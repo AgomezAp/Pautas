@@ -1,0 +1,83 @@
+// =============================================================
+// SKELETON LOADERS
+// =============================================================
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--gray-100) 25%,
+    var(--gray-200) 50%,
+    var(--gray-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+// Variants
+.skeleton--text {
+  height: 14px;
+  width: 60%;
+  border-radius: var(--radius-sm);
+}
+.skeleton--text-sm {
+  height: 12px;
+  width: 40%;
+  border-radius: var(--radius-sm);
+}
+.skeleton--heading {
+  height: 28px;
+  width: 45%;
+  border-radius: var(--radius-md);
+}
+.skeleton--kpi-value {
+  height: 32px;
+  width: 70%;
+  border-radius: var(--radius-md);
+}
+.skeleton--avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+}
+.skeleton--icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+}
+.skeleton--chart {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+.skeleton--button {
+  width: 120px;
+  height: 40px;
+  border-radius: var(--radius-md);
+}
+
+// ─── Skeleton KPI Card ───
+.skeleton-kpi-card {
+  background: var(--gray-0);
+  border: var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+.skeleton-kpi-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+// ─── Skeleton Table Row ───
+.skeleton-table-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--gray-100);
+}
+.skeleton-table-row__cell {
+  flex: 1;
+}

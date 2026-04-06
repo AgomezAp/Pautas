@@ -1,0 +1,295 @@
+// =============================================================
+// ANGULAR MATERIAL OVERRIDES — PAUTAS REDESIGN
+// =============================================================
+
+@use '@angular/material' as mat;
+
+// ─── Remove ripple globally ───
+.mat-mdc-button-ripple,
+.mat-ripple {
+  display: none !important;
+}
+
+// ─── Toolbar ───
+.mat-toolbar {
+  font-family: var(--font-family) !important;
+}
+.mat-toolbar.mat-primary {
+  background-color: var(--brand-primary) !important;
+  color: white !important;
+}
+
+// ─── Cards ───
+.mat-mdc-card {
+  font-family: var(--font-family) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: none !important;
+  border: var(--border-default);
+  transition: box-shadow var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out);
+  &:hover {
+    box-shadow: var(--shadow-card-hover) !important;
+    border-color: var(--gray-300);
+  }
+}
+
+// ─── Tables ───
+.mat-mdc-table {
+  background: transparent !important;
+  width: 100%;
+  font-family: var(--font-family) !important;
+}
+.mat-mdc-header-row {
+  background: var(--gray-50) !important;
+  border-bottom: 2px solid var(--gray-200) !important;
+  height: 44px !important;
+}
+.mat-mdc-header-cell {
+  font-size: var(--text-xs) !important;
+  font-weight: var(--weight-semibold) !important;
+  color: var(--gray-500) !important;
+  letter-spacing: var(--tracking-wider) !important;
+  text-transform: uppercase !important;
+  padding: 0 var(--space-4) !important;
+  border-bottom: none !important;
+}
+.mat-mdc-row {
+  height: 52px !important;
+  transition: background-color var(--duration-fast) var(--ease-out);
+  &:hover {
+    background: var(--gray-50) !important;
+  }
+  &:last-child .mat-mdc-cell {
+    border-bottom: none !important;
+  }
+}
+.mat-mdc-cell {
+  font-size: var(--text-base) !important;
+  color: var(--gray-800) !important;
+  padding: 0 var(--space-4) !important;
+  border-bottom: 1px solid var(--gray-100) !important;
+  font-family: var(--font-family) !important;
+}
+
+// ─── Buttons ───
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary,
+.mat-mdc-flat-button.mat-primary {
+  background-color: var(--brand-primary) !important;
+  color: var(--gray-0) !important;
+  font-family: var(--font-family) !important;
+  font-weight: var(--weight-semibold) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+  &:hover { background-color: var(--brand-primary-hover) !important; }
+  &:active { transform: scale(0.98); }
+}
+.mat-mdc-raised-button.mat-accent,
+.mat-mdc-unelevated-button.mat-accent,
+.mat-mdc-flat-button.mat-accent {
+  background-color: var(--brand-accent) !important;
+  color: var(--brand-primary) !important;
+  font-family: var(--font-family) !important;
+  font-weight: var(--weight-semibold) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+  &:hover { background-color: var(--brand-accent-hover) !important; }
+  &:active { transform: scale(0.98); }
+}
+.mat-mdc-outlined-button,
+.mat-mdc-stroked-button {
+  font-family: var(--font-family) !important;
+  font-weight: var(--weight-medium) !important;
+  border-radius: var(--radius-md) !important;
+  border-color: var(--gray-300) !important;
+  color: var(--gray-700) !important;
+  &:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--gray-400) !important;
+  }
+}
+.mat-mdc-icon-button {
+  color: var(--gray-400) !important;
+  transition: var(--transition-all);
+  &:hover {
+    background: var(--gray-100) !important;
+    color: var(--gray-700) !important;
+  }
+}
+
+// ─── Form Fields ───
+.mat-mdc-form-field {
+  font-family: var(--font-family) !important;
+}
+.mdc-text-field--outlined {
+  background-color: var(--gray-0) !important;
+}
+.mdc-text-field--outlined .mdc-notched-outline__leading,
+.mdc-text-field--outlined .mdc-notched-outline__notch,
+.mdc-text-field--outlined .mdc-notched-outline__trailing {
+  border-color: var(--gray-300) !important;
+}
+.mat-mdc-form-field.mat-focused .mdc-text-field--outlined .mdc-notched-outline__leading,
+.mat-mdc-form-field.mat-focused .mdc-text-field--outlined .mdc-notched-outline__notch,
+.mat-mdc-form-field.mat-focused .mdc-text-field--outlined .mdc-notched-outline__trailing {
+  border-color: var(--brand-accent) !important;
+}
+.mdc-text-field--focused .mdc-floating-label {
+  color: var(--gray-900) !important;
+}
+
+// ─── Select / Option ───
+.mat-mdc-select {
+  font-family: var(--font-family) !important;
+}
+.mat-mdc-select-panel {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-xl) !important;
+  border: var(--border-default) !important;
+  padding: 4px !important;
+}
+.mat-mdc-option {
+  font-family: var(--font-family) !important;
+  font-size: var(--text-base) !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: var(--radius-sm) !important;
+  &:hover { background: var(--gray-50) !important; }
+  &.mdc-list-item--selected {
+    background: var(--brand-accent-light) !important;
+    color: var(--gray-900) !important;
+  }
+}
+
+// ─── Menu ───
+.mat-mdc-menu-panel {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-xl) !important;
+  border: var(--border-default) !important;
+  min-width: 180px !important;
+}
+.mat-mdc-menu-item {
+  font-family: var(--font-family) !important;
+  font-size: var(--text-base) !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: var(--radius-sm) !important;
+  margin: 2px 4px !important;
+  color: var(--gray-700) !important;
+  &:hover { background: var(--gray-50) !important; }
+}
+
+// ─── Tabs ───
+.mat-mdc-tab-group {
+  font-family: var(--font-family) !important;
+}
+.mat-mdc-tab-header {
+  border-bottom: 1px solid var(--gray-200) !important;
+}
+.mat-mdc-tab {
+  font-family: var(--font-family) !important;
+  font-size: var(--text-base) !important;
+  font-weight: var(--weight-medium) !important;
+  color: var(--gray-500) !important;
+  letter-spacing: 0 !important;
+  min-width: 100px !important;
+  padding: 0 var(--space-5) !important;
+  height: 48px !important;
+  opacity: 1 !important;
+  &:hover { color: var(--gray-700) !important; }
+}
+.mdc-tab--active .mdc-tab__text-label {
+  color: var(--gray-900) !important;
+  font-weight: var(--weight-semibold) !important;
+}
+// Underline indicator — YELLOW
+.mat-mdc-tab-header .mdc-tab-indicator__content--underline {
+  border-color: var(--brand-accent) !important;
+  border-width: 2px !important;
+  border-radius: 2px 2px 0 0 !important;
+}
+
+// ─── Datepicker ───
+.mat-datepicker-content {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+.mat-calendar-body-selected {
+  background: var(--brand-primary) !important;
+  color: var(--gray-0) !important;
+}
+.mat-calendar-body-today:not(.mat-calendar-body-selected) {
+  border-color: var(--brand-accent) !important;
+}
+
+// ─── Dialog ───
+.cdk-overlay-dark-backdrop {
+  background: rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+.mat-mdc-dialog-container {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  font-family: var(--font-family) !important;
+}
+.mat-mdc-dialog-surface {
+  border-radius: var(--radius-xl) !important;
+}
+.mat-mdc-dialog-title {
+  font-family: var(--font-family) !important;
+  font-weight: var(--weight-bold) !important;
+  color: var(--gray-900) !important;
+}
+.mat-mdc-dialog-actions {
+  border-top: 1px solid var(--gray-100);
+  padding: var(--space-4) var(--space-6) !important;
+  background: var(--gray-50);
+}
+
+// ─── Paginator ───
+.mat-mdc-paginator {
+  background: transparent !important;
+  border-top: 1px solid var(--gray-100);
+  font-family: var(--font-family) !important;
+  font-size: var(--text-sm) !important;
+  color: var(--gray-500) !important;
+}
+.mat-mdc-paginator-container {
+  padding: var(--space-2) var(--space-4) !important;
+  min-height: 48px !important;
+}
+
+// ─── Progress Spinner ───
+.mat-mdc-progress-spinner circle {
+  stroke: var(--brand-accent) !important;
+}
+
+// ─── Sidenav ───
+.mat-sidenav, .mat-mdc-list-item, .mat-mdc-chip {
+  font-family: var(--font-family) !important;
+}
+
+// ─── Snackbar (legacy support) ───
+.snack-success {
+  --mdc-snackbar-container-color: var(--success-dark);
+  --mdc-snackbar-supporting-text-color: white;
+  --mdc-snackbar-supporting-text-font: var(--font-family);
+}
+.snack-error {
+  --mdc-snackbar-container-color: var(--danger-dark);
+  --mdc-snackbar-supporting-text-color: white;
+  --mdc-snackbar-supporting-text-font: var(--font-family);
+}
+
+// ─── Slide Toggle ───
+.mat-mdc-slide-toggle .mdc-switch--selected .mdc-switch__handle {
+  background: var(--brand-accent) !important;
+}
+.mat-mdc-slide-toggle .mdc-switch--selected .mdc-switch__track {
+  background: rgba(255, 214, 0, 0.4) !important;
+}

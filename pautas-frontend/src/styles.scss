@@ -1,0 +1,15 @@
+// =============================================================
+// PAUTAS — Global Stylesheet
+// =============================================================
+// Order matters: variables → reset → typography → animations →
+// skeleton → material-overrides → utilities
+
+@use '@angular/material' as mat;
+
+@use 'styles/variables';
+@use 'styles/reset';
+@use 'styles/typography';
+@use 'styles/animations';
+@use 'styles/skeleton';
+@use 'styles/material-overrides';
+@use 'styles/utilities';

@@ -1,0 +1,11 @@
+{
+  "files.watcherExclude": {
+    "**/.angular/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true
+  },
+  "search.exclude": {
+    "**/.angular/**": true,
+    "**/dist/**": true
+  }
+}
