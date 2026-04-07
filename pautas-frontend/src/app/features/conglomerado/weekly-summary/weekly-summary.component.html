@@ -1,0 +1,65 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Resumen Semanal</h1>
+    <div class="week-nav">
+      <button class="btn btn-icon" (click)="previousWeek()">
+        <app-icon name="chevron_left" size="md"></app-icon>
+      </button>
+      <span class="week-label">Semana {{ currentWeek }} - {{ currentYear }}</span>
+      <button class="btn btn-icon" (click)="nextWeek()" [disabled]="isCurrentWeek">
+        <app-icon name="chevron_right" size="md"></app-icon>
+      </button>
+    </div>
+  </div>
+
+  @if (summary) {
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-icon bg-blue"><app-icon name="calendar_today" size="md"></app-icon></div>
+        <div class="summary-data">
+          <span class="summary-value">{{ summary.days_with_entries || 0 }} <span class="summary-of">/ 7</span></span>
+          <span class="summary-label">Dias con entradas</span>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon bg-purple"><app-icon name="people" size="md"></app-icon></div>
+        <div class="summary-data">
+          <span class="summary-value">{{ summary.total_clientes || 0 }}</span>
+          <span class="summary-label">Total Clientes</span>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon bg-green"><app-icon name="verified" size="md"></app-icon></div>
+        <div class="summary-data">
+          <span class="summary-value">{{ summary.total_clientes_efectivos || 0 }}</span>
+          <span class="summary-label">Clientes Efectivos</span>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon bg-orange"><app-icon name="child_care" size="md"></app-icon></div>
+        <div class="summary-data">
+          <span class="summary-value">{{ summary.total_menores || 0 }}</span>
+          <span class="summary-label">Total Menores</span>
+        </div>
+      </div>
+
+      <div class="summary-card highlight">
+        <div class="summary-icon bg-teal"><app-icon name="trending_up" size="md"></app-icon></div>
+        <div class="summary-data">
+          <span class="summary-value">{{ (summary.effectiveness_rate || 0) * 100 | number:'1.1-1' }}%</span>
+          <span class="summary-label">Tasa de Efectividad</span>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!summary && !loading) {
+    <div class="empty-state">
+      <app-icon name="event_busy" size="xl"></app-icon>
+      <p>No hay datos para esta semana</p>
+    </div>
+  }
+</div>

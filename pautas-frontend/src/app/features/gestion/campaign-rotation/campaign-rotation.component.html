@@ -1,0 +1,173 @@
+<h2>Rotacion de Campanas</h2>
+
+<!-- Current Assignments Table -->
+<div class="card assignments-card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Asignaciones Actuales</h5>
+    <small class="text-muted">Campanas activas y sus usuarios conglomerado asignados</small>
+  </div>
+  <div class="card-body">
+    <div class="filter-row">
+      <div class="filter-field">
+        <label class="form-label">Filtrar por pais</label>
+        <select class="form-select" [(ngModel)]="selectedCountryId" (ngModelChange)="onCountryFilterChange()">
+          <option [ngValue]="0">Todos los paises</option>
+          @for (country of countries; track country.id) {
+            <option [ngValue]="country.id">{{ country.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover full-width">
+        <thead>
+          <tr>
+            <th>Pais</th>
+            <th>Campana</th>
+            <th>Usuario Asignado</th>
+            <th>Accion</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of campaigns; track row.id) {
+            <tr [class.selected-row]="rotationForm.get('campaign_id')?.value === row.id">
+              <td>{{ row.country_name }}</td>
+              <td>{{ row.name }}</td>
+              <td>
+                @if (row.assigned_user_name) {
+                  <span class="user-assigned">{{ row.assigned_user_name }}</span>
+                } @else {
+                  <span class="user-unassigned">Sin asignar</span>
+                }
+              </td>
+              <td>
+                <button class="btn btn-icon text-primary"
+                        ngbTooltip="Rotar esta campana"
+                        (click)="selectCampaignForRotation(row)">
+                  <app-icon name="swap_horiz" size="md"></app-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Rotation Form -->
+<div class="card rotation-form-card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Registrar Rotacion</h5>
+    <small class="text-muted">
+      @if (selectedCampaign) {
+        Reasignar "{{ selectedCampaign.name }}" ({{ selectedCampaign.country_name }})
+        @if (selectedCampaign.assigned_user_name) {
+          &#8212; actualmente asignada a {{ selectedCampaign.assigned_user_name }}
+        }
+      } @else {
+        Seleccione una campana de la tabla o del selector
+      }
+    </small>
+  </div>
+  <div class="card-body">
+    <form [formGroup]="rotationForm" (ngSubmit)="submitRotation()" class="rotation-form">
+      <div class="form-row">
+        <div class="mb-3 form-field">
+          <label class="form-label">Campana a rotar</label>
+          <select class="form-select" formControlName="campaign_id" (change)="onCampaignSelected(rotationForm.get('campaign_id')?.value)">
+            <option [ngValue]="null" disabled>Seleccione...</option>
+            @for (camp of campaigns; track camp.id) {
+              <option [ngValue]="camp.id">
+                {{ camp.name }} ({{ camp.country_code }}){{ camp.assigned_user_name ? ' — ' + camp.assigned_user_name : '' }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="mb-3 form-field">
+          <label class="form-label">Nuevo usuario asignado</label>
+          <select class="form-select" formControlName="new_user_id">
+            <option [ngValue]="null" disabled>Seleccione...</option>
+            @for (user of availableUsers; track user.id) {
+              <option [ngValue]="user.id">
+                {{ user.full_name }} ({{ user.country_name }}){{ user.current_campaign_name ? ' — tiene: ' + user.current_campaign_name : ' — sin campana' }}
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (swapWarning) {
+        <div class="swap-warning">
+          <app-icon name="info" size="md"></app-icon>
+          <span>{{ swapWarning }}</span>
+        </div>
+      }
+
+      <div class="form-row">
+        <div class="mb-3 form-field">
+          <label class="form-label">Fecha efectiva</label>
+          <input type="date" class="form-control" formControlName="effective_date">
+        </div>
+
+        <div class="mb-3 form-field">
+          <label class="form-label">Razon de la rotacion</label>
+          <input class="form-control" formControlName="reason"
+                 placeholder="Ej: Cambio de turno, reasignacion...">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" type="submit"
+              [disabled]="rotationForm.invalid || submitting">
+        <app-icon name="swap_horiz" size="sm"></app-icon>
+        {{ submitting ? 'Procesando...' : (swapWarning ? 'Intercambiar Campanas' : 'Registrar Rotacion') }}
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Rotation History -->
+<div class="card history-card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Historial de Rotaciones</h5>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-hover full-width">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Campana</th>
+            <th>Pais</th>
+            <th>De</th>
+            <th>A</th>
+            <th>Registrado por</th>
+            <th>Razon</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rotationHistory; track $index) {
+            <tr [class.swap-row]="row.reason?.startsWith('[INTERCAMBIO]')">
+              <td>{{ row.effective_date | date:'dd/MM/yyyy' }}</td>
+              <td>{{ row.campaign_name }}</td>
+              <td>{{ row.country_name }}</td>
+              <td>{{ row.previous_user_name || '(sin asignar)' }}</td>
+              <td>{{ row.new_user_name }}</td>
+              <td>{{ row.rotated_by_name }}</td>
+              <td>{{ row.reason || '&#8212;' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [totalItems]="totalRotations"
+      [pageSize]="10"
+      [currentPage]="currentPage"
+      [pageSizeOptions]="[5, 10, 25]"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

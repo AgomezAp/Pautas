@@ -1,0 +1,321 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use 'sass:color';
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #ffd600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes
+$color-text-light: #ffffff;
+$color-text-muted: #a0a0a0;
+$color-bg-hover: #1e1e1e;
+$color-bg-active: #252525;
+$color-border: #2a2a2a;
+
+// Sidebar dimensions
+$sidebar-width: 260px;
+$sidebar-collapsed-width: 72px;
+$sidebar-transition: 0.3s ease;
+
+// ============================================
+// SIDEBAR CONTAINER
+// ============================================
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: $sidebar-width;
+  height: 100vh;
+  background-color: $color-primary;
+  font-family: $font-primary;
+  border-right: 1px solid $color-border;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1001;
+  transition: width $sidebar-transition;
+  overflow: hidden;
+
+  // Estado colapsado
+  &--collapsed {
+    width: $sidebar-collapsed-width;
+
+    .sidebar__logo {
+      justify-content: center;
+      padding: 1.5rem 0;
+    }
+
+    .sidebar__logo-mark {
+      margin-right: 0;
+    }
+
+    .sidebar__link {
+      justify-content: center;
+      padding: 0.875rem 0;
+    }
+
+    .sidebar__link-icon {
+      margin-right: 0;
+    }
+
+    .sidebar__toggle {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+// ============================================
+// SIDEBAR LOGO
+// ============================================
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid $color-border;
+  flex-shrink: 0;
+}
+
+.sidebar__logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-right: 0.75rem;
+  font-family: $font-primary;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: $color-primary;
+  background-color: $color-secondary;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px color.adjust($color-secondary, $alpha: -0.7);
+  transition: margin $sidebar-transition;
+}
+
+.sidebar__logo-text {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: $color-text-light;
+  white-space: nowrap;
+  position: relative;
+
+  // Subrayado decorativo amarillo
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: $color-secondary;
+    border-radius: 1px;
+  }
+}
+
+// ============================================
+// SIDEBAR NAVIGATION
+// ============================================
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 1rem 0.75rem;
+  gap: 0.25rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // Scrollbar personalizado
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $color-border;
+    border-radius: 2px;
+
+    &:hover {
+      background-color: $color-text-muted;
+    }
+  }
+}
+
+// ============================================
+// SIDEBAR LINKS
+// ============================================
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  font-family: $font-primary;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: $color-text-muted;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+
+  // Hover state
+  &:hover {
+    background-color: $color-bg-hover;
+    color: $color-text-light;
+
+    .sidebar__link-icon {
+      color: $color-secondary;
+    }
+  }
+
+  // Focus state
+  &:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px color.adjust($color-secondary, $alpha: -0.5);
+  }
+
+  // Active state (ruta actual)
+  &--active {
+    background-color: $color-bg-active;
+    color: $color-text-light;
+
+    // Borde lateral izquierdo amarillo
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 60%;
+      background-color: $color-secondary;
+      border-radius: 0 2px 2px 0;
+    }
+
+    .sidebar__link-icon {
+      color: $color-secondary;
+    }
+
+    &:hover {
+      background-color: $color-bg-active;
+    }
+  }
+}
+
+.sidebar__link-icon {
+  flex-shrink: 0;
+  margin-right: 0.875rem;
+  color: $color-text-muted;
+  transition:
+    all 0.2s ease,
+    margin $sidebar-transition;
+}
+
+.sidebar__link-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ============================================
+// SIDEBAR FOOTER
+// ============================================
+.sidebar__footer {
+  padding: 1rem 0.75rem;
+  border-top: 1px solid $color-border;
+  flex-shrink: 0;
+}
+
+.sidebar__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-family: $font-primary;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: $color-text-muted;
+  background-color: transparent;
+  border: 1px solid $color-border;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: $color-secondary;
+    border-color: $color-secondary;
+    color: $color-primary;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.6);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// ============================================
+// TOOLTIPS (para estado colapsado)
+// ============================================
+.sidebar--collapsed {
+  .sidebar__link {
+    // Tooltip nativo con title
+    position: relative;
+
+    &:hover::after {
+      content: attr(title);
+      position: absolute;
+      left: calc(100% + 12px);
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: $color-primary;
+      background-color: $color-secondary;
+      border-radius: 0.375rem;
+      white-space: nowrap;
+      z-index: 1002;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+
+      // Flecha
+      &::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 6px solid transparent;
+        border-right-color: $color-secondary;
+      }
+    }
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: none;
+
+    &--open {
+      transform: translateX(0);
+      box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    }
+  }
+}

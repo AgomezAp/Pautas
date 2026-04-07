@@ -1,0 +1,106 @@
+<div class="dialog-header">
+  <h2>{{ isEdit ? 'Editar' : 'Crear' }} Usuario</h2>
+  <button class="btn btn-icon dialog-close" (click)="activeModal.dismiss()" aria-label="Cerrar">
+    <app-icon name="close" size="md"></app-icon>
+  </button>
+</div>
+<div class="modal-body">
+  <form [formGroup]="form" class="form-grid">
+    <div class="form-row">
+      <div class="mb-3">
+        <label class="form-label">Nombre de usuario</label>
+        <div class="input-group">
+          <span class="input-group-text"><app-icon name="person" size="sm"></app-icon></span>
+          <input class="form-control" formControlName="username" autocomplete="username">
+        </div>
+        @if (form.get('username')?.hasError('required') && form.get('username')?.touched) {
+          <div class="invalid-feedback d-block">El usuario es requerido</div>
+        }
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Nombre completo</label>
+        <div class="input-group">
+          <span class="input-group-text"><app-icon name="badge" size="sm"></app-icon></span>
+          <input class="form-control" formControlName="full_name" autocomplete="name">
+        </div>
+        @if (form.get('full_name')?.hasError('required') && form.get('full_name')?.touched) {
+          <div class="invalid-feedback d-block">El nombre es requerido</div>
+        }
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <div class="input-group">
+        <span class="input-group-text"><app-icon name="email" size="sm"></app-icon></span>
+        <input class="form-control" formControlName="email" type="email" autocomplete="email">
+      </div>
+    </div>
+
+    @if (!isEdit) {
+      <div class="mb-3">
+        <label class="form-label">Contrase&ntilde;a</label>
+        <div class="input-group">
+          <span class="input-group-text"><app-icon name="lock" size="sm"></app-icon></span>
+          <input class="form-control" formControlName="password" type="password" autocomplete="new-password">
+        </div>
+        @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
+          <div class="invalid-feedback d-block">La contrase&ntilde;a es requerida</div>
+        }
+        @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
+          <div class="invalid-feedback d-block">M&iacute;nimo 8 caracteres</div>
+        }
+      </div>
+    }
+
+    <div class="form-row">
+      <div class="mb-3">
+        <label class="form-label">Rol</label>
+        <div class="input-group">
+          <span class="input-group-text"><app-icon name="shield" size="sm"></app-icon></span>
+          <select class="form-select" formControlName="role_id">
+            @for (role of roles; track role.id) {
+              <option [ngValue]="role.id">{{ role.name }}</option>
+            }
+          </select>
+        </div>
+        @if (form.get('role_id')?.hasError('required') && form.get('role_id')?.touched) {
+          <div class="invalid-feedback d-block">El rol es requerido</div>
+        }
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Pa&iacute;s</label>
+        <div class="input-group">
+          <span class="input-group-text"><app-icon name="public" size="sm"></app-icon></span>
+          <select class="form-select" formControlName="country_id">
+            <option [ngValue]="null">Ninguno</option>
+            @for (country of countries; track country.id) {
+              <option [ngValue]="country.id">{{ country.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Campa&ntilde;a</label>
+      <div class="input-group">
+        <span class="input-group-text"><app-icon name="campaign" size="sm"></app-icon></span>
+        <select class="form-select" formControlName="campaign_id">
+          <option [ngValue]="null">Ninguna</option>
+          @for (campaign of campaigns; track campaign.id) {
+            <option [ngValue]="campaign.id">{{ campaign.name }} ({{ campaign.country_name }})</option>
+          }
+        </select>
+      </div>
+    </div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-outline-secondary dialog-btn-cancel" (click)="activeModal.dismiss()">Cancelar</button>
+  <button class="btn btn-primary dialog-btn-submit" (click)="onSubmit()" [disabled]="form.invalid || saving">
+    {{ saving ? 'Guardando...' : (isEdit ? 'Actualizar' : 'Crear') }}
+  </button>
+</div>

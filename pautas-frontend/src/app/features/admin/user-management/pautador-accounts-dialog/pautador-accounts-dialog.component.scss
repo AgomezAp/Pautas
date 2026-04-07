@@ -1,0 +1,97 @@
+:host { display: block; }
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+.dialog-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--gray-900);
+}
+.dialog-subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+}
+.dialog-close { color: var(--gray-400); }
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-4);
+  color: var(--gray-500);
+}
+
+.accounts-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  border-bottom: var(--border-subtle);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.account-row:last-child { border-bottom: none; }
+.account-row:hover { background: var(--gray-50); }
+.account-row--selected { background: var(--brand-accent-subtle); }
+.account-row--selected:hover { background: var(--brand-accent-light); }
+
+.account-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.account-name {
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-id {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+  font-family: var(--font-mono);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--gray-400);
+  text-align: center;
+}
+
+.selected-count {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+  margin-right: auto;
+}
+
+.modal-body {
+  min-width: 550px;
+}
+.modal-footer {
+  border-top: var(--border-subtle);
+}
+.dialog-btn-cancel { color: var(--gray-500); }
+.dialog-btn-submit {
+  min-width: 100px;
+  font-weight: var(--weight-semibold);
+}

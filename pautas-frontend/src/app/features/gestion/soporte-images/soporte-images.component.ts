@@ -1,264 +1,67 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatInputModule } from '@angular/material/input';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { NgbCollapseModule } from '@ng-bootstrap/ng-bootstrap';
 import { GestionService } from '../gestion.service';
 import { CountryService } from '../../../core/services/country.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Country } from '../../../core/models/country.model';
 import { environment } from '../../../../environments/environment';
+import { IconComponent } from '../../../shared/components/icon/icon.component';
+
+interface EntryImage {
+  id: number;
+  image_path: string;
+  original_name: string;
+  thumb_path: string | null;
+}
+
+interface EntryGroup {
+  entry_id: number;
+  entry_date: string;
+  clientes: number;
+  clientes_efectivos: number;
+  menores: number;
+  images: EntryImage[];
+}
+
+interface MonthGroup {
+  key: string;
+  label: string;
+  days: EntryGroup[];
+}
+
+interface UserFolder {
+  user_id: number;
+  full_name: string;
+  username: string;
+  country_name: string;
+  total_images: number;
+  months: MonthGroup[];
+  collapsed: boolean;
+}
 
 @Component({
   selector: 'app-soporte-images',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatSelectModule,
-    MatInputModule, MatDatepickerModule, MatNativeDateModule, MatIconModule,
-    MatButtonModule, MatPaginatorModule,
+    CommonModule, FormsModule, NgbCollapseModule, IconComponent,
   ],
-  template: `
-    <div class="page-header">
-      <h2>Imágenes de Soporte</h2>
-      <p class="subtitle">Imágenes subidas por los usuarios del conglomerado</p>
-    </div>
-
-    <div class="filter-bar">
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>País</mat-label>
-        <mat-select [(ngModel)]="countryId" (selectionChange)="applyFilters()">
-          <mat-option [value]="null">Todos</mat-option>
-          @for (country of countries; track country.id) {
-            <mat-option [value]="country.id">{{ country.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Desde</mat-label>
-        <input matInput [matDatepicker]="pickerFrom" [(ngModel)]="dateFrom" (dateChange)="applyFilters()">
-        <mat-datepicker-toggle matIconSuffix [for]="pickerFrom"></mat-datepicker-toggle>
-        <mat-datepicker #pickerFrom></mat-datepicker>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Hasta</mat-label>
-        <input matInput [matDatepicker]="pickerTo" [(ngModel)]="dateTo" (dateChange)="applyFilters()">
-        <mat-datepicker-toggle matIconSuffix [for]="pickerTo"></mat-datepicker-toggle>
-        <mat-datepicker #pickerTo></mat-datepicker>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field search-field">
-        <mat-label>Buscar por nombre</mat-label>
-        <input matInput [(ngModel)]="search" (keyup.enter)="applyFilters()" placeholder="Nombre o usuario">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-
-      <button mat-stroked-button (click)="clearFilters()" class="clear-btn">
-        <mat-icon>clear</mat-icon> Limpiar
-      </button>
-    </div>
-
-    <div class="image-grid">
-      @for (entry of entries; track entry.id) {
-        <mat-card class="image-card">
-          <img [src]="getImageUrl(entry.soporte_image_path)"
-               [alt]="'Soporte de ' + entry.full_name"
-               class="image-preview"
-               (click)="openFullImage(entry.soporte_image_path)"
-               (error)="onImageError($event)">
-          <mat-card-content>
-            <div class="entry-info">
-              <span class="entry-user">{{ entry.full_name }}</span>
-              <span class="entry-detail">{{ entry.username }}</span>
-              <span class="entry-detail">{{ entry.entry_date | date:'dd/MM/yyyy' }} · {{ entry.country_name }}</span>
-              <div class="entry-stats">
-                <span>Clientes: {{ entry.clientes }}</span>
-                <span>Efectivos: {{ entry.clientes_efectivos }}</span>
-                <span>Menores: {{ entry.menores }}</span>
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-      }
-    </div>
-
-    @if (entries.length === 0 && !loading) {
-      <div class="empty-state">
-        <mat-icon>photo_library</mat-icon>
-        <p>No se encontraron imágenes de soporte</p>
-      </div>
-    }
-
-    <mat-paginator
-      [length]="totalItems"
-      [pageSize]="pageSize"
-      [pageSizeOptions]="[12, 24, 48]"
-      [pageIndex]="page - 1"
-      (page)="onPageChange($event)"
-      showFirstLastButtons>
-    </mat-paginator>
-
-    @if (fullImageUrl) {
-      <div class="lightbox" (click)="closeFullImage()">
-        <div class="lightbox-content" (click)="$event.stopPropagation()">
-          <button mat-icon-button class="lightbox-close" (click)="closeFullImage()">
-            <mat-icon>close</mat-icon>
-          </button>
-          <img [src]="fullImageUrl" class="lightbox-image">
-        </div>
-      </div>
-    }
-  `,
-  styles: [`
-    .page-header { margin-bottom: 24px; }
-    .page-header h2 {
-      margin: 0 0 4px 0;
-      color: var(--gray-900);
-      position: relative;
-      padding-bottom: var(--space-2);
-      display: inline-block;
-    }
-    .page-header h2::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 40px;
-      height: 3px;
-      background: var(--brand-accent);
-      border-radius: var(--radius-full);
-    }
-    .subtitle {
-      margin: 8px 0 0 0;
-      color: var(--gray-500);
-      font-size: 14px;
-    }
-    .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 20px;
-      padding: 16px;
-      background: var(--gray-0);
-      border: var(--border-subtle);
-      border-radius: var(--radius-md);
-    }
-    .filter-field { flex: 0 0 180px; }
-    .search-field { flex: 1 1 200px; }
-    .clear-btn { height: 40px; }
-    .image-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-    .image-card {
-      overflow: hidden;
-      border-radius: var(--radius-md);
-    }
-    .image-preview {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .image-preview:hover {
-      transform: scale(1.02);
-    }
-    .entry-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      padding: 8px 0;
-    }
-    .entry-user {
-      font-weight: var(--weight-semibold);
-      font-size: 14px;
-      color: var(--gray-900);
-    }
-    .entry-detail {
-      font-size: 12px;
-      color: var(--gray-500);
-    }
-    .entry-stats {
-      display: flex;
-      gap: 12px;
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--gray-700);
-    }
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 64px 16px;
-      color: var(--gray-500);
-    }
-    .empty-state mat-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      margin-bottom: 16px;
-      opacity: 0.3;
-    }
-    .empty-state p { margin: 0; font-size: 16px; }
-    .lightbox {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      cursor: pointer;
-    }
-    .lightbox-content {
-      position: relative;
-      max-width: 90vw;
-      max-height: 90vh;
-    }
-    .lightbox-image {
-      max-width: 90vw;
-      max-height: 90vh;
-      object-fit: contain;
-      border-radius: var(--radius-sm);
-    }
-    .lightbox-close {
-      position: absolute;
-      top: -40px;
-      right: 0;
-      color: var(--gray-0);
-    }
-  `]
+  templateUrl: './soporte-images.component.html',
+  styleUrl: './soporte-images.component.scss',
 })
 export class SoporteImagesComponent implements OnInit {
-  entries: any[] = [];
+  users: UserFolder[] = [];
   countries: Country[] = [];
-  totalItems = 0;
-  page = 1;
-  pageSize = 12;
   loading = false;
 
   countryId: number | null = null;
-  dateFrom: Date | null = null;
-  dateTo: Date | null = null;
+  dateFrom = '';
+  dateTo = '';
   search = '';
 
-  fullImageUrl: string | null = null;
+  lightboxUrl: string | null = null;
+  lightboxImages: EntryImage[] = [];
+  lightboxIndex = 0;
 
   private backendBase: string;
 
@@ -268,38 +71,79 @@ export class SoporteImagesComponent implements OnInit {
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
   ) {
-    // Derive backend base from API URL (remove /api/v1 suffix)
     this.backendBase = environment.apiUrl.replace('/api/v1', '');
   }
 
   ngOnInit(): void {
     this.countryService.getAll().subscribe(res => {
       this.countries = res.data;
-      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     });
-    this.loadEntries();
+    this.loadData();
   }
 
-  loadEntries(): void {
+  loadData(): void {
     this.loading = true;
-    const params: any = { page: this.page, limit: this.pageSize };
+    const params: any = {};
     if (this.countryId) params.country_id = this.countryId;
-    if (this.dateFrom) params.date_from = this.formatDate(this.dateFrom);
-    if (this.dateTo) params.date_to = this.formatDate(this.dateTo);
+    if (this.dateFrom) params.date_from = this.dateFrom;
+    if (this.dateTo) params.date_to = this.dateTo;
     if (this.search) params.search = this.search;
 
     this.gestionService.getEntriesWithImages(params).subscribe({
       next: (res) => {
-        this.entries = res.data;
-        this.totalItems = res.meta?.total || 0;
+        this.users = (res.data || []).map((u: any) => this.buildUserFolder(u));
         this.loading = false;
-        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
       error: () => {
         this.loading = false;
-        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
     });
+  }
+
+  private buildUserFolder(raw: any): UserFolder {
+    const entries: EntryGroup[] = raw.entries || [];
+    const monthsMap = new Map<string, EntryGroup[]>();
+
+    for (const entry of entries) {
+      const d = new Date(entry.entry_date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthsMap.has(key)) monthsMap.set(key, []);
+      monthsMap.get(key)!.push(entry);
+    }
+
+    const months: MonthGroup[] = Array.from(monthsMap.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, days]) => ({
+        key,
+        label: this.formatMonthLabel(key),
+        days: days.sort((a, b) => b.entry_date.localeCompare(a.entry_date)),
+      }));
+
+    return {
+      user_id: raw.user_id,
+      full_name: raw.full_name,
+      username: raw.username,
+      country_name: raw.country_name,
+      total_images: raw.total_images || 0,
+      months,
+      collapsed: true,
+    };
+  }
+
+  private formatMonthLabel(key: string): string {
+    const [year, month] = key.split('-');
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
+  }
+
+  formatDay(dateStr: string): string {
+    const d = new Date(dateStr);
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+    return `${days[d.getUTCDay()]} ${d.getUTCDate()}`;
   }
 
   getImageUrl(imagePath: string): string {
@@ -308,14 +152,39 @@ export class SoporteImagesComponent implements OnInit {
     return `${this.backendBase}/${imagePath}?token=${token}`;
   }
 
-  openFullImage(imagePath: string): void {
-    this.fullImageUrl = this.getImageUrl(imagePath);
-    this.cdr.markForCheck();
+  getThumbUrl(img: EntryImage): string {
+    const path = img.thumb_path || img.image_path;
+    return this.getImageUrl(path);
   }
 
-  closeFullImage(): void {
-    this.fullImageUrl = null;
-    this.cdr.markForCheck();
+  openLightbox(images: EntryImage[], index: number): void {
+    this.lightboxImages = images;
+    this.lightboxIndex = index;
+    this.lightboxUrl = this.getImageUrl(images[index].image_path);
+    this.cdr.detectChanges();
+  }
+
+  closeLightbox(): void {
+    this.lightboxUrl = null;
+    this.lightboxImages = [];
+    this.lightboxIndex = 0;
+    this.cdr.detectChanges();
+  }
+
+  prevImage(): void {
+    if (this.lightboxIndex > 0) {
+      this.lightboxIndex--;
+      this.lightboxUrl = this.getImageUrl(this.lightboxImages[this.lightboxIndex].image_path);
+      this.cdr.detectChanges();
+    }
+  }
+
+  nextImage(): void {
+    if (this.lightboxIndex < this.lightboxImages.length - 1) {
+      this.lightboxIndex++;
+      this.lightboxUrl = this.getImageUrl(this.lightboxImages[this.lightboxIndex].image_path);
+      this.cdr.detectChanges();
+    }
   }
 
   onImageError(event: Event): void {
@@ -323,29 +192,18 @@ export class SoporteImagesComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.page = 1;
-    this.loadEntries();
+    this.loadData();
   }
 
   clearFilters(): void {
     this.countryId = null;
-    this.dateFrom = null;
-    this.dateTo = null;
+    this.dateFrom = '';
+    this.dateTo = '';
     this.search = '';
-    this.page = 1;
-    this.loadEntries();
+    this.loadData();
   }
 
-  onPageChange(event: PageEvent): void {
-    this.page = event.pageIndex + 1;
-    this.pageSize = event.pageSize;
-    this.loadEntries();
-  }
-
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  toggleUser(user: UserFolder): void {
+    user.collapsed = !user.collapsed;
   }
 }

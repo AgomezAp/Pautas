@@ -1,6 +1,5 @@
 import { query, getClient } from '../config/database';
 import { logger } from '../utils/logger.util';
-import { getISOWeekInfo } from '../utils/iso-week.util';
 
 interface DailyEntryData {
   id: number;

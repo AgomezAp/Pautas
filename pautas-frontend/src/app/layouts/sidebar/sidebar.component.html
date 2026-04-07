@@ -1,0 +1,36 @@
+<aside class="sidebar" [class.sidebar--collapsed]="collapsed" role="navigation" aria-label="Menú principal">
+  <!-- Logo -->
+  <div class="sidebar__logo">
+    <span class="sidebar__logo-mark" aria-hidden="true">P</span>
+    @if (!collapsed) {
+      <span class="sidebar__logo-text">Pautas</span>
+    }
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar__nav" aria-label="Navegación">
+    @for (item of navItems; track item.route) {
+      <a
+        class="sidebar__link"
+        [routerLink]="item.route"
+        routerLinkActive="sidebar__link--active"
+        [routerLinkActiveOptions]="{ exact: item.route === '/admin' || item.route === '/pautadores' || item.route === '/conglomerado' || item.route === '/gestion' }"
+        [attr.aria-label]="collapsed ? item.label : null"
+        [attr.title]="collapsed ? item.label : null"
+      >
+        <app-icon class="sidebar__link-icon" [name]="item.icon" size="md"></app-icon>
+        @if (!collapsed) {
+          <span class="sidebar__link-label">{{ item.label }}</span>
+        }
+      </a>
+    }
+  </nav>
+
+  <!-- Footer: collapse toggle -->
+  <div class="sidebar__footer">
+    <button class="sidebar__toggle" (click)="toggleCollapse()"
+            [attr.aria-label]="collapsed ? 'Expandir menú' : 'Colapsar menú'">
+      <app-icon [name]="collapsed ? 'chevron_right' : 'chevron_left'" size="md"></app-icon>
+    </button>
+  </div>
+</aside>

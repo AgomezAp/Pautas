@@ -10,60 +10,8 @@ import { routeAnimation } from '../../config/route-animation';
 @Component({
   selector: 'app-main-layout',
   imports: [CommonModule, RouterOutlet, SidebarComponent, TopbarComponent],
-  template: `
-    <div class="layout" [class.layout--collapsed]="sidebarCollapsed">
-      <app-sidebar
-        [navItems]="navItems"
-        [collapsed]="sidebarCollapsed"
-        (collapsedChange)="sidebarCollapsed = $event"
-      />
-
-      <div class="layout__main">
-        <app-topbar
-          [userName]="userName"
-          [roleLabel]="roleLabel"
-          (menuToggle)="sidebarCollapsed = !sidebarCollapsed"
-          (logoutClick)="logout()"
-        />
-
-        <main class="layout__content">
-          <div [@routeAnimation]="getRouteState(outlet)">
-            <router-outlet #outlet="outlet" />
-          </div>
-        </main>
-      </div>
-    </div>
-  `,
-  styles: [`
-    :host { display: block; height: 100vh; }
-
-    .layout {
-      display: flex;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .layout__main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-      overflow: hidden;
-    }
-
-    .layout__content {
-      flex: 1;
-      overflow-y: auto;
-      padding: var(--content-padding);
-      background: var(--gray-50);
-    }
-
-    @media (max-width: 768px) {
-      .layout__content {
-        padding: var(--space-4);
-      }
-    }
-  `],
+  templateUrl: './main-layout.component.html',
+  styleUrl: './main-layout.component.scss',
   animations: [routeAnimation],
 })
 export class MainLayoutComponent {
@@ -95,13 +43,11 @@ export class MainLayoutComponent {
         return [
           { label: 'Dashboard', route: '/admin', icon: 'dashboard' },
           { label: 'Usuarios', route: '/admin/users', icon: 'people' },
-          { label: 'Campañas', route: '/admin/campaigns', icon: 'campaign' },
           { label: 'Google Ads', route: '/admin/google-ads', icon: 'ads_click' },
           { label: 'Entradas Conglomerado', route: '/admin/conglomerado-entries', icon: 'assignment' },
           { label: 'Alertas', route: '/admin/alertas', icon: 'notifications_active' },
           { label: 'Ranking', route: '/admin/ranking', icon: 'emoji_events' },
           { label: 'Países', route: '/admin/countries', icon: 'public' },
-          { label: 'Auditoría', route: '/admin/audit-log', icon: 'history' },
         ];
       case 'conglomerado':
         return [
@@ -125,6 +71,7 @@ export class MainLayoutComponent {
         return [
           { label: 'Dashboard', route: '/gestion', icon: 'dashboard' },
           { label: 'Rotaciones', route: '/gestion/rotations', icon: 'autorenew' },
+          { label: 'Registrar Conglomerado', route: '/gestion/registrar-conglomerado', icon: 'person_add' },
           { label: 'Cuentas Conglomerado', route: '/gestion/conglomerado-accounts', icon: 'link' },
           { label: 'Imágenes Soporte', route: '/gestion/soporte-images', icon: 'photo_library' },
           { label: 'Alertas', route: '/gestion/alertas', icon: 'notifications_active' },

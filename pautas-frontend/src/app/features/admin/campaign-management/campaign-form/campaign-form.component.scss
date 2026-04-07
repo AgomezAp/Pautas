@@ -1,0 +1,32 @@
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+.dialog-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--gray-900);
+}
+.dialog-close { color: var(--gray-400); }
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  min-width: 480px;
+  gap: var(--space-1);
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.modal-footer {
+  border-top: var(--border-subtle);
+}
+.dialog-btn-cancel { color: var(--gray-500); }
+.dialog-btn-submit {
+  min-width: 120px;
+  font-weight: var(--weight-semibold);
+}

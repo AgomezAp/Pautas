@@ -1,0 +1,116 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use 'sass:color';
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #ffd600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes
+$color-bg-page: #f5f5f5;
+$color-border: #e0e0e0;
+
+// Layout dimensions (deben coincidir con sidebar)
+$sidebar-width: 260px;
+$sidebar-collapsed-width: 72px;
+$topbar-height: 64px;
+$layout-transition: 0.3s ease;
+
+// ============================================
+// LAYOUT CONTAINER
+// ============================================
+.layout {
+  display: flex;
+  min-height: 100vh;
+  font-family: $font-primary;
+  background-color: $color-bg-page;
+
+  // Estado colapsado
+  &--collapsed {
+    .layout__main {
+      margin-left: $sidebar-collapsed-width;
+    }
+  }
+}
+
+// ============================================
+// LAYOUT MAIN (Contenido principal)
+// ============================================
+.layout__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: $sidebar-width;
+  min-height: 100vh;
+  transition: margin-left $layout-transition;
+}
+
+// ============================================
+// LAYOUT CONTENT (Área de contenido)
+// ============================================
+.layout__content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+
+  // Scrollbar personalizado
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $color-border;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: color.adjust($color-border, $lightness: -10%);
+    }
+  }
+
+  // Contenedor de animación
+  > div {
+    min-height: 100%;
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media (max-width: 1024px) {
+  .layout__content {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    // En móvil, sidebar está oculto por defecto
+    .layout__main {
+      margin-left: 0;
+    }
+
+    &--collapsed {
+      .layout__main {
+        margin-left: 0;
+      }
+    }
+  }
+
+  .layout__content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .layout__content {
+    padding: 0.75rem;
+  }
+}

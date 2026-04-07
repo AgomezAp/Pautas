@@ -5,25 +5,8 @@ import { CommonModule } from '@angular/common';
   selector: 'app-sparkline',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <svg [attr.width]="width" [attr.height]="height" [attr.viewBox]="'0 0 ' + width + ' ' + height"
-         class="sparkline" preserveAspectRatio="none">
-      @if (areaPath) {
-        <path [attr.d]="areaPath" [attr.fill]="color + '18'" />
-      }
-      @if (linePath) {
-        <path [attr.d]="linePath" fill="none" [attr.stroke]="color" stroke-width="1.5"
-              stroke-linecap="round" stroke-linejoin="round" />
-      }
-      @if (lastPoint) {
-        <circle [attr.cx]="lastPoint.x" [attr.cy]="lastPoint.y" r="2.5" [attr.fill]="color" />
-      }
-    </svg>
-  `,
-  styles: [`
-    :host { display: inline-flex; align-items: center; }
-    .sparkline { display: block; }
-  `]
+  templateUrl: './sparkline.component.html',
+  styleUrl: './sparkline.component.scss',
 })
 export class SparklineComponent implements OnChanges {
   @Input() data: number[] = [];

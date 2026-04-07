@@ -1,0 +1,152 @@
+<div class="page-container">
+  <h2 class="page-title">Registro de Maestros</h2>
+
+  <div class="main-grid">
+    <!-- Formulario -->
+    <div class="card form-card">
+      <div class="card-body">
+        <h3 class="form-card__title">
+          <app-icon name="person_add" size="md"></app-icon> Nuevo Conglomerado
+        </h3>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="mb-3">
+            <label class="form-label">Nombre completo</label>
+            <input class="form-control" [class.is-invalid]="form.get('full_name')?.invalid && form.get('full_name')?.touched"
+                   formControlName="full_name" placeholder="Ej: Juan Perez">
+            @if (form.get('full_name')?.hasError('required') && form.get('full_name')?.touched) {
+              <div class="invalid-feedback d-block">El nombre es requerido</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input class="form-control" [class.is-invalid]="form.get('username')?.invalid && form.get('username')?.touched"
+                   formControlName="username" placeholder="Ej: juan.perez">
+            @if (form.get('username')?.hasError('required') && form.get('username')?.touched) {
+              <div class="invalid-feedback d-block">El username es requerido</div>
+            }
+            @if (form.get('username')?.hasError('minlength')) {
+              <div class="invalid-feedback d-block">Minimo 3 caracteres</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email (opcional)</label>
+            <input class="form-control" [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched"
+                   formControlName="email" type="email" placeholder="Ej: juan@correo.com">
+            @if (form.get('email')?.hasError('email')) {
+              <div class="invalid-feedback d-block">Email invalido</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Contrasena</label>
+            <input class="form-control" [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
+                   formControlName="password" type="password" placeholder="Minimo 8 caracteres">
+            @if (form.get('password')?.hasError('minlength')) {
+              <div class="invalid-feedback d-block">Minimo 8 caracteres</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Pais</label>
+            <select class="form-select" [class.is-invalid]="form.get('country_id')?.invalid && form.get('country_id')?.touched"
+                    formControlName="country_id" (change)="onCountryChange()">
+              <option [ngValue]="null" disabled>Seleccione un pais</option>
+              @for (country of countries; track country.id) {
+                <option [ngValue]="country.id">{{ country.name }}</option>
+              }
+            </select>
+            @if (form.get('country_id')?.hasError('required') && form.get('country_id')?.touched) {
+              <div class="invalid-feedback d-block">El pais es requerido</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Campana (opcional)</label>
+            <select class="form-select" formControlName="campaign_id">
+              <option [ngValue]="null">Sin campana</option>
+              @for (campaign of filteredCampaigns; track campaign.id) {
+                <option [ngValue]="campaign.id">{{ campaign.name }}</option>
+              }
+            </select>
+          </div>
+
+          <button class="btn btn-primary submit-btn" type="submit"
+                  [disabled]="form.invalid || submitting">
+            @if (submitting) {
+              <div class="spinner-border spinner-border-sm" role="status"></div>
+            } @else {
+              <app-icon name="person_add" size="sm"></app-icon>
+            }
+            {{ submitting ? 'Registrando...' : 'Registrar Conglomerado' }}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Lista de conglomerados existentes -->
+    <div class="card list-card">
+      <div class="card-body">
+        <div class="list-card__header">
+          <h3>Conglomerados Registrados</h3>
+          <div class="country-filter">
+            <label class="form-label">Filtrar pais</label>
+            <select class="form-select" [(ngModel)]="filterCountryId" (ngModelChange)="loadUsers()">
+              <option [ngValue]="undefined">Todos</option>
+              @for (country of countries; track country.id) {
+                <option [ngValue]="country.id">{{ country.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        @if (loadingUsers) {
+          <div class="loading-container">
+            <div class="spinner-border" role="status"></div>
+          </div>
+        } @else {
+          <table class="table table-hover users-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Pais</th>
+                <th>Campana</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of users; track $index) {
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <span class="user-cell__name">{{ row.full_name }}</span>
+                      <span class="user-cell__username">{{ row.username }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="country-chip">{{ row.country_code || row.country_name }}</span>
+                  </td>
+                  <td>{{ row.campaign_name || '&#8212;' }}</td>
+                  <td>
+                    <span class="status-chip" [class.status-chip--active]="row.is_active" [class.status-chip--inactive]="!row.is_active">
+                      {{ row.is_active ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          @if (users.length === 0) {
+            <div class="empty-state">
+              <app-icon name="people_outline" size="lg"></app-icon>
+              <p>No hay conglomerados registrados.</p>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>

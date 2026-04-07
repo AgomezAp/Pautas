@@ -1,0 +1,91 @@
+<div class="page-header">
+  <h2>Entradas del Conglomerado</h2>
+  <p class="subtitle">Vista administrativa de todas las entradas diarias del conglomerado</p>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-field">
+    <label class="form-label">Pa&iacute;s</label>
+    <select class="form-select" [(ngModel)]="countryId" (change)="applyFilters()">
+      <option [ngValue]="null">Todos</option>
+      @for (country of countries; track country.id) {
+        <option [ngValue]="country.id">{{ country.name }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Desde</label>
+    <input type="date" class="form-control" [(ngModel)]="dateFrom" (change)="applyFilters()">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Hasta</label>
+    <input type="date" class="form-control" [(ngModel)]="dateTo" (change)="applyFilters()">
+  </div>
+
+  <div class="filter-field search-field">
+    <label class="form-label">Buscar por nombre</label>
+    <div class="input-group">
+      <input class="form-control" [(ngModel)]="search" (keyup.enter)="applyFilters()" placeholder="Nombre o usuario">
+      <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+    </div>
+  </div>
+
+  <button class="btn btn-outline-secondary clear-btn" (click)="clearFilters()">
+    <app-icon name="clear" size="sm"></app-icon>
+    Limpiar
+  </button>
+</div>
+
+<div class="table-container">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>Pa&iacute;s</th>
+          <th>Campa&ntilde;a</th>
+          <th>Clientes</th>
+          <th>Clientes Efectivos</th>
+          <th>Menores</th>
+          <th>Google Ads ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of entries; track row.id) {
+          <tr>
+            <td>{{ row.entry_date | date:'dd/MM/yyyy' }}</td>
+            <td>
+              <div class="user-cell">
+                <span class="user-name">{{ row.full_name }}</span>
+                <span class="user-username">{{ row.username }}</span>
+              </div>
+            </td>
+            <td>{{ row.country_name }}</td>
+            <td>{{ row.campaign_name || '\u2014' }}</td>
+            <td>{{ row.clientes }}</td>
+            <td>{{ row.clientes_efectivos }}</td>
+            <td>{{ row.menores }}</td>
+            <td>{{ row.google_ads_account_id | googleAdsId }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (entries.length === 0 && !loading) {
+    <div class="empty-state">
+      <app-icon name="inventory" size="xl"></app-icon>
+      <p>No se encontraron entradas</p>
+    </div>
+  }
+
+  <app-pagination
+    [totalItems]="totalItems"
+    [pageSize]="pageSize"
+    [currentPage]="page"
+    (pageChange)="onPageChange($event)">
+  </app-pagination>
+</div>

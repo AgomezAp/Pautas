@@ -1,0 +1,713 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use 'sass:color';
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #ffd600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes de texto
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-text-light: #ffffff;
+
+// Fondos
+$color-bg-white: #ffffff;
+$color-bg-light: #f8f9fa;
+
+// Bordes
+$color-border: #dee2e6;
+$color-border-light: #e9ecef;
+
+// Estados
+$color-danger: #dc3545;
+$color-success: #10b981;
+
+// Espaciado
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+// Border radius
+$radius-sm: 0.375rem;
+$radius-md: 0.5rem;
+$radius-lg: 0.75rem;
+$radius-xl: 1rem;
+
+// Sombras
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+// Transiciones
+$transition-base: all 0.25s ease;
+
+// ============================================
+// KEYFRAMES
+// ============================================
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// ============================================
+// HOST
+// ============================================
+:host {
+  display: block;
+  font-family: $font-primary;
+  color: $color-text-dark;
+  padding: $spacing-xl;
+  background-color: $color-bg-light;
+  min-height: 100vh;
+}
+
+// ============================================
+// PAGE HEADER
+// ============================================
+.page-header {
+  margin-bottom: $spacing-xl;
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__title {
+    font-family: $font-primary;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    margin: 0;
+    position: relative;
+    padding-bottom: $spacing-sm;
+
+    // Subrayado decorativo amarillo (regla obligatoria)
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 60px;
+      height: 3px;
+      background-color: $color-secondary;
+      border-radius: 2px;
+    }
+  }
+
+  &__subtitle {
+    font-family: $font-primary;
+    font-size: 0.95rem;
+    color: $color-text-muted;
+    margin: 0.35rem 0 0 0;
+  }
+}
+
+// ============================================
+// FILTERS BAR
+// ============================================
+.filters-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-xl;
+  background-color: $color-bg-white;
+  padding: $spacing-lg;
+  border-radius: $radius-lg;
+  border-top: 4px solid $color-secondary; // Borde superior amarillo (regla obligatoria)
+  box-shadow: $shadow-sm;
+}
+
+// ============================================
+// FILTER FIELD
+// ============================================
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 170px;
+  flex: 1;
+  max-width: 240px;
+
+  .form-label {
+    font-family: $font-primary;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: $color-text-dark;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0;
+  }
+
+  // Estilos compartidos select e input
+  .form-select,
+  .form-control {
+    font-family: $font-primary;
+    font-size: 0.9rem;
+    color: $color-text-dark;
+    background-color: $color-bg-white;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    padding: 0.5rem 0.75rem;
+    height: 40px;
+    line-height: 1.4;
+    transition: $transition-base;
+
+    // Focus amarillo (regla obligatoria)
+    &:focus {
+      outline: none;
+      border-color: $color-secondary;
+      box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
+    }
+
+    &:hover {
+      border-color: color.adjust($color-border, $lightness: -10%);
+    }
+
+    &::placeholder {
+      color: $color-text-muted;
+      font-weight: 400;
+    }
+  }
+
+  // Select con flecha custom
+  .form-select {
+    cursor: pointer;
+    appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23141414' d='M6 8.825a.7.7 0 0 1-.5-.206L1.705 4.824a.71.71 0 0 1 1.003-1.003L6 7.113l3.293-3.292a.71.71 0 0 1 1.003 1.003L6.5 8.619a.7.7 0 0 1-.5.206Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+  }
+
+  // Input date
+  .form-control[type='date'] {
+    cursor: pointer;
+
+    &::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: $transition-base;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// ============================================
+// TABLE PANEL
+// ============================================
+.table-panel {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  transition: $transition-base;
+
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+}
+
+// ============================================
+// SKELETON LOADER (Table Rows)
+// ============================================
+.skeleton-table-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: 0.85rem $spacing-lg;
+  border-bottom: 1px solid $color-border-light;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  // Simular la fila del thead en la primera skeleton row
+  &:first-child {
+    background-color: color.adjust($color-bg-light, $lightness: -1%);
+  }
+
+  &__cell {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.skeleton {
+  border-radius: $radius-sm;
+  background: linear-gradient(
+    90deg,
+    $color-border-light 25%,
+    color.adjust($color-border-light, $lightness: 3%) 37%,
+    $color-border-light 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+
+  &--text {
+    width: 75%;
+    height: 14px;
+  }
+}
+
+// ============================================
+// TABLE RESPONSIVE
+// ============================================
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: $color-bg-light;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $color-border;
+    border-radius: 3px;
+
+    &:hover {
+      background-color: $color-text-muted;
+    }
+  }
+}
+
+// ============================================
+// TABLE
+// ============================================
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-primary;
+  font-size: 0.88rem;
+
+  &.mb-0 {
+    margin-bottom: 0;
+  }
+
+  // ---------- THEAD — fondo principal oscuro (regla obligatoria) ----------
+  thead {
+    th {
+      font-family: $font-primary;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $color-text-light;
+      background-color: $color-primary;
+      padding: 0.85rem $spacing-md;
+      border: none;
+      white-space: nowrap;
+      position: relative;
+      user-select: none;
+
+      // Separador sutil entre columnas
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 22%;
+        height: 56%;
+        width: 1px;
+        background-color: rgba($color-text-light, 0.12);
+      }
+
+      // ---------- Sortable ----------
+      &.sortable {
+        cursor: pointer;
+        transition: $transition-base;
+        padding-right: $spacing-xl;
+
+        &:hover {
+          background-color: color.adjust($color-primary, $lightness: 8%);
+        }
+
+        // Columna activa de sort
+        &.sort-active {
+          background-color: color.adjust($color-primary, $lightness: 6%);
+
+          // Indicador inferior amarillo
+          &::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: $spacing-md;
+            right: $spacing-md;
+            height: 2px;
+            background-color: $color-secondary;
+            border-radius: 2px 2px 0 0;
+          }
+        }
+      }
+    }
+  }
+
+  // ---------- TBODY ----------
+  tbody {
+    tr {
+      border-bottom: 1px solid $color-border-light;
+      transition: $transition-base;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: rgba($color-secondary, 0.05);
+      }
+    }
+
+    td {
+      font-family: $font-primary;
+      font-size: 0.88rem;
+      color: $color-text-dark;
+      padding: 0.75rem $spacing-md;
+      border: none;
+      vertical-align: middle;
+      white-space: nowrap;
+
+      // Primera columna (Fecha)
+      &:first-child {
+        font-weight: 600;
+      }
+    }
+  }
+
+  // ---------- Hover variant ----------
+  &.table-hover {
+    tbody tr {
+      cursor: default;
+    }
+  }
+}
+
+// ============================================
+// SORT ICON
+// ============================================
+.sort-icon {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+  color: rgba($color-text-light, 0.45);
+  transition: $transition-base;
+
+  .sort-active & {
+    color: $color-secondary; // Icono amarillo cuando sort activo (regla obligatoria)
+  }
+}
+
+// ============================================
+// TABULAR NUMS (columnas numéricas)
+// ============================================
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: center;
+}
+
+// ============================================
+// STATUS BADGES
+// ============================================
+
+// Badge base
+%badge-base {
+  font-family: $font-primary;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 50px;
+  display: inline-block;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+// Activo / Habilitado
+.badge-success,
+.badge--active {
+  @extend %badge-base;
+  background-color: rgba($color-success, 0.12);
+  color: color.adjust($color-success, $lightness: -8%);
+  border: 1px solid rgba($color-success, 0.2);
+}
+
+// Pausado
+.badge-warning,
+.badge--paused {
+  @extend %badge-base;
+  background-color: rgba($color-secondary, 0.15);
+  color: color.adjust($color-secondary, $lightness: -25%);
+  border: 1px solid rgba($color-secondary, 0.25);
+}
+
+// Eliminado / Inactivo
+.badge-danger,
+.badge--removed {
+  @extend %badge-base;
+  background-color: rgba($color-danger, 0.1);
+  color: $color-danger;
+  border: 1px solid rgba($color-danger, 0.18);
+}
+
+// Desconocido / Por defecto
+.badge-secondary,
+.badge--unknown {
+  @extend %badge-base;
+  background-color: $color-bg-light;
+  color: $color-text-muted;
+  border: 1px solid $color-border-light;
+}
+
+// ============================================
+// PAGINACIÓN (app-pagination)
+// ============================================
+app-pagination {
+  display: block;
+  border-top: 1px solid $color-border-light;
+  padding: $spacing-md $spacing-lg;
+  background-color: $color-bg-white;
+
+  ::ng-deep {
+    .pagination-wrapper,
+    .pagination-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $spacing-md;
+      flex-wrap: wrap;
+      font-family: $font-primary;
+    }
+
+    // Texto informativo
+    .pagination-info,
+    .pagination-label {
+      font-family: $font-primary;
+      font-size: 0.82rem;
+      color: $color-text-muted;
+      font-weight: 500;
+    }
+
+    // Botones de página
+    .pagination-btn,
+    .page-btn {
+      font-family: $font-primary;
+      font-size: 0.85rem;
+      font-weight: 500;
+      min-width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: $radius-sm;
+      border: 1px solid $color-border;
+      background-color: $color-bg-white;
+      color: $color-text-dark;
+      cursor: pointer;
+      transition: $transition-base;
+      padding: 0 $spacing-sm;
+
+      &:hover:not(:disabled):not(.active) {
+        background-color: $color-bg-light;
+        border-color: color.adjust($color-border, $lightness: -10%);
+      }
+
+      // Página activa — amarillo (regla obligatoria)
+      &.active,
+      &--active {
+        background-color: $color-secondary;
+        border-color: $color-secondary;
+        color: $color-text-dark;
+        font-weight: 700;
+
+        &:hover {
+          background-color: color.adjust($color-secondary, $lightness: -8%);
+          border-color: color.adjust($color-secondary, $lightness: -8%);
+        }
+      }
+
+      // Deshabilitado
+      &:disabled,
+      &--disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+
+    // Select de pageSize
+    .page-size-select,
+    select {
+      font-family: $font-primary;
+      font-size: 0.85rem;
+      color: $color-text-dark;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      padding: 0.35rem 0.6rem;
+      background-color: $color-bg-white;
+      cursor: pointer;
+      transition: $transition-base;
+
+      &:focus {
+        outline: none;
+        border-color: $color-secondary;
+        box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
+      }
+    }
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+// Tablet
+@media (max-width: 1024px) {
+  :host {
+    padding: $spacing-lg;
+  }
+
+  .filters-bar {
+    gap: $spacing-sm;
+    padding: $spacing-md;
+  }
+
+  .filter-field {
+    min-width: 150px;
+    max-width: unset;
+  }
+}
+
+// Mobile
+@media (max-width: 640px) {
+  :host {
+    padding: $spacing-md;
+  }
+
+  .page-header {
+    &__title {
+      font-size: 1.4rem;
+    }
+
+    &__subtitle {
+      font-size: 0.85rem;
+    }
+  }
+
+  // Filtros stack vertical
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-md;
+    padding: $spacing-md;
+  }
+
+  .filter-field {
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+    flex: unset;
+  }
+
+  // Skeleton compacto
+  .skeleton-table-row {
+    padding: 0.65rem $spacing-md;
+    gap: $spacing-sm;
+
+    &__cell {
+      .skeleton--text {
+        height: 12px;
+      }
+    }
+  }
+
+  // Tabla compacta
+  .table {
+    font-size: 0.82rem;
+
+    thead th {
+      font-size: 0.7rem;
+      padding: 0.7rem $spacing-sm;
+
+      &.sortable {
+        padding-right: $spacing-lg;
+      }
+    }
+
+    tbody td {
+      font-size: 0.82rem;
+      padding: 0.6rem $spacing-sm;
+    }
+  }
+
+  .sort-icon {
+    margin-left: 0.15rem;
+  }
+
+  .tabular-nums {
+    font-size: 0.82rem;
+  }
+
+  // Badges más compactos
+  %badge-base {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  // Paginación compacta
+  app-pagination {
+    padding: $spacing-sm $spacing-md;
+
+    ::ng-deep {
+      .pagination-wrapper,
+      .pagination-container {
+        flex-direction: column;
+        align-items: center;
+        gap: $spacing-sm;
+      }
+
+      .pagination-btn,
+      .page-btn {
+        min-width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+// Extra small
+@media (max-width: 400px) {
+  .table {
+    font-size: 0.78rem;
+    min-width: 700px;
+
+    thead th {
+      font-size: 0.66rem;
+      padding: 0.6rem 0.35rem;
+    }
+
+    tbody td {
+      font-size: 0.78rem;
+      padding: 0.5rem 0.35rem;
+    }
+  }
+}

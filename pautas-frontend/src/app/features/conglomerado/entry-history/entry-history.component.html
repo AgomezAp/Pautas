@@ -1,0 +1,53 @@
+<div class="page-header">
+  <h1>Historial de Entradas</h1>
+  <p class="page-subtitle">Registro de todas tus entradas diarias</p>
+</div>
+
+<div class="table-panel">
+  <table class="table table-hover mb-0">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Clientes</th>
+        <th>Clientes Efectivos</th>
+        <th>Menores</th>
+        <th>Semana</th>
+        <th>Soporte</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of entries; track row.entry_date) {
+        <tr>
+          <td>{{ row.entry_date | date:'dd/MM/yyyy' }}</td>
+          <td>{{ row.clientes }}</td>
+          <td>{{ row.clientes_efectivos }}</td>
+          <td>{{ row.menores }}</td>
+          <td>
+            <span class="week-badge">S{{ row.iso_week }}</span>
+          </td>
+          <td>
+            @if (row.soporte_image_path) {
+              <img [src]="getImageUrl(row.soporte_image_path)"
+                   class="thumb"
+                   (click)="openImage(row.soporte_image_path)"
+                   (error)="onImgError($event)">
+            } @else {
+              <span class="no-image">&mdash;</span>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (fullImageUrl) {
+  <div class="lightbox" (click)="closeImage()">
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <button class="btn btn-icon lightbox-close" (click)="closeImage()">
+        <app-icon name="close" size="md"></app-icon>
+      </button>
+      <img [src]="fullImageUrl" class="lightbox-image">
+    </div>
+  </div>
+}

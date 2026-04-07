@@ -1,0 +1,324 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1>Analisis Google Ads</h1>
+    <p class="page-subtitle">Tendencias de gasto, rendimiento y rankings de cuentas</p>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="filters-bar">
+  <div class="filter-field">
+    <label class="form-label">Desde</label>
+    <input type="date" class="form-control" [(ngModel)]="filterDateFrom">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Hasta</label>
+    <input type="date" class="form-control" [(ngModel)]="filterDateTo">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Pais</label>
+    <select class="form-select" [(ngModel)]="filterCountryId">
+      <option [ngValue]="null">Todos los paises</option>
+      @for (c of countries; track c.id) {
+        <option [ngValue]="c.id">{{ c.name }}</option>
+      }
+    </select>
+  </div>
+
+  <button class="btn btn-primary apply-btn" (click)="applyFilters()">
+    <app-icon name="search" size="sm"></app-icon>
+    Consultar
+  </button>
+
+  <button class="btn btn-outline-secondary clear-btn" (click)="clearFilters()" ngbTooltip="Restablecer filtros">
+    <app-icon name="restart_alt" size="sm"></app-icon>
+    Limpiar
+  </button>
+</div>
+
+<!-- Tabs -->
+<div class="tabs-wrapper">
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 0" (click)="onTabChange(0)" type="button" role="tab">Tendencia de Gasto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 1" (click)="onTabChange(1)" type="button" role="tab">Rendimiento</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 2" (click)="onTabChange(2)" type="button" role="tab">Rankings</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 3" (click)="onTabChange(3)" type="button" role="tab">Distribucion Presupuestal</button>
+    </li>
+  </ul>
+
+  <div class="tab-content-body">
+    <!-- Tab 1: Tendencia de Gasto -->
+    @if (activeTab === 0) {
+      <div class="tab-content">
+        <div class="toggle-row">
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" [class.active]="granularity === 'daily'" (click)="granularity = 'daily'; loadSpendingTrend()">Diario</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="granularity === 'weekly'" (click)="granularity = 'weekly'; loadSpendingTrend()">Semanal</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="granularity === 'monthly'" (click)="granularity = 'monthly'; loadSpendingTrend()">Mensual</button>
+          </div>
+        </div>
+
+        @if (loadingTrend) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando tendencia...</span>
+          </div>
+        }
+
+        @if (lineChartData) {
+          <div class="chart-panel">
+            <div class="chart-container">
+              <canvas baseChart [data]="lineChartData" [options]="lineChartOptions" type="line"></canvas>
+            </div>
+          </div>
+        }
+
+        @if (spendingTrendData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="table_chart" size="md"></app-icon>
+              <span>Detalle por Periodo</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Periodo</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Presupuesto</th>
+                    <th class="text-right">Campanas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of spendingTrendData; track row.period) {
+                    <tr>
+                      <td>{{ formatPeriod(row.period) }}</td>
+                      <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ formatCurrency(row.total_budget) }}</td>
+                      <td class="text-right">{{ row.campaigns_count }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 2: Rendimiento -->
+    @if (activeTab === 1) {
+      <div class="tab-content">
+        @if (loadingPerformance) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando rendimiento...</span>
+          </div>
+        }
+
+        @if (performanceBarData) {
+          <div class="chart-panel">
+            <div class="chart-title">CPC por Cuenta (Top 10)</div>
+            <div class="chart-container">
+              <canvas baseChart [data]="performanceBarData" [options]="performanceBarOptions" type="bar"></canvas>
+            </div>
+          </div>
+        }
+
+        @if (performanceData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="leaderboard" size="md"></app-icon>
+              <span>Metricas de Rendimiento</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cuenta</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">Impresiones</th>
+                    <th class="text-right">Conversiones</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">CTR</th>
+                    <th class="text-right">ROI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of performanceData; track row.customer_account_id) {
+                    <tr>
+                      <td>
+                        <div class="account-cell">
+                          <span class="account-name">{{ row.customer_account_name }}</span>
+                          <span class="account-country">{{ row.country_name }}</span>
+                        </div>
+                      </td>
+                      <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.total_impressions | number }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                      <td class="text-right">{{ row.ctr }}%</td>
+                      <td class="text-right">{{ row.roi }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 3: Rankings -->
+    @if (activeTab === 2) {
+      <div class="tab-content">
+        <div class="toggle-row">
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" [class.active]="rankingSort === 'top'" (click)="rankingSort = 'top'; loadRankings()">Top</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="rankingSort === 'bottom'" (click)="rankingSort = 'bottom'; loadRankings()">Bottom</button>
+          </div>
+
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" [class.active]="rankingMetric === 'spend'" (click)="rankingMetric = 'spend'; loadRankings()">Gasto</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="rankingMetric === 'conversions'" (click)="rankingMetric = 'conversions'; loadRankings()">Conversiones</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="rankingMetric === 'clicks'" (click)="rankingMetric = 'clicks'; loadRankings()">Clicks</button>
+          </div>
+        </div>
+
+        @if (loadingRankings) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando rankings...</span>
+          </div>
+        }
+
+        @if (rankingsBarData) {
+          <div class="chart-panel">
+            <div class="chart-container">
+              <canvas baseChart [data]="rankingsBarData" [options]="rankingsBarOptions" type="bar"></canvas>
+            </div>
+          </div>
+        }
+
+        @if (rankingsData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="emoji_events" size="md"></app-icon>
+              <span>Ranking de Cuentas</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Cuenta</th>
+                    <th class="text-right">Valor Metrica</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">Conversiones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of rankingsData; track row.customer_account_id; let i = $index) {
+                    <tr>
+                      <td>
+                        <span class="rank-badge">{{ i + 1 }}</span>
+                      </td>
+                      <td>
+                        <div class="account-cell">
+                          <span class="account-name">{{ row.customer_account_name }}</span>
+                          <span class="account-country">{{ row.country_name }}</span>
+                        </div>
+                      </td>
+                      <td class="text-right fw-600">{{ formatMetricValue(row.metric_value) }}</td>
+                      <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 4: Distribucion Presupuestal -->
+    @if (activeTab === 3) {
+      <div class="tab-content">
+        @if (loadingBudget) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando distribucion...</span>
+          </div>
+        }
+
+        @if (doughnutChartData) {
+          <div class="chart-panel">
+            <div class="chart-title">Presupuesto por Pais</div>
+            <div class="chart-container chart-container-doughnut">
+              <canvas baseChart [data]="doughnutChartData" [options]="doughnutChartOptions" type="doughnut"></canvas>
+            </div>
+          </div>
+        }
+
+        @if (budgetData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="account_balance" size="md"></app-icon>
+              <span>Distribucion por Pais</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pais</th>
+                    <th class="text-right">Presupuesto Asignado</th>
+                    <th class="text-right">Gastado</th>
+                    <th class="text-right">% Ejecucion</th>
+                    <th class="text-right">Cuentas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of budgetData; track row.country_name; let i = $index) {
+                    <tr>
+                      <td>
+                        <div class="country-name">
+                          <span class="dot" [style.background]="getColor(i)"></span>
+                          {{ row.country_name || 'Sin pais' }}
+                        </div>
+                      </td>
+                      <td class="text-right fw-600">{{ formatCurrency(row.assigned_budget) }}</td>
+                      <td class="text-right">{{ formatCurrency(row.spent) }}</td>
+                      <td class="text-right">
+                        <div class="pct-bar-wrap">
+                          <div class="pct-bar" [style.width.%]="clampPct(row.execution_pct)"
+                               [style.background]="getColor(i)"></div>
+                          <span>{{ row.execution_pct }}%</span>
+                        </div>
+                      </td>
+                      <td class="text-right">{{ row.accounts_count }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

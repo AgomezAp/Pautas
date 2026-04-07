@@ -1,0 +1,61 @@
+<h2>Entradas Diarias</h2>
+
+<div class="filters-row">
+  <div class="filter-field">
+    <label class="form-label">Pa&iacute;s</label>
+    <select class="form-select" [(ngModel)]="filters.country_id" (ngModelChange)="applyFilters()">
+      <option [ngValue]="null">Todos</option>
+      @for (c of countries; track c.id) {
+        <option [ngValue]="c.id">{{ c.name }}</option>
+      }
+    </select>
+  </div>
+  <div class="filter-field">
+    <label class="form-label">Desde</label>
+    <input type="date" class="form-control" [(ngModel)]="filters.date_from" (change)="applyFilters()">
+  </div>
+  <div class="filter-field">
+    <label class="form-label">Hasta</label>
+    <input type="date" class="form-control" [(ngModel)]="filters.date_to" (change)="applyFilters()">
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Usuario</th>
+            <th>Pa&iacute;s</th>
+            <th>Campa&ntilde;a</th>
+            <th>Clientes</th>
+            <th>Efectivos</th>
+            <th>Menores</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of data; track row) {
+            <tr>
+              <td>{{ row.entry_date | date:'dd/MM/yyyy' }}</td>
+              <td>{{ row.user_name }}</td>
+              <td>{{ row.country_name }}</td>
+              <td>{{ row.campaign_name || '&mdash;' }}</td>
+              <td>{{ row.clientes }}</td>
+              <td>{{ row.clientes_efectivos }}</td>
+              <td>{{ row.menores }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-pagination
+      [totalItems]="totalItems"
+      [pageSize]="pageSize"
+      [currentPage]="pageIndex + 1"
+      [pageSizeOptions]="[10, 25, 50]"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+</div>

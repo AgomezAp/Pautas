@@ -1,0 +1,420 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use "sass:color";
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #FFD600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes de texto
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-text-light: #ffffff;
+
+// Fondos
+$color-bg-white: #ffffff;
+$color-bg-light: #f8f9fa;
+
+// Bordes
+$color-border: #dee2e6;
+$color-border-light: #e9ecef;
+
+// Estados
+$color-danger: #dc3545;
+$color-success: #10b981;
+$color-warning: #f59e0b;
+$color-info: #0ea5e9;
+
+// Espaciado
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+// Border radius
+$radius-sm: 0.375rem;
+$radius-md: 0.5rem;
+$radius-lg: 0.75rem;
+$radius-xl: 1rem;
+
+// Sombras
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+$shadow-toast: 0 8px 30px rgba(0, 0, 0, 0.18);
+
+// Transiciones
+$transition-base: all 0.25s ease;
+
+// ============================================
+// KEYFRAMES
+// ============================================
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 120px;
+    margin-bottom: $spacing-sm;
+  }
+  70% {
+    opacity: 0;
+    transform: translateX(110%);
+    max-height: 120px;
+    margin-bottom: $spacing-sm;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(110%);
+    max-height: 0;
+    margin-bottom: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+@keyframes progressShrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+// ============================================
+// HOST
+// ============================================
+:host {
+  display: block;
+  font-family: $font-primary;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10000;
+}
+
+// ============================================
+// TOAST CONTAINER
+// ============================================
+.toast-container {
+  position: fixed;
+  top: $spacing-xl;
+  right: $spacing-xl;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 420px;
+  width: 100%;
+  pointer-events: none;
+}
+
+// ============================================
+// TOAST BASE
+// ============================================
+.toast {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-toast;
+  margin-bottom: $spacing-sm;
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  cursor: default;
+  animation: slideInRight 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+  transition: $transition-base;
+
+  // Borde lateral izquierdo (regla obligatoria para elementos destacados)
+  border-left: 4px solid transparent;
+
+  // Hover sutil
+  &:hover {
+    transform: translateX(-4px);
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.22);
+
+    // Pausar barra de progreso en hover
+    .toast__progress {
+      animation-play-state: paused;
+    }
+  }
+
+  // ======== ESTADO: LEAVING ========
+  &--leaving {
+    animation: slideOutRight 0.45s ease forwards;
+    pointer-events: none;
+  }
+
+  // ======== VARIANTES POR TIPO ========
+
+  // Success
+  &--success {
+    background-color: $color-bg-white;
+    border-left-color: $color-success;
+
+    .toast__icon {
+      color: $color-success;
+      background-color: rgba($color-success, 0.1);
+    }
+
+    .toast__progress {
+      background-color: $color-success;
+    }
+  }
+
+  // Error
+  &--error {
+    background-color: $color-bg-white;
+    border-left-color: $color-danger;
+
+    .toast__icon {
+      color: $color-danger;
+      background-color: rgba($color-danger, 0.1);
+    }
+
+    .toast__progress {
+      background-color: $color-danger;
+    }
+  }
+
+  // Warning
+  &--warning {
+    background-color: $color-bg-white;
+    border-left-color: $color-warning;
+
+    .toast__icon {
+      color: $color-warning;
+      background-color: rgba($color-warning, 0.1);
+    }
+
+    .toast__progress {
+      background-color: $color-warning;
+    }
+  }
+
+  // Info
+  &--info {
+    background-color: $color-bg-white;
+    border-left-color: $color-info;
+
+    .toast__icon {
+      color: $color-info;
+      background-color: rgba($color-info, 0.1);
+    }
+
+    .toast__progress {
+      background-color: $color-info;
+    }
+  }
+
+  // Default / Genérico (usa color secundario de marca)
+  &--default {
+    background-color: $color-primary;
+    border-left-color: $color-secondary;
+
+    .toast__icon {
+      color: $color-secondary;
+      background-color: rgba($color-secondary, 0.15);
+    }
+
+    .toast__message {
+      color: $color-text-light;
+    }
+
+    .toast__close {
+      color: rgba($color-text-light, 0.6);
+
+      &:hover {
+        color: $color-text-light;
+        background-color: rgba($color-text-light, 0.1);
+      }
+    }
+
+    .toast__progress {
+      background-color: $color-secondary;
+    }
+  }
+}
+
+// ============================================
+// TOAST ICON
+// ============================================
+.toast__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: $radius-md;
+  flex-shrink: 0;
+  transition: $transition-base;
+
+  app-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// ============================================
+// TOAST MESSAGE
+// ============================================
+.toast__message {
+  font-family: $font-primary;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: $color-text-dark;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+// ============================================
+// TOAST CLOSE BUTTON
+// ============================================
+.toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: $radius-sm;
+  border: none;
+  background-color: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: $transition-base;
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: $spacing-sm;
+
+  app-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &:hover {
+    background-color: rgba($color-primary, 0.06);
+    color: $color-text-dark;
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// ============================================
+// TOAST PROGRESS BAR
+// ============================================
+.toast__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  border-radius: 0 0 0 $radius-lg;
+  animation: progressShrink linear forwards;
+  transform-origin: left;
+  will-change: width;
+
+  // La duración se aplica inline desde [style.animation-duration.ms]
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+// Tablet
+@media (max-width: 768px) {
+  .toast-container {
+    top: $spacing-lg;
+    right: $spacing-md;
+    left: $spacing-md;
+    max-width: unset;
+  }
+
+  .toast {
+    padding: $spacing-sm $spacing-md;
+
+    &:hover {
+      transform: translateX(-2px);
+    }
+  }
+
+  .toast__icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+  }
+
+  .toast__message {
+    font-size: 0.85rem;
+  }
+
+  .toast__close {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+  }
+}
+
+// Mobile
+@media (max-width: 480px) {
+  .toast-container {
+    top: $spacing-md;
+    right: $spacing-sm;
+    left: $spacing-sm;
+  }
+
+  .toast {
+    padding: $spacing-sm;
+    border-radius: $radius-md;
+    border-left-width: 3px;
+    margin-bottom: 0.35rem;
+  }
+
+  .toast__icon {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: $radius-sm;
+  }
+
+  .toast__message {
+    font-size: 0.82rem;
+  }
+
+  .toast__close {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+  }
+
+  .toast__progress {
+    height: 2px;
+  }
+}

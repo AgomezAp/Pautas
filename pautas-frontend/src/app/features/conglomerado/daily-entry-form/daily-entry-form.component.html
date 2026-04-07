@@ -1,0 +1,91 @@
+<div class="form-container">
+  <div class="form-header">
+    <h1>Entrada Diaria</h1>
+    <p class="form-date">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
+  </div>
+
+  <div class="form-panel">
+    @if (alreadySubmitted) {
+      <div class="success-state">
+        <div class="success-icon-wrap">
+          <app-icon name="check_circle" size="xl"></app-icon>
+        </div>
+        <h3>Entrada enviada</h3>
+        <p>Ya registraste tu entrada de hoy. Vuelve ma&ntilde;ana.</p>
+      </div>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="fields-grid">
+          <div class="mb-3">
+            <label class="form-label">Clientes</label>
+            <div class="input-group">
+              <span class="input-group-text"><app-icon name="people" size="sm"></app-icon></span>
+              <input type="number" class="form-control" formControlName="clientes" min="0">
+            </div>
+            @if (form.get('clientes')?.hasError('required') && form.get('clientes')?.touched) {
+              <div class="invalid-feedback d-block">Campo requerido</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Clientes Efectivos</label>
+            <div class="input-group">
+              <span class="input-group-text"><app-icon name="verified" size="sm"></app-icon></span>
+              <input type="number" class="form-control" formControlName="clientes_efectivos" min="0">
+            </div>
+            @if (form.get('clientes_efectivos')?.hasError('required') && form.get('clientes_efectivos')?.touched) {
+              <div class="invalid-feedback d-block">Campo requerido</div>
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Menores</label>
+            <div class="input-group">
+              <span class="input-group-text"><app-icon name="child_care" size="sm"></app-icon></span>
+              <input type="number" class="form-control" formControlName="menores" min="0">
+            </div>
+            @if (form.get('menores')?.hasError('required') && form.get('menores')?.touched) {
+              <div class="invalid-feedback d-block">Campo requerido</div>
+            }
+          </div>
+        </div>
+
+        <div class="upload-area" (click)="fileInput.click()"
+             [class.has-file]="selectedFiles.length > 0">
+          <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" #fileInput hidden>
+          @if (imagePreviews.length > 0) {
+            <div class="preview-grid" (click)="$event.stopPropagation()">
+              @for (preview of imagePreviews; track $index) {
+                <div class="preview-item">
+                  <img [src]="preview" alt="Preview" class="upload-preview-thumb">
+                  <button type="button" class="btn-remove-preview" (click)="removeFile($index)">
+                    <app-icon name="close" size="sm"></app-icon>
+                  </button>
+                </div>
+              }
+              @if (selectedFiles.length < 10) {
+                <div class="preview-add" (click)="fileInput.click()">
+                  <app-icon name="add" size="md"></app-icon>
+                </div>
+              }
+            </div>
+          } @else {
+            <app-icon name="cloud_upload" size="xl" class="upload-icon"></app-icon>
+            <span class="upload-text">Subir imagenes de soporte</span>
+            <span class="upload-hint">JPEG, PNG, WebP, GIF - max 5MB cada una - hasta 10 imagenes</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn-primary submit-btn"
+                [disabled]="form.invalid || selectedFiles.length === 0 || submitting">
+          @if (submitting) {
+            <div class="spinner-border spinner-border-sm btn-spinner" role="status"></div>
+            <span>Enviando...</span>
+          } @else {
+            <span>Enviar Entrada</span>
+          }
+        </button>
+      </form>
+    }
+  </div>
+</div>

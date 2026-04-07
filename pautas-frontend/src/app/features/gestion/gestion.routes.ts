@@ -14,6 +14,7 @@ export const GESTION_ROUTES: Routes = [
       { path: 'conglomerado-accounts', component: ConglomeradoAccountsComponent },
       { path: 'soporte-images', loadComponent: () => import('./soporte-images/soporte-images.component').then(m => m.SoporteImagesComponent) },
       { path: 'alertas', loadComponent: () => import('../alerts/alert-dashboard/alert-dashboard.component').then(m => m.AlertDashboardComponent) },
+      { path: 'registrar-conglomerado', loadComponent: () => import('./create-conglomerado/create-conglomerado.component').then(m => m.CreateConglomeradoComponent) },
     ],
   },
 ];

@@ -1,0 +1,631 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use "sass:color";
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #FFD600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes de texto
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-text-light: #ffffff;
+
+// Fondos
+$color-bg-white: #ffffff;
+$color-bg-light: #f8f9fa;
+
+// Bordes
+$color-border: #dee2e6;
+$color-border-light: #e9ecef;
+
+// Estados
+$color-danger: #dc3545;
+$color-success: #10b981;
+
+// Espaciado
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+// Border radius
+$radius-sm: 0.375rem;
+$radius-md: 0.5rem;
+$radius-lg: 0.75rem;
+$radius-xl: 1rem;
+
+// Sombras
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+// Transiciones
+$transition-base: all 0.25s ease;
+
+// ============================================
+// HOST
+// ============================================
+:host {
+  display: block;
+  font-family: $font-primary;
+  color: $color-text-dark;
+  padding: $spacing-xl;
+  background-color: $color-bg-light;
+  min-height: 100vh;
+}
+
+// ============================================
+// PAGE HEADER
+// ============================================
+.page-header {
+  margin-bottom: $spacing-xl;
+
+  h2 {
+    font-family: $font-primary;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    margin: 0;
+    position: relative;
+    padding-bottom: $spacing-sm;
+
+    // Subrayado decorativo amarillo (regla obligatoria)
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 60px;
+      height: 3px;
+      background-color: $color-secondary;
+      border-radius: 2px;
+    }
+  }
+}
+
+// ============================================
+// KPI GRID
+// ============================================
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: $spacing-lg;
+  margin-bottom: $spacing-xl;
+}
+
+// ============================================
+// KPI CARD
+// ============================================
+.kpi-card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+  border-top: 4px solid $color-secondary; // Borde superior amarillo (regla obligatoria)
+  transition: $transition-base;
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-2px);
+  }
+
+  .card-body {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+
+    app-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      border-radius: $radius-md;
+      background-color: rgba($color-secondary, 0.12);
+      color: $color-text-dark;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.kpi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.kpi-value {
+  font-family: $font-primary;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: $color-text-dark;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+  font-family: $font-primary;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ============================================
+// REPORT CARD
+// ============================================
+.report-card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  transition: $transition-base;
+
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+
+  > .card-body {
+    padding: 0;
+  }
+}
+
+// ============================================
+// NAV TABS
+// ============================================
+.nav-tabs {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0 $spacing-lg;
+  padding-top: $spacing-md;
+  border-bottom: 2px solid $color-border-light;
+  background-color: $color-bg-white;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  // Ocultar scrollbar
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.nav-item {
+  flex-shrink: 0;
+}
+
+.nav-link {
+  font-family: $font-primary;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: $color-text-muted;
+  background: none;
+  border: none;
+  padding: $spacing-sm $spacing-md $spacing-md;
+  cursor: pointer;
+  position: relative;
+  transition: $transition-base;
+  white-space: nowrap;
+
+  &:hover:not(.active) {
+    color: $color-text-dark;
+    background-color: $color-bg-light;
+    border-radius: $radius-sm $radius-sm 0 0;
+  }
+
+  // Tab activo — borde inferior amarillo (regla obligatoria)
+  &.active {
+    color: $color-text-dark;
+    font-weight: 700;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background-color: $color-secondary;
+      border-radius: 2px 2px 0 0;
+    }
+  }
+}
+
+// ============================================
+// TAB CONTENT
+// ============================================
+.tab-content {
+  &.mt-3 {
+    margin-top: 0; // Controlamos el espaciado manualmente
+  }
+}
+
+.tab-body {
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+// ============================================
+// FILTER ROW (dentro de tabs)
+// ============================================
+.filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  padding: $spacing-md $spacing-lg;
+  background-color: $color-bg-light;
+  border-radius: $radius-md;
+  border-left: 4px solid $color-secondary; // Borde lateral amarillo (regla obligatoria)
+}
+
+// ============================================
+// FILTER FIELD
+// ============================================
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 190px;
+
+  .form-label {
+    font-family: $font-primary;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: $color-text-dark;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0;
+  }
+
+  .form-select {
+    font-family: $font-primary;
+    font-size: 0.9rem;
+    color: $color-text-dark;
+    background-color: $color-bg-white;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    height: 40px;
+    line-height: 1.4;
+    transition: $transition-base;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23141414' d='M6 8.825a.7.7 0 0 1-.5-.206L1.705 4.824a.71.71 0 0 1 1.003-1.003L6 7.113l3.293-3.292a.71.71 0 0 1 1.003 1.003L6.5 8.619a.7.7 0 0 1-.5.206Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+
+    // Focus amarillo (regla obligatoria)
+    &:focus {
+      outline: none;
+      border-color: $color-secondary;
+      box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
+    }
+
+    &:hover {
+      border-color: color.adjust($color-border, $lightness: -10%);
+    }
+  }
+}
+
+// ============================================
+// TABLE (compartida para todos los tabs)
+// ============================================
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-primary;
+  font-size: 0.88rem;
+
+  &.full-width {
+    width: 100%;
+  }
+
+  // ---------- THEAD — fondo principal oscuro (regla obligatoria) ----------
+  thead {
+    th {
+      font-family: $font-primary;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $color-text-light;
+      background-color: $color-primary;
+      padding: 0.85rem $spacing-md;
+      border: none;
+      white-space: nowrap;
+      position: relative;
+
+      // Separador sutil entre columnas
+      &:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 22%;
+        height: 56%;
+        width: 1px;
+        background-color: rgba($color-text-light, 0.12);
+      }
+
+      // Primera columna alineada a la izquierda, el resto centrado/derecha
+      &:first-child {
+        text-align: left;
+      }
+
+      &:not(:first-child) {
+        text-align: right;
+      }
+    }
+  }
+
+  // ---------- TBODY ----------
+  tbody {
+    tr {
+      border-bottom: 1px solid $color-border-light;
+      transition: $transition-base;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: rgba($color-secondary, 0.05);
+      }
+    }
+
+    td {
+      font-family: $font-primary;
+      font-size: 0.88rem;
+      color: $color-text-dark;
+      padding: 0.75rem $spacing-md;
+      border: none;
+      vertical-align: middle;
+      white-space: nowrap;
+
+      // Primera columna destacada
+      &:first-child {
+        font-weight: 600;
+        text-align: left;
+      }
+
+      // Columnas numéricas (todas menos la primera)
+      &:not(:first-child) {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+      }
+
+      // Última columna (porcentajes/tasas) con badge implícito
+      &:last-child {
+        font-weight: 700;
+      }
+    }
+  }
+
+  // ---------- Hover variant ----------
+  &.table-hover {
+    tbody tr {
+      cursor: default;
+    }
+  }
+}
+
+// Hacer tabla responsive dentro de tab-body
+.tab-body {
+  .table {
+    overflow-x: auto;
+    display: block;
+    -webkit-overflow-scrolling: touch;
+
+    thead,
+    tbody {
+      display: table;
+      width: 100%;
+    }
+
+    // Scrollbar personalizado
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: $color-bg-light;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: $color-border;
+      border-radius: 3px;
+
+      &:hover {
+        background-color: $color-text-muted;
+      }
+    }
+  }
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl * 2;
+  text-align: center;
+  gap: $spacing-sm;
+
+  app-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-border;
+    margin-bottom: $spacing-sm;
+  }
+
+  p {
+    font-family: $font-primary;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: $color-text-muted;
+    margin: 0;
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+// Tablet
+@media (max-width: 1024px) {
+  :host {
+    padding: $spacing-lg;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: $spacing-md;
+  }
+
+  .kpi-card .card-body {
+    padding: $spacing-md;
+  }
+
+  .tab-body {
+    padding: $spacing-md;
+  }
+
+  .filter-row {
+    padding: $spacing-sm $spacing-md;
+  }
+}
+
+// Mobile
+@media (max-width: 640px) {
+  :host {
+    padding: $spacing-md;
+  }
+
+  .page-header {
+    h2 {
+      font-size: 1.35rem;
+    }
+  }
+
+  // KPIs 2 columnas
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: $spacing-sm;
+  }
+
+  .kpi-card {
+    .card-body {
+      padding: $spacing-md;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $spacing-sm;
+
+      app-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+      }
+    }
+  }
+
+  .kpi-value {
+    font-size: 1.25rem;
+  }
+
+  .kpi-label {
+    font-size: 0.72rem;
+  }
+
+  // Tabs scroll horizontal
+  .nav-tabs {
+    padding: $spacing-sm $spacing-md 0;
+  }
+
+  .nav-link {
+    font-size: 0.8rem;
+    padding: $spacing-sm $spacing-sm $spacing-md;
+  }
+
+  .tab-body {
+    padding: $spacing-md $spacing-sm;
+    gap: $spacing-md;
+  }
+
+  // Filter row stack
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: $spacing-sm $spacing-md;
+  }
+
+  .filter-field {
+    min-width: unset;
+    width: 100%;
+  }
+
+  // Tabla compacta
+  .table {
+    font-size: 0.82rem;
+    min-width: 600px;
+
+    thead th {
+      font-size: 0.7rem;
+      padding: 0.7rem $spacing-sm;
+    }
+
+    tbody td {
+      font-size: 0.82rem;
+      padding: 0.6rem $spacing-sm;
+    }
+  }
+
+  // Empty state
+  .empty-state {
+    padding: $spacing-xl;
+
+    p {
+      font-size: 0.88rem;
+    }
+  }
+}
+
+// Extra small
+@media (max-width: 400px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-card .card-body {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .nav-link {
+    font-size: 0.74rem;
+    padding: $spacing-sm 0.4rem $spacing-sm;
+  }
+}

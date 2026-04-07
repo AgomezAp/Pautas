@@ -1,0 +1,139 @@
+<div class="page-header">
+  <h2>Imagenes de Soporte</h2>
+  <p class="subtitle">Imagenes subidas por los usuarios del conglomerado</p>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-field">
+    <label class="form-label">Pais</label>
+    <select class="form-select" [(ngModel)]="countryId" (ngModelChange)="applyFilters()">
+      <option [ngValue]="null">Todos</option>
+      @for (country of countries; track country.id) {
+        <option [ngValue]="country.id">{{ country.name }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Desde</label>
+    <input type="date" class="form-control" [(ngModel)]="dateFrom" (change)="applyFilters()">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Hasta</label>
+    <input type="date" class="form-control" [(ngModel)]="dateTo" (change)="applyFilters()">
+  </div>
+
+  <div class="filter-field search-field">
+    <label class="form-label">Buscar por nombre</label>
+    <div class="input-group">
+      <input class="form-control" [(ngModel)]="search" (keyup.enter)="applyFilters()" placeholder="Nombre o usuario">
+      <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+    </div>
+  </div>
+
+  <button class="btn btn-outline-secondary clear-btn" (click)="clearFilters()">
+    <app-icon name="clear" size="sm"></app-icon> Limpiar
+  </button>
+</div>
+
+@if (loading) {
+  <div class="loading-state">
+    <div class="spinner-border" role="status"></div>
+    <p>Cargando imagenes...</p>
+  </div>
+}
+
+@if (!loading && users.length === 0) {
+  <div class="empty-state">
+    <app-icon name="photo_library" size="lg"></app-icon>
+    <p>No se encontraron imagenes de soporte</p>
+  </div>
+}
+
+@if (!loading) {
+  <div class="folders-container">
+    @for (user of users; track user.user_id) {
+      <div class="user-folder card">
+        <div class="user-folder-header" (click)="toggleUser(user)">
+          <div class="user-info">
+            <app-icon [name]="user.collapsed ? 'folder' : 'folder_open'" size="md"></app-icon>
+            <div class="user-details">
+              <span class="user-name">{{ user.full_name }}</span>
+              <span class="user-meta">{{ user.username }} &middot; {{ user.country_name }}</span>
+            </div>
+          </div>
+          <div class="user-badge">
+            <span class="badge bg-primary">{{ user.total_images }} imagen{{ user.total_images !== 1 ? 'es' : '' }}</span>
+            <app-icon [name]="user.collapsed ? 'expand_more' : 'expand_less'" size="sm"></app-icon>
+          </div>
+        </div>
+
+        <div [ngbCollapse]="user.collapsed">
+          <div class="user-folder-body">
+            @for (month of user.months; track month.key) {
+              <div class="month-section">
+                <h6 class="month-label">
+                  <app-icon name="date_range" size="sm"></app-icon>
+                  {{ month.label }}
+                </h6>
+
+                @for (day of month.days; track day.entry_id) {
+                  <div class="day-section">
+                    <div class="day-header">
+                      <span class="day-label">{{ formatDay(day.entry_date) }}</span>
+                      <span class="day-stats">
+                        Clientes: {{ day.clientes }} &middot;
+                        Efectivos: {{ day.clientes_efectivos }} &middot;
+                        Menores: {{ day.menores }}
+                      </span>
+                    </div>
+                    <div class="image-grid">
+                      @for (img of day.images; track img.id) {
+                        <div class="image-thumb" (click)="openLightbox(day.images, $index)">
+                          <img [src]="getThumbUrl(img)"
+                               [alt]="img.original_name || 'Soporte'"
+                               (error)="onImageError($event)">
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (lightboxUrl) {
+  <div class="lightbox" (click)="closeLightbox()">
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <button class="btn-lightbox close-btn" (click)="closeLightbox()">
+        <app-icon name="close" size="lg"></app-icon>
+      </button>
+
+      @if (lightboxImages.length > 1 && lightboxIndex > 0) {
+        <button class="btn-lightbox prev-btn" (click)="prevImage()">
+          <app-icon name="chevron_left" size="lg"></app-icon>
+        </button>
+      }
+
+      <img [src]="lightboxUrl" class="lightbox-image" (error)="onImageError($event)">
+
+      @if (lightboxImages.length > 1 && lightboxIndex < lightboxImages.length - 1) {
+        <button class="btn-lightbox next-btn" (click)="nextImage()">
+          <app-icon name="chevron_right" size="lg"></app-icon>
+        </button>
+      }
+
+      @if (lightboxImages.length > 1) {
+        <div class="lightbox-counter">
+          {{ lightboxIndex + 1 }} / {{ lightboxImages.length }}
+        </div>
+      }
+    </div>
+  </div>
+}

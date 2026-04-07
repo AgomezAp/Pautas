@@ -1,0 +1,59 @@
+<div class="dialog-header">
+  <h2>{{ isEdit ? 'Editar' : 'Crear' }} Campa&ntilde;a</h2>
+  <button class="btn btn-icon dialog-close" (click)="activeModal.dismiss()" aria-label="Cerrar">
+    <app-icon name="close" size="md"></app-icon>
+  </button>
+</div>
+<div class="modal-body">
+  <form [formGroup]="form" class="form-grid">
+    <div class="mb-3">
+      <label class="form-label">Nombre de la campa&ntilde;a</label>
+      <div class="input-group">
+        <span class="input-group-text"><app-icon name="campaign" size="sm"></app-icon></span>
+        <input class="form-control" formControlName="name">
+      </div>
+      @if (form.get('name')?.hasError('required') && form.get('name')?.touched) {
+        <div class="invalid-feedback d-block">El nombre es requerido</div>
+      }
+    </div>
+
+    <div class="form-row">
+      <div class="mb-3">
+        <label class="form-label">ID Google Ads</label>
+        <div class="input-group">
+          <span class="input-group-text"><app-icon name="tag" size="sm"></app-icon></span>
+          <input class="form-control" formControlName="google_ads_campaign_id">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Pa&iacute;s</label>
+        <div class="input-group">
+          <span class="input-group-text"><app-icon name="public" size="sm"></app-icon></span>
+          <select class="form-select" formControlName="country_id">
+            @for (country of countries; track country.id) {
+              <option [ngValue]="country.id">{{ country.name }}</option>
+            }
+          </select>
+        </div>
+        @if (form.get('country_id')?.hasError('required') && form.get('country_id')?.touched) {
+          <div class="invalid-feedback d-block">El pa&iacute;s es requerido</div>
+        }
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">URL de la campa&ntilde;a</label>
+      <div class="input-group">
+        <span class="input-group-text"><app-icon name="link" size="sm"></app-icon></span>
+        <input class="form-control" formControlName="campaign_url">
+      </div>
+    </div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-outline-secondary dialog-btn-cancel" (click)="activeModal.dismiss()">Cancelar</button>
+  <button class="btn btn-primary dialog-btn-submit" (click)="onSubmit()" [disabled]="form.invalid || saving">
+    {{ saving ? 'Guardando...' : (isEdit ? 'Actualizar' : 'Crear') }}
+  </button>
+</div>

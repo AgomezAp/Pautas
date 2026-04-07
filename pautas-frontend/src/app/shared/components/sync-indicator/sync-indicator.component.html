@@ -1,0 +1,4 @@
+<span class="sync-indicator" [class.sync-indicator--active]="syncing">
+  <span class="sync-indicator__dot" [class.sync-indicator__dot--active]="syncing"></span>
+  <span class="sync-indicator__label">{{ syncing ? 'Sincronizando...' : label }}</span>
+</span>

@@ -1,11 +1,11 @@
 // =============================================================
 // RESET & BASE STYLES
+// Minimal reset — does NOT strip margin/padding globally
+// (Bootstrap needs default spacing on its components)
 // =============================================================
 
 *, *::before, *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 html {
@@ -24,6 +24,7 @@ body {
   color: var(--gray-900);
   background-color: var(--gray-50);
   height: 100%;
+  margin: 0;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -55,10 +56,10 @@ input, textarea, select {
 // Selection
 ::selection {
   background-color: var(--brand-accent);
-  color: var(--brand-primary);
+  color: white;
 }
 
-// Scrollbar (Vercel-style, subtle)
+// Scrollbar (subtle)
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

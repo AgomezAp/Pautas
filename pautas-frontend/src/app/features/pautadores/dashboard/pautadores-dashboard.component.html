@@ -1,0 +1,81 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-header__text">
+    <h1 class="page-header__title">Dashboard</h1>
+    <p class="page-header__subtitle">Resumen de actividad de pautadores</p>
+  </div>
+  <div class="page-header__actions">
+    <div class="filter-field">
+      <label class="form-label">Pa&iacute;s</label>
+      <select class="form-select" [(ngModel)]="selectedCountry" (ngModelChange)="loadData()">
+        <option [ngValue]="null">Todos</option>
+        @for (c of countries; track c.id) {
+          <option [ngValue]="c.id">{{ c.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  @if (kpis.length === 0) {
+    @for (i of [1,2,3,4,5,6]; track i) {
+      <div class="kpi">
+        <div class="skeleton skeleton--icon"></div>
+        <div class="kpi__body">
+          <div class="skeleton skeleton--text-sm" style="margin-bottom:6px"></div>
+          <div class="skeleton skeleton--kpi-value"></div>
+        </div>
+      </div>
+    }
+  } @else {
+    @for (kpi of kpis; track kpi.label) {
+      <div class="kpi">
+        <div class="kpi__icon-wrap" [style.background]="kpi.bgColor">
+          <app-icon [name]="kpi.icon" size="md"></app-icon>
+        </div>
+        <div class="kpi__body">
+          <span class="kpi__label">{{ kpi.label }}</span>
+          <span class="kpi__value">{{ kpi.value }}</span>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+<!-- Charts -->
+<div class="charts-grid">
+  <div class="chart-panel chart-panel--wide">
+    <h3 class="chart-panel__title">Clientes por D&iacute;a</h3>
+    <div class="chart-panel__canvas">
+      @if (barChartData) {
+        <canvas baseChart [data]="barChartData" [options]="barChartOptions" type="bar"></canvas>
+      } @else {
+        <div class="skeleton skeleton--chart"></div>
+      }
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <h3 class="chart-panel__title">Tendencia Semanal</h3>
+    <div class="chart-panel__canvas">
+      @if (lineChartData) {
+        <canvas baseChart [data]="lineChartData" [options]="lineChartOptions" type="line"></canvas>
+      } @else {
+        <div class="skeleton skeleton--chart"></div>
+      }
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <h3 class="chart-panel__title">Distribuci&oacute;n por Pa&iacute;s</h3>
+    <div class="chart-panel__canvas chart-panel__canvas--donut">
+      @if (pieChartData) {
+        <canvas baseChart [data]="pieChartData" [options]="pieChartOptions" type="doughnut"></canvas>
+      } @else {
+        <div class="skeleton skeleton--chart"></div>
+      }
+    </div>
+  </div>
+</div>

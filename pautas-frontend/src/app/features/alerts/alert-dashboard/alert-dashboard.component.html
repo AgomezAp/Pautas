@@ -1,0 +1,225 @@
+<div class="alerts-dashboard">
+  <h2 class="page-title">Centro de Alertas</h2>
+
+  <!-- Summary Cards -->
+  <div class="summary-cards">
+    <div class="card summary-card summary-card--critical" (click)="filterBySeverity('CRITICAL')">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="summary-card__icon">
+          <app-icon name="error" size="lg"></app-icon>
+        </div>
+        <div class="summary-card__content">
+          <span class="summary-card__value">{{ summary?.critical?.active || 0 }}</span>
+          <span class="summary-card__label">Criticas Activas</span>
+        </div>
+        <span class="summary-card__total">{{ summary?.critical?.total || 0 }} total</span>
+      </div>
+    </div>
+
+    <div class="card summary-card summary-card--warning" (click)="filterBySeverity('WARNING')">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="summary-card__icon">
+          <app-icon name="warning" size="lg"></app-icon>
+        </div>
+        <div class="summary-card__content">
+          <span class="summary-card__value">{{ summary?.warning?.active || 0 }}</span>
+          <span class="summary-card__label">Advertencias Activas</span>
+        </div>
+        <span class="summary-card__total">{{ summary?.warning?.total || 0 }} total</span>
+      </div>
+    </div>
+
+    <div class="card summary-card summary-card--info" (click)="filterBySeverity('INFO')">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="summary-card__icon">
+          <app-icon name="info" size="lg"></app-icon>
+        </div>
+        <div class="summary-card__content">
+          <span class="summary-card__value">{{ summary?.info?.active || 0 }}</span>
+          <span class="summary-card__label">Informativas Activas</span>
+        </div>
+        <span class="summary-card__total">{{ summary?.info?.total || 0 }} total</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card filters-card">
+    <div class="card-body">
+      <div class="filters-row">
+        <div class="filter-field">
+          <label class="form-label">Severidad</label>
+          <select class="form-select" [(ngModel)]="filters.severity" (ngModelChange)="loadAlerts()">
+            <option [ngValue]="undefined">Todas</option>
+            <option value="CRITICAL">Critica</option>
+            <option value="WARNING">Advertencia</option>
+            <option value="INFO">Informativa</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label class="form-label">Estado</label>
+          <select class="form-select" [(ngModel)]="filters.status" (ngModelChange)="loadAlerts()">
+            <option [ngValue]="undefined">Todos</option>
+            <option value="ACTIVE">Activa</option>
+            <option value="ACKNOWLEDGED">Vista</option>
+            <option value="RESOLVED">Resuelta</option>
+            <option value="DISMISSED">Descartada</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label class="form-label">Pais</label>
+          <select class="form-select" [(ngModel)]="filters.country_id" (ngModelChange)="loadAlerts()">
+            <option [ngValue]="undefined">Todos</option>
+            @for (country of countries; track country.id) {
+              <option [ngValue]="country.id">{{ country.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label class="form-label">Desde</label>
+          <input type="date" class="form-control" [(ngModel)]="dateFrom" (change)="onDateChange()">
+        </div>
+
+        <div class="filter-field">
+          <label class="form-label">Hasta</label>
+          <input type="date" class="form-control" [(ngModel)]="dateTo" (change)="onDateChange()">
+        </div>
+
+        <button class="btn btn-outline-secondary" (click)="clearFilters()">
+          <app-icon name="clear" size="sm"></app-icon> Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Alerts List -->
+    <div class="alerts-list-section">
+      @if (loading) {
+        <div class="loading-container">
+          <div class="spinner-border" role="status"></div>
+        </div>
+      } @else {
+        @for (alert of alerts; track alert.id) {
+          <div class="card alert-card" [class]="'alert-card alert-card--' + alert.severity.toLowerCase()">
+            <div class="card-body">
+              <div class="alert-card__header">
+                <div class="alert-card__severity">
+                  <app-icon [name]="getSeverityIcon(alert.severity)" size="md"></app-icon>
+                  <span class="alert-card__type-badge">{{ getTypeLabel(alert.alert_type) }}</span>
+                </div>
+                <div class="alert-card__meta">
+                  <span class="alert-card__status-chip" [class]="'chip--' + alert.status.toLowerCase()">
+                    {{ getStatusLabel(alert.status) }}
+                  </span>
+                  <span class="alert-card__date">{{ alert.created_at | date:'dd/MM/yy HH:mm' }}</span>
+                </div>
+              </div>
+
+              <h4 class="alert-card__title">{{ alert.title }}</h4>
+              <p class="alert-card__message">{{ alert.message }}</p>
+
+              <div class="alert-card__context">
+                @if (alert.user_full_name) {
+                  <span class="context-chip">
+                    <app-icon name="person" size="sm"></app-icon> {{ alert.user_full_name }}
+                  </span>
+                }
+                @if (alert.country_name) {
+                  <span class="context-chip">
+                    <app-icon name="public" size="sm"></app-icon> {{ alert.country_name }}
+                  </span>
+                }
+                @if (alert.campaign_name) {
+                  <span class="context-chip">
+                    <app-icon name="campaign" size="sm"></app-icon> {{ alert.campaign_name }}
+                  </span>
+                }
+              </div>
+
+              @if (alert.status === 'ACTIVE' || alert.status === 'ACKNOWLEDGED') {
+                <div class="alert-card__actions">
+                  @if (alert.status === 'ACTIVE') {
+                    <button class="btn btn-outline-primary btn-sm" (click)="onAcknowledge(alert)">
+                      <app-icon name="visibility" size="sm"></app-icon> Marcar vista
+                    </button>
+                  }
+                  <button class="btn btn-outline-secondary btn-sm" (click)="onResolve(alert)">
+                    <app-icon name="check_circle" size="sm"></app-icon> Resolver
+                  </button>
+                  <button class="btn btn-outline-secondary btn-sm" (click)="onDismiss(alert)">
+                    <app-icon name="close" size="sm"></app-icon> Descartar
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="card empty-state">
+            <div class="card-body text-center">
+              <app-icon name="notifications_none" size="lg"></app-icon>
+              <p>No hay alertas para los filtros seleccionados.</p>
+            </div>
+          </div>
+        }
+
+        @if (totalAlerts > pageSize) {
+          <app-pagination
+            [totalItems]="totalAlerts"
+            [pageSize]="pageSize"
+            [currentPage]="currentPage"
+            [pageSizeOptions]="[10, 25, 50]"
+            (pageChange)="onPageChange($event)">
+          </app-pagination>
+        }
+      }
+    </div>
+
+    <!-- Sidebar: Chart + Top Alerted -->
+    <div class="sidebar-section">
+      <div class="card chart-card">
+        <div class="card-body">
+          <h3>Tendencia (7 dias)</h3>
+          @if (trendChartData) {
+            <canvas baseChart
+              [data]="trendChartData"
+              [options]="trendChartOptions"
+              type="bar"
+            ></canvas>
+          }
+        </div>
+      </div>
+
+      <div class="card top-alerted-card">
+        <div class="card-body">
+          <h3>Top Alertados (30 dias)</h3>
+          @for (user of topAlerted; track user.user_id; let i = $index) {
+            <div class="top-item">
+              <span class="top-item__rank">{{ i + 1 }}</span>
+              <div class="top-item__info">
+                <span class="top-item__name">{{ user.full_name }}</span>
+                <span class="top-item__country">{{ user.country_name }}</span>
+              </div>
+              <div class="top-item__counts">
+                @if (user.critical_count > 0) {
+                  <span class="count-badge count-badge--critical">{{ user.critical_count }}</span>
+                }
+                @if (user.warning_count > 0) {
+                  <span class="count-badge count-badge--warning">{{ user.warning_count }}</span>
+                }
+                @if (user.info_count > 0) {
+                  <span class="count-badge count-badge--info">{{ user.info_count }}</span>
+                }
+              </div>
+            </div>
+          } @empty {
+            <p class="empty-text">Sin datos.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

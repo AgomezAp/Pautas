@@ -1,0 +1,55 @@
+<div class="header-row">
+  <h2>Gesti&oacute;n de Campa&ntilde;as</h2>
+  <button class="btn btn-primary" (click)="openForm()">
+    <app-icon name="add" size="sm"></app-icon> Nueva Campa&ntilde;a
+  </button>
+</div>
+
+<div class="mb-3">
+  <div class="input-group">
+    <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+    <input class="form-control" (input)="applyFilter($event)" placeholder="Nombre o ID">
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>ID Google Ads</th>
+        <th>Pa&iacute;s</th>
+        <th>Usuario Asignado</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of pagedData; track row.id) {
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>{{ row.google_ads_campaign_id || '-' }}</td>
+          <td>{{ row.country_name }}</td>
+          <td>{{ row.assigned_user || 'Sin asignar' }}</td>
+          <td>
+            <span [class]="row.is_active ? 'badge-active' : 'badge-inactive'">
+              {{ row.is_active ? 'Activa' : 'Inactiva' }}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" (click)="openForm(row)">
+              <app-icon name="edit" size="sm"></app-icon>
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<app-pagination
+  [totalItems]="filteredData.length"
+  [pageSize]="pageSize"
+  [currentPage]="currentPage"
+  (pageChange)="onPageChange($event)">
+</app-pagination>

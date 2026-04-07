@@ -1,0 +1,149 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use "sass:color";
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #FFD600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes
+$color-text-light: #ffffff;
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+
+// Espaciado interno de la card
+$card-padding: 1.5rem;
+
+// ============================================
+// AUTH CONTAINER (Full Screen)
+// ============================================
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: $color-primary;
+  font-family: $font-primary;
+}
+
+// ============================================
+// AUTH CARD (Fondo Blanco)
+// ============================================
+.auth-card {
+  width: 100%;
+  max-width: 450px;
+  background-color: $color-text-light;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  
+  // Padding interno general
+  padding: $card-padding;
+
+  // Borde superior amarillo
+  &::before {
+    content: '';
+    display: block;
+    height: 4px;
+    margin-bottom: 1.5rem;
+    background-color: $color-secondary;
+    border-radius: 2px;
+  }
+}
+
+// ============================================
+// AUTH HEADER
+// ============================================
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0 1.5rem;
+  text-align: center;
+
+  // Logo circular con la "P"
+  .auth-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 70px;
+    margin-bottom: 1.25rem;
+    font-family: $font-primary;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: $color-primary;
+    background-color: $color-secondary;
+    border-radius: 50%;
+    box-shadow: 0 8px 25px color.adjust($color-secondary, $alpha: -0.6);
+  }
+
+  // Título principal
+  h1 {
+    margin: 0 0 0.5rem;
+    font-family: $font-primary;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    letter-spacing: -0.5px;
+    position: relative;
+    padding-bottom: 0.75rem;
+
+    // Subrayado decorativo amarillo
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 3px;
+      background-color: $color-secondary;
+      border-radius: 2px;
+    }
+  }
+
+  // Subtítulo
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: $color-text-muted;
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 1rem;
+  }
+
+  .auth-card {
+    padding: 1rem;
+    border-radius: 0.75rem;
+
+    &::before {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .auth-header {
+    padding: 0.5rem 0 1rem;
+
+    .auth-logo {
+      width: 60px;
+      height: 60px;
+      font-size: 2rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+}

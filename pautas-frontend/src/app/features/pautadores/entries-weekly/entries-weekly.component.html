@@ -1,0 +1,86 @@
+<div class="page-header">
+  <h2>Entradas Semanales</h2>
+  <div class="week-nav">
+    <button class="btn btn-sm btn-outline-secondary" (click)="previousWeek()" ngbTooltip="Semana anterior">
+      <app-icon name="chevron_left" size="sm"></app-icon>
+    </button>
+    <span class="week-label">{{ weekRangeLabel }}</span>
+    <button class="btn btn-sm btn-outline-secondary" (click)="nextWeek()" [disabled]="isCurrentWeek" ngbTooltip="Semana siguiente">
+      <app-icon name="chevron_right" size="sm"></app-icon>
+    </button>
+  </div>
+</div>
+
+<div class="filters-row">
+  <div class="filter-field">
+    <label class="form-label">Pa&iacute;s</label>
+    <select class="form-select" [(ngModel)]="selectedCountryId" (ngModelChange)="loadData()">
+      <option [ngValue]="null">Todos</option>
+      @for (c of countries; track c.id) {
+        <option [ngValue]="c.id">{{ c.name }}</option>
+      }
+    </select>
+  </div>
+</div>
+
+@if (loading) {
+  <div class="loading">Cargando...</div>
+} @else {
+  <div class="calendar-wrapper">
+    <table class="calendar-table">
+      <thead>
+        <tr>
+          <th class="col-campaign">CUENTA</th>
+          <th class="col-day">LUN<br><span class="day-date">{{ dayDates[0] }}</span></th>
+          <th class="col-day">MAR<br><span class="day-date">{{ dayDates[1] }}</span></th>
+          <th class="col-day">MI&Eacute;<br><span class="day-date">{{ dayDates[2] }}</span></th>
+          <th class="col-day">JUE<br><span class="day-date">{{ dayDates[3] }}</span></th>
+          <th class="col-day">VIE<br><span class="day-date">{{ dayDates[4] }}</span></th>
+          <th class="col-day">S&Aacute;B<br><span class="day-date">{{ dayDates[5] }}</span></th>
+          <th class="col-total">TOTAL</th>
+          <th class="col-total">EFECT.</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows; track row.user_id) {
+          <tr>
+            <td class="cell-campaign">
+              <div class="campaign-name">{{ row.user_name }}</div>
+              <div class="campaign-user">{{ row.country_name }}</div>
+            </td>
+            @for (dayNum of weekDays; track dayNum) {
+              <td class="cell-day" [ngClass]="getCellClass(row, dayNum)">
+                @if (!row.campaign_active) {
+                  <span class="paused">PAUSADO</span>
+                } @else if (row.days[dayNum]) {
+                  <span class="day-value">{{ row.days[dayNum].clientes }}</span>
+                } @else {
+                  <span class="day-empty">-</span>
+                }
+              </td>
+            }
+            <td class="cell-total">{{ row.total_clientes }}</td>
+            <td class="cell-total">{{ row.total_efectivos }}</td>
+          </tr>
+        }
+        @if (rows.length === 0) {
+          <tr><td colspan="9" class="no-data">No hay datos para esta semana</td></tr>
+        }
+      </tbody>
+      @if (rows.length > 0) {
+        <tfoot>
+          <tr class="totals-row">
+            <td class="cell-campaign"><strong>TOTALES</strong></td>
+            @for (dayNum of weekDays; track dayNum) {
+              <td class="cell-day cell-total-footer">
+                {{ getDayTotal(dayNum) }}
+              </td>
+            }
+            <td class="cell-total cell-total-footer">{{ grandTotal }}</td>
+            <td class="cell-total cell-total-footer">{{ grandTotalEfectivos }}</td>
+          </tr>
+        </tfoot>
+      }
+    </table>
+  </div>
+}

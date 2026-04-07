@@ -1,0 +1,94 @@
+<div class="page-header">
+  <div>
+    <h1>Cuentas Conglomerado</h1>
+    <p class="page-subtitle">Asignar cuentas de Google Ads a miembros del conglomerado</p>
+  </div>
+</div>
+
+<div class="content-card">
+  <div class="tab-toolbar">
+    <div class="filter-select">
+      <label class="form-label">Pais</label>
+      <select class="form-select" [(ngModel)]="selectedCountryId" (ngModelChange)="loadUsers()">
+        <option [ngValue]="0">Todos</option>
+        @for (country of countries; track country.id) {
+          <option [ngValue]="country.id">{{ country.name }}</option>
+        }
+      </select>
+    </div>
+    <span class="record-count">{{ users.length }} miembros</span>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border spinner-border-sm" role="status"></div>
+      <span>Cargando miembros...</span>
+    </div>
+  } @else if (users.length === 0) {
+    <div class="empty-state">
+      <app-icon name="group_off" size="lg"></app-icon>
+      <p>No se encontraron miembros del conglomerado</p>
+    </div>
+  } @else {
+    <div class="data-table-wrap">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Usuario</th>
+            <th>Pais</th>
+            <th>Campana</th>
+            <th>Cuenta Google Ads</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of users; track row.id) {
+            <tr>
+              <td>
+                <span class="cell-primary">{{ row.full_name }}</span>
+              </td>
+              <td>{{ row.username }}</td>
+              <td>{{ row.country_name || '&#8212;' }}</td>
+              <td>{{ row.campaign_name || '&#8212;' }}</td>
+              <td>
+                @if (editingUserId === row.id) {
+                  <div class="inline-edit d-flex align-items-center gap-1">
+                    <input class="form-control form-control-sm edit-field" [(ngModel)]="editValue" placeholder="1234567890"
+                           (keyup.enter)="saveAccountId(row)"
+                           (keyup.escape)="cancelEdit()">
+                    <button class="btn btn-icon btn-sm text-primary" (click)="saveAccountId(row)"
+                            ngbTooltip="Guardar" [disabled]="saving">
+                      @if (saving) {
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                      } @else {
+                        <app-icon name="check" size="sm"></app-icon>
+                      }
+                    </button>
+                    <button class="btn btn-icon btn-sm" (click)="cancelEdit()" ngbTooltip="Cancelar">
+                      <app-icon name="close" size="sm"></app-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <div class="account-display" (click)="startEdit(row)">
+                    @if (row.google_ads_account_id) {
+                      <span class="mono">{{ row.google_ads_account_id | googleAdsId }}</span>
+                    } @else {
+                      <span class="text-muted">Sin asignar</span>
+                    }
+                    <app-icon name="edit" size="sm" class="edit-icon" ngbTooltip="Editar cuenta"></app-icon>
+                  </div>
+                }
+              </td>
+              <td>
+                <span class="badge" [class]="row.is_active ? 'badge badge-green' : 'badge badge-red'">
+                  {{ row.is_active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

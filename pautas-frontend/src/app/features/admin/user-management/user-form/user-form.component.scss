@@ -1,0 +1,186 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use 'sass:color';
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #ffd600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-border: #dee2e6;
+$color-bg-light: #f8f9fa;
+$color-danger: #dc3545;
+
+// ============================================
+// FORMULARIO LOGIN
+// ============================================
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  // Ya no necesita padding lateral, lo hereda de .auth-card
+}
+
+// ============================================
+// FORM GROUPS
+// ============================================
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// Labels
+.form-label {
+  font-family: $font-primary;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: $color-text-dark;
+}
+
+// Input Groups
+.input-group {
+  display: flex;
+  align-items: stretch;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+
+  // Estado focus del grupo
+  &:focus-within {
+    border-color: $color-secondary;
+    box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.75);
+
+    .input-group-text {
+      color: $color-secondary;
+      border-color: $color-secondary;
+    }
+  }
+
+  // Estado error
+  &.is-invalid {
+    border-color: $color-danger;
+
+    &:focus-within {
+      box-shadow: 0 0 0 3px color.adjust($color-danger, $alpha: -0.75);
+    }
+  }
+
+  // Icono
+  .input-group-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+    background-color: $color-bg-light;
+    border: none;
+    border-right: 1px solid $color-border;
+    color: $color-text-muted;
+    transition: all 0.2s ease;
+  }
+
+  // Input
+  .form-control {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    font-family: $font-primary;
+    font-size: 0.9rem;
+    color: $color-text-dark;
+    background-color: transparent;
+    border: none;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+      opacity: 0.7;
+    }
+  }
+
+  // Botón toggle password
+  .btn-toggle-password {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+    background: $color-bg-light;
+    border: none;
+    border-left: 1px solid $color-border;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: $color-primary;
+    }
+  }
+}
+
+// ============================================
+// MENSAJES DE ERROR
+// ============================================
+.invalid-feedback {
+  font-family: $font-primary;
+  font-size: 0.8rem;
+  color: $color-danger;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  &::before {
+    content: '⚠';
+    font-size: 0.75rem;
+  }
+}
+
+// ============================================
+// BOTÓN SUBMIT
+// ============================================
+.btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  margin-top: 0.75rem;
+  font-family: $font-primary;
+  font-size: 1rem;
+  font-weight: 600;
+  color: $color-primary;
+  background-color: $color-secondary;
+  border: 2px solid $color-secondary;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: color.adjust($color-secondary, $lightness: -8%);
+    border-color: color.adjust($color-secondary, $lightness: -8%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px color.adjust($color-secondary, $alpha: -0.5);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.6);
+  }
+
+  &:disabled {
+    background-color: $color-border;
+    border-color: $color-border;
+    color: $color-text-muted;
+    cursor: not-allowed;
+  }
+}

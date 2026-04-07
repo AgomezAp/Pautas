@@ -1,0 +1,147 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use 'sass:color';
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #ffd600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes de texto
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-text-light: #ffffff;
+
+// Fondos
+$color-bg-white: #ffffff;
+$color-bg-light: #f8f9fa;
+
+// Bordes
+$color-border: #dee2e6;
+$color-border-light: #e9ecef;
+
+// Estados
+$color-danger: #dc3545;
+$color-success: #10b981;
+
+// Espaciado
+$spacing-sm: 0.5rem;
+
+// Transiciones
+$transition-base: all 0.25s ease;
+
+// ============================================
+// KEYFRAMES
+// ============================================
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: var(--line-length, 300);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadeInArea {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popDot {
+  0% {
+    r: 0;
+    opacity: 0;
+  }
+  60% {
+    r: 3.5;
+    opacity: 1;
+  }
+  100% {
+    r: 2.5;
+    opacity: 1;
+  }
+}
+
+// ============================================
+// HOST
+// ============================================
+:host {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+// ============================================
+// SPARKLINE SVG
+// ============================================
+.sparkline {
+  display: block;
+  overflow: visible;
+  cursor: default;
+  transition: $transition-base;
+
+  // ---------- Área de relleno ----------
+  path[fill]:not([fill='none']) {
+    opacity: 0.85;
+    animation: fadeInArea 0.6s ease forwards;
+    transition: opacity 0.2s ease;
+  }
+
+  // ---------- Línea principal ----------
+  path[fill='none'] {
+    stroke-dasharray: var(--line-length, 300);
+    stroke-dashoffset: 0;
+    animation: drawLine 0.8s ease forwards;
+    transition: stroke-width 0.2s ease;
+  }
+
+  // ---------- Punto final (último dato) ----------
+  circle {
+    animation: popDot 0.4s ease 0.6s both;
+    transition: r 0.2s ease;
+    filter: drop-shadow(0 0 2px rgba($color-primary, 0.15));
+  }
+
+  // ======== HOVER STATE ========
+  &:hover {
+    // Línea más gruesa
+    path[fill='none'] {
+      stroke-width: 2.5;
+    }
+
+    // Área más visible
+    path[fill]:not([fill='none']) {
+      opacity: 1;
+    }
+
+    // Punto más grande
+    circle {
+      r: 3.5;
+      filter: drop-shadow(0 0 4px rgba($color-primary, 0.25));
+    }
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+// En pantallas pequeñas se reduce si es necesario
+@media (max-width: 640px) {
+  :host {
+    max-width: 100%;
+  }
+
+  .sparkline {
+    max-width: 100%;
+    height: auto;
+  }
+}

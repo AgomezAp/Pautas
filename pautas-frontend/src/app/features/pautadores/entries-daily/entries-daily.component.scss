@@ -1,0 +1,497 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use 'sass:color';
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #ffd600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes de texto
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-text-light: #ffffff;
+
+// Fondos
+$color-bg-white: #ffffff;
+$color-bg-light: #f8f9fa;
+
+// Bordes
+$color-border: #dee2e6;
+$color-border-light: #e9ecef;
+
+// Estados
+$color-danger: #dc3545;
+$color-success: #10b981;
+
+// Espaciado
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+// Border radius
+$radius-sm: 0.375rem;
+$radius-md: 0.5rem;
+$radius-lg: 0.75rem;
+$radius-xl: 1rem;
+
+// Sombras
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+// Transiciones
+$transition-base: all 0.25s ease;
+
+// ============================================
+// HOST
+// ============================================
+:host {
+  display: block;
+  font-family: $font-primary;
+  color: $color-text-dark;
+  padding: $spacing-xl;
+  background-color: $color-bg-light;
+  min-height: 100vh;
+}
+
+// ============================================
+// TÍTULO PRINCIPAL (H2)
+// ============================================
+h2 {
+  font-family: $font-primary;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: $color-text-dark;
+  margin: 0 0 $spacing-xl 0;
+  position: relative;
+  padding-bottom: $spacing-sm;
+
+  // Subrayado decorativo amarillo (regla obligatoria)
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 55px;
+    height: 3px;
+    background-color: $color-secondary;
+    border-radius: 2px;
+  }
+}
+
+// ============================================
+// FILA DE FILTROS
+// ============================================
+.filters-row {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-xl;
+  background-color: $color-bg-white;
+  padding: $spacing-lg;
+  border-radius: $radius-lg;
+  border-top: 4px solid $color-secondary; // Borde superior amarillo (regla obligatoria)
+  box-shadow: $shadow-sm;
+}
+
+// ============================================
+// CAMPO DE FILTRO
+// ============================================
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 180px;
+  flex: 1;
+  max-width: 260px;
+
+  .form-label {
+    font-family: $font-primary;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: $color-text-dark;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0;
+  }
+
+  // Estilos compartidos para select e input
+  .form-select,
+  .form-control {
+    font-family: $font-primary;
+    font-size: 0.9rem;
+    color: $color-text-dark;
+    background-color: $color-bg-white;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    padding: 0.5rem 0.75rem;
+    transition: $transition-base;
+    height: 40px;
+    line-height: 1.4;
+
+    // Focus con color secundario (regla obligatoria)
+    &:focus {
+      outline: none;
+      border-color: $color-secondary;
+      box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
+    }
+
+    &:hover {
+      border-color: color.adjust($color-border, $lightness: -10%);
+    }
+
+    // Placeholder
+    &::placeholder {
+      color: $color-text-muted;
+      font-weight: 400;
+    }
+  }
+
+  // Select con flecha custom
+  .form-select {
+    cursor: pointer;
+    appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23141414' d='M6 8.825a.7.7 0 0 1-.5-.206L1.705 4.824a.71.71 0 0 1 1.003-1.003L6 7.113l3.293-3.292a.71.71 0 0 1 1.003 1.003L6.5 8.619a.7.7 0 0 1-.5.206Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+  }
+
+  // Input date ajustes
+  .form-control[type='date'] {
+    cursor: pointer;
+
+    &::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: $transition-base;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// ============================================
+// CARD CONTENEDORA
+// ============================================
+.card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  border: none;
+  overflow: hidden;
+  transition: $transition-base;
+
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+}
+
+.card-body {
+  &.p-0 {
+    padding: 0;
+  }
+}
+
+// ============================================
+// TABLE RESPONSIVE
+// ============================================
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  // Scrollbar personalizado
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: $color-bg-light;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $color-border;
+    border-radius: 3px;
+
+    &:hover {
+      background-color: $color-text-muted;
+    }
+  }
+}
+
+// ============================================
+// TABLA
+// ============================================
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-primary;
+  font-size: 0.9rem;
+
+  &.mb-0 {
+    margin-bottom: 0;
+  }
+
+  // ---------- Header (fondo principal oscuro - regla obligatoria) ----------
+  thead {
+    th {
+      font-family: $font-primary;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $color-text-light;
+      background-color: $color-primary; // Fondo oscuro (regla obligatoria)
+      padding: 0.85rem $spacing-md;
+      border: none;
+      white-space: nowrap;
+      position: relative;
+
+      // Separador sutil entre columnas
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 25%;
+        height: 50%;
+        width: 1px;
+        background-color: rgba($color-text-light, 0.15);
+      }
+    }
+  }
+
+  // ---------- Body ----------
+  tbody {
+    tr {
+      transition: $transition-base;
+      border-bottom: 1px solid $color-border-light;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      // Hover de fila
+      &:hover {
+        background-color: rgba($color-secondary, 0.06);
+      }
+    }
+
+    td {
+      font-family: $font-primary;
+      font-size: 0.88rem;
+      color: $color-text-dark;
+      padding: 0.75rem $spacing-md;
+      border: none;
+      vertical-align: middle;
+      white-space: nowrap;
+
+      // Primera columna (Fecha) con acento
+      &:first-child {
+        font-weight: 600;
+        color: $color-text-dark;
+      }
+
+      // Columnas numéricas (Clientes, Efectivos, Menores) - las 3 últimas
+      &:nth-last-child(-n + 3) {
+        font-weight: 600;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+
+  // ---------- Hover variant ----------
+  &.table-hover {
+    tbody tr {
+      cursor: default;
+    }
+  }
+}
+
+// ============================================
+// PAGINACIÓN (app-pagination)
+// ============================================
+app-pagination {
+  display: block;
+  border-top: 1px solid $color-border-light;
+  padding: $spacing-md $spacing-lg;
+  background-color: $color-bg-white;
+
+  // Estilos genéricos para el componente hijo (deep)
+  ::ng-deep {
+    .pagination-wrapper,
+    .pagination-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $spacing-md;
+      flex-wrap: wrap;
+      font-family: $font-primary;
+    }
+
+    // Texto informativo (ej: "Mostrando 1-10 de 50")
+    .pagination-info,
+    .pagination-label {
+      font-family: $font-primary;
+      font-size: 0.82rem;
+      color: $color-text-muted;
+      font-weight: 500;
+    }
+
+    // Botones de página
+    .pagination-btn,
+    .page-btn {
+      font-family: $font-primary;
+      font-size: 0.85rem;
+      font-weight: 500;
+      min-width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: $radius-sm;
+      border: 1px solid $color-border;
+      background-color: $color-bg-white;
+      color: $color-text-dark;
+      cursor: pointer;
+      transition: $transition-base;
+      padding: 0 $spacing-sm;
+
+      &:hover:not(:disabled):not(.active) {
+        background-color: $color-bg-light;
+        border-color: color.adjust($color-border, $lightness: -10%);
+      }
+
+      // Página activa
+      &.active,
+      &--active {
+        background-color: $color-secondary;
+        border-color: $color-secondary;
+        color: $color-text-dark;
+        font-weight: 700;
+
+        &:hover {
+          background-color: color.adjust($color-secondary, $lightness: -8%);
+          border-color: color.adjust($color-secondary, $lightness: -8%);
+        }
+      }
+
+      // Deshabilitado
+      &:disabled,
+      &--disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+
+    // Select de pageSize
+    .page-size-select,
+    select {
+      font-family: $font-primary;
+      font-size: 0.85rem;
+      color: $color-text-dark;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      padding: 0.35rem 0.6rem;
+      background-color: $color-bg-white;
+      cursor: pointer;
+      transition: $transition-base;
+
+      &:focus {
+        outline: none;
+        border-color: $color-secondary;
+        box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
+      }
+    }
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+// Tablet
+@media (max-width: 1024px) {
+  :host {
+    padding: $spacing-lg;
+  }
+
+  .filters-row {
+    gap: $spacing-sm;
+    padding: $spacing-md;
+  }
+
+  .filter-field {
+    min-width: 160px;
+  }
+}
+
+// Mobile
+@media (max-width: 640px) {
+  :host {
+    padding: $spacing-md;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+    margin-bottom: $spacing-lg;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-md;
+    padding: $spacing-md;
+  }
+
+  .filter-field {
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+    flex: unset;
+  }
+
+  // Tabla: scroll horizontal y celdas más compactas
+  .table {
+    font-size: 0.82rem;
+
+    thead th {
+      font-size: 0.72rem;
+      padding: 0.7rem $spacing-sm;
+    }
+
+    tbody td {
+      font-size: 0.82rem;
+      padding: 0.65rem $spacing-sm;
+    }
+  }
+
+  app-pagination {
+    padding: $spacing-sm $spacing-md;
+
+    ::ng-deep {
+      .pagination-wrapper,
+      .pagination-container {
+        flex-direction: column;
+        align-items: center;
+        gap: $spacing-sm;
+      }
+
+      .pagination-btn,
+      .page-btn {
+        min-width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}

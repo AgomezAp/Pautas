@@ -18,8 +18,7 @@ export class ConglomeradoService {
     countryId: number,
     campaignId: number | null,
     data: { clientes: number; clientes_efectivos: number; menores: number },
-    imagePath: string | null,
-    originalName: string | null,
+    images: { imagePath: string; originalName: string; thumbPath: string | null }[],
     ip?: string
   ) {
     const today = new Date();
@@ -33,25 +32,36 @@ export class ConglomeradoService {
       const result = await client.query(
         `INSERT INTO daily_entries
           (user_id, country_id, campaign_id, entry_date, iso_year, iso_week,
-           clientes, clientes_efectivos, menores, soporte_image_path, soporte_original_name)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           clientes, clientes_efectivos, menores)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           userId, countryId, campaignId, entryDate, isoYear, isoWeek,
           data.clientes, data.clientes_efectivos, data.menores,
-          imagePath, originalName,
         ]
       );
 
+      const entry = result.rows[0];
+
+      // Insert images into entry_images table
+      for (const img of images) {
+        await client.query(
+          `INSERT INTO entry_images (entry_id, image_path, original_name, thumb_path)
+           VALUES ($1, $2, $3, $4)`,
+          [entry.id, img.imagePath, img.originalName, img.thumbPath]
+        );
+      }
+
       await client.query('COMMIT');
 
-      await logAudit(userId, 'ENTRY_CREATED', 'daily_entry', result.rows[0].id, {
+      await logAudit(userId, 'ENTRY_CREATED', 'daily_entry', entry.id, {
         clientes: data.clientes,
         clientes_efectivos: data.clientes_efectivos,
         menores: data.menores,
+        images_count: images.length,
       }, ip);
 
-      return result.rows[0];
+      return entry;
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;

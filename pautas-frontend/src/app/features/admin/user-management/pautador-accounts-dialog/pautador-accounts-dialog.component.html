@@ -1,0 +1,61 @@
+<div class="dialog-header">
+  <div>
+    <h2>Cuentas Google Ads</h2>
+    <p class="dialog-subtitle">{{ data.user.full_name }}</p>
+  </div>
+  <button class="btn btn-icon dialog-close" (click)="onCancel()" aria-label="Cerrar">
+    <app-icon name="close" size="md"></app-icon>
+  </button>
+</div>
+<div class="modal-body">
+  <div class="mb-3">
+    <div class="input-group">
+      <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+      <input class="form-control" [(ngModel)]="searchTerm" (keyup)="filterAccounts()" placeholder="Nombre o ID de cuenta">
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-border spinner-border-sm" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <span>Cargando cuentas...</span>
+    </div>
+  } @else {
+    <div class="accounts-list">
+      @for (account of filteredAccounts; track account.customer_account_id) {
+        <div class="account-row" [class.account-row--selected]="account.selected"
+             (click)="account.selected = !account.selected">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="account.selected"
+                   (click)="$event.stopPropagation()">
+          </div>
+          <div class="account-details">
+            <span class="account-name">{{ account.customer_account_name }}</span>
+            <span class="account-id">{{ account.customer_account_id | googleAdsId }}</span>
+          </div>
+        </div>
+      }
+      @if (filteredAccounts.length === 0) {
+        <div class="empty-state">
+          <app-icon name="search_off" size="lg"></app-icon>
+          <p>No se encontraron cuentas</p>
+        </div>
+      }
+    </div>
+  }
+</div>
+<div class="modal-footer">
+  <span class="selected-count">{{ selectedCount }} cuentas seleccionadas</span>
+  <button class="btn btn-outline-secondary dialog-btn-cancel" (click)="onCancel()">Cancelar</button>
+  <button class="btn btn-primary dialog-btn-submit" (click)="onSave()" [disabled]="saving">
+    @if (saving) {
+      <div class="spinner-border spinner-border-sm" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+    } @else {
+      Guardar
+    }
+  </button>
+</div>

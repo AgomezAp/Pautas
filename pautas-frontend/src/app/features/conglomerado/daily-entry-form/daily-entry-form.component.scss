@@ -1,0 +1,459 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use 'sass:color';
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #ffd600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes de texto
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-text-light: #ffffff;
+
+// Fondos
+$color-bg-white: #ffffff;
+$color-bg-light: #f8f9fa;
+
+// Bordes
+$color-border: #dee2e6;
+$color-border-light: #e9ecef;
+
+// Estados
+$color-success: #10b981;
+$color-danger: #dc3545;
+
+// Espaciado
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+// Border radius
+$radius-sm: 0.375rem;
+$radius-md: 0.5rem;
+$radius-lg: 0.75rem;
+$radius-xl: 1rem;
+
+// ============================================
+// FORM CONTAINER
+// ============================================
+.form-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: $spacing-lg;
+  font-family: $font-primary;
+}
+
+// ============================================
+// FORM HEADER
+// ============================================
+.form-header {
+  text-align: center;
+  margin-bottom: $spacing-xl;
+
+  h1 {
+    margin: 0 0 $spacing-sm;
+    font-family: $font-primary;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    position: relative;
+    display: inline-block;
+    padding-bottom: $spacing-sm;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 3px;
+      background-color: $color-secondary;
+      border-radius: 2px;
+    }
+  }
+}
+
+.form-date {
+  margin: $spacing-md 0 0;
+  font-family: $font-primary;
+  font-size: 0.95rem;
+  color: $color-text-muted;
+  text-transform: capitalize;
+}
+
+// ============================================
+// FORM PANEL
+// ============================================
+.form-panel {
+  background-color: $color-bg-white;
+  border-radius: $radius-xl;
+  border: 1px solid $color-border-light;
+  padding: $spacing-xl;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+  // Borde superior amarillo
+  border-top: 4px solid $color-secondary;
+}
+
+// ============================================
+// FIELDS GRID
+// ============================================
+.fields-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-sm;
+}
+
+.mb-3 {
+  margin-bottom: $spacing-md;
+}
+
+// ============================================
+// FORM ELEMENTS
+// ============================================
+.form-label {
+  display: block;
+  margin-bottom: $spacing-sm;
+  font-family: $font-primary;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $color-text-dark;
+}
+
+.input-group {
+  display: flex;
+  align-items: stretch;
+
+  .input-group-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 $spacing-md;
+    background-color: $color-bg-light;
+    border: 1px solid $color-border;
+    border-right: none;
+    border-radius: $radius-md 0 0 $radius-md;
+    color: $color-text-muted;
+    transition: all 0.2s ease;
+
+    app-icon {
+      transition: color 0.2s ease;
+    }
+  }
+
+  .form-control {
+    flex: 1;
+    padding: 0.75rem $spacing-md;
+    font-family: $font-primary;
+    font-size: 1rem;
+    color: $color-text-dark;
+    background-color: $color-bg-white;
+    border: 1px solid $color-border;
+    border-radius: 0 $radius-md $radius-md 0;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: $color-secondary;
+      box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.75);
+    }
+
+    // Para inputs de número - quitar spinners
+    &[type='number'] {
+      -moz-appearance: textfield;
+
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    }
+  }
+
+  // Focus state del grupo
+  &:focus-within {
+    .input-group-text {
+      border-color: $color-secondary;
+
+      app-icon {
+        color: $color-secondary;
+      }
+    }
+
+    .form-control {
+      border-color: $color-secondary;
+    }
+  }
+}
+
+// ============================================
+// VALIDATION MESSAGES
+// ============================================
+.invalid-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: $spacing-sm;
+  font-family: $font-primary;
+  font-size: 0.8rem;
+  color: $color-danger;
+
+  &::before {
+    content: '⚠';
+    font-size: 0.75rem;
+  }
+}
+
+.d-block {
+  display: flex !important;
+}
+
+// ============================================
+// UPLOAD AREA
+// ============================================
+.upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  min-height: 180px;
+  margin-bottom: $spacing-lg;
+  padding: $spacing-xl;
+  background-color: $color-bg-light;
+  border: 2px dashed $color-border;
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: $color-secondary;
+    background-color: color.adjust($color-secondary, $alpha: -0.95);
+
+    .upload-icon {
+      color: $color-secondary;
+      transform: translateY(-4px);
+    }
+  }
+
+  &.has-file {
+    border-style: solid;
+    border-color: $color-secondary;
+    background-color: color.adjust($color-secondary, $alpha: -0.95);
+    padding: $spacing-md;
+  }
+}
+
+.upload-icon {
+  color: $color-text-muted;
+  transition: all 0.2s ease;
+}
+
+.upload-text {
+  font-family: $font-primary;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text-dark;
+}
+
+.upload-hint {
+  font-family: $font-primary;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.upload-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: $radius-md;
+  object-fit: contain;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.preview-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  .upload-preview-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: $radius-md;
+  }
+}
+
+.btn-remove-preview {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: $color-danger;
+  }
+}
+
+.preview-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 2px dashed $color-border;
+  border-radius: $radius-md;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-secondary;
+    color: $color-secondary;
+  }
+}
+
+// ============================================
+// SUBMIT BUTTON
+// ============================================
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: 0.875rem $spacing-lg;
+  font-family: $font-primary;
+  font-size: 1rem;
+  font-weight: 600;
+  color: $color-primary;
+  background-color: $color-secondary;
+  border: 2px solid $color-secondary;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: color.adjust($color-secondary, $lightness: -8%);
+    border-color: color.adjust($color-secondary, $lightness: -8%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px color.adjust($color-secondary, $alpha: -0.5);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.6);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-spinner {
+    width: 1rem;
+    height: 1rem;
+    border-width: 2px;
+  }
+}
+
+// ============================================
+// SUCCESS STATE
+// ============================================
+.success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: $spacing-xl 0;
+}
+
+.success-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: $spacing-lg;
+  background-color: color.adjust($color-success, $alpha: -0.88);
+  border-radius: 50%;
+
+  app-icon {
+    color: $color-success;
+  }
+}
+
+.success-state {
+  h3 {
+    margin: 0 0 $spacing-sm;
+    font-family: $font-primary;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: $color-text-dark;
+  }
+
+  p {
+    margin: 0;
+    font-family: $font-primary;
+    font-size: 0.95rem;
+    color: $color-text-muted;
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media (max-width: 576px) {
+  .form-container {
+    padding: $spacing-md;
+  }
+
+  .form-header {
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  .form-panel {
+    padding: $spacing-lg;
+  }
+
+  .upload-area {
+    min-height: 150px;
+    padding: $spacing-lg;
+  }
+
+  .submit-btn {
+    padding: 0.75rem $spacing-md;
+    font-size: 0.95rem;
+  }
+}

@@ -1,0 +1,95 @@
+<div class="header-row">
+  <h2>Gesti&oacute;n de Usuarios</h2>
+  <button class="btn btn-primary" (click)="openForm()">
+    <app-icon name="add" size="sm"></app-icon> Nuevo Usuario
+  </button>
+</div>
+
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a class="nav-link" [class.active]="activeTab === 0" (click)="onTabChange(0)">Todos</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" [class.active]="activeTab === 1" (click)="onTabChange(1)">Pautadores</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" [class.active]="activeTab === 2" (click)="onTabChange(2)">Conglomerado</a>
+  </li>
+</ul>
+
+<div class="tab-content">
+  @if (activeTab === 0) {
+    <ng-container *ngTemplateOutlet="userTable; context: { $implicit: tabs[0], columns: columnsAll, tabIndex: 0 }"></ng-container>
+  }
+  @if (activeTab === 1) {
+    <ng-container *ngTemplateOutlet="userTable; context: { $implicit: tabs[1], columns: columnsPautadores, tabIndex: 1 }"></ng-container>
+  }
+  @if (activeTab === 2) {
+    <ng-container *ngTemplateOutlet="userTable; context: { $implicit: tabs[2], columns: columnsConglomerado, tabIndex: 2 }"></ng-container>
+  }
+</div>
+
+<ng-template #userTable let-tab let-columns="columns" let-tabIndex="tabIndex">
+  <div class="tab-panel">
+    <div class="mb-3">
+      <div class="input-group">
+        <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+        <input class="form-control" (input)="applyFilter($event, tabIndex)" placeholder="Nombre, usuario o email">
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Nombre</th>
+            @if (columns.includes('role')) { <th>Rol</th> }
+            <th>Pa&iacute;s</th>
+            @if (columns.includes('campaign_name')) { <th>Campa&ntilde;a</th> }
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of tab.pagedData; track row.id) {
+            <tr>
+              <td>{{ row.username }}</td>
+              <td>{{ row.full_name }}</td>
+              @if (columns.includes('role')) { <td>{{ row.role }}</td> }
+              <td>{{ row.country_name || '-' }}</td>
+              @if (columns.includes('campaign_name')) { <td>{{ row.campaign_name || '-' }}</td> }
+              <td>
+                <span [class]="row.is_active ? 'badge-active' : 'badge-inactive'">
+                  {{ row.is_active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary me-1" (click)="openForm(row)" ngbTooltip="Editar">
+                  <app-icon name="edit" size="sm"></app-icon>
+                </button>
+                <button class="btn btn-sm" [class]="row.is_active ? 'btn-outline-danger' : 'btn-outline-success'"
+                        (click)="confirmToggleActive(row)"
+                        [ngbTooltip]="row.is_active ? 'Desactivar usuario' : 'Activar usuario'">
+                  <app-icon [name]="row.is_active ? 'block' : 'check_circle'" size="sm"></app-icon>
+                </button>
+                @if (row.role === 'pautador') {
+                  <button class="btn btn-sm btn-outline-primary ms-1" (click)="openAccountsDialog(row)" ngbTooltip="Cuentas Google Ads">
+                    <app-icon name="link" size="sm"></app-icon>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [totalItems]="tab.filteredData.length"
+      [pageSize]="tab.pageSize"
+      [currentPage]="tab.currentPage"
+      (pageChange)="onPageChange($event, tabIndex)">
+    </app-pagination>
+  </div>
+</ng-template>

@@ -1,0 +1,52 @@
+<form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+  <div class="mb-4">
+    <label class="form-label" for="login-user">Usuario</label>
+    <div class="input-group">
+      <span class="input-group-text"><app-icon name="person" size="sm"></app-icon></span>
+      <input type="text" id="login-user" class="form-control form-control-lg" formControlName="username"
+             autocomplete="username"
+             [class.is-invalid]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
+             placeholder="Ingrese su usuario">
+    </div>
+    @if (loginForm.get('username')?.hasError('required') && loginForm.get('username')?.touched) {
+      <div class="text-danger mt-1" style="font-size: 0.8rem">El usuario es requerido</div>
+    }
+  </div>
+
+  <div class="mb-4">
+    <label class="form-label" for="login-pass">Contraseña</label>
+    <div class="input-group">
+      <span class="input-group-text"><app-icon name="lock" size="sm"></app-icon></span>
+      <input [type]="hidePassword ? 'password' : 'text'" id="login-pass"
+             class="form-control form-control-lg" formControlName="password"
+             autocomplete="current-password"
+             [class.is-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+             placeholder="Ingrese su contraseña">
+      <button class="btn btn-outline-secondary border-start-0" type="button" (click)="hidePassword = !hidePassword"
+              style="border-color: var(--gray-300)">
+        <app-icon [name]="hidePassword ? 'visibility_off' : 'visibility'" size="sm"></app-icon>
+      </button>
+    </div>
+    @if (loginForm.get('password')?.hasError('required') && loginForm.get('password')?.touched) {
+      <div class="text-danger mt-1" style="font-size: 0.8rem">La contraseña es requerida</div>
+    }
+  </div>
+
+  @if (errorMessage) {
+    <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem">
+      <app-icon name="error" size="sm"></app-icon>
+      {{ errorMessage }}
+    </div>
+  }
+
+  <button class="btn btn-primary w-100 btn-lg mt-2" type="submit"
+          [disabled]="loginForm.invalid || isLoading">
+    @if (isLoading) {
+      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+      Ingresando...
+    } @else {
+      <app-icon name="lock" size="sm"></app-icon>
+      Ingresar
+    }
+  </button>
+</form>

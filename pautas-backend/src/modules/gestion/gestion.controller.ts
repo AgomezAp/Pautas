@@ -126,8 +126,26 @@ export class GestionController {
   async getEntriesWithImages(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await gestionService.getEntriesWithImages(req.query);
-      return sendSuccess(res, result.data, result.meta);
+      return sendSuccess(res, result.data);
     } catch (err) { next(err); }
+  }
+
+  async createConglomeradoUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { username, full_name, email, password, country_id, campaign_id } = req.body;
+      const user = await gestionService.createConglomeradoUser(
+        { username, full_name, email, password, country_id, campaign_id },
+        req.user!.sub,
+        req.ip
+      );
+      return sendCreated(res, user);
+    } catch (err: any) {
+      if (err.code === '23505') {
+        return sendError(res, 'DUPLICATE_ENTRY', 'El username o email ya existe', 409);
+      }
+      if (err.status) return sendError(res, err.code, err.message, err.status);
+      next(err);
+    }
   }
 }
 

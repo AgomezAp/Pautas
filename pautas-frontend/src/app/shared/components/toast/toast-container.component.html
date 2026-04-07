@@ -1,0 +1,12 @@
+<div class="toast-container">
+  @for (toast of toasts; track toast.id) {
+    <div class="toast toast--{{ toast.type }}" [class.toast--leaving]="toast._leaving">
+      <app-icon class="toast__icon" [name]="iconFor(toast.type)" size="sm"></app-icon>
+      <span class="toast__message">{{ toast.message }}</span>
+      <button class="toast__close" (click)="remove(toast)">
+        <app-icon name="close" size="sm"></app-icon>
+      </button>
+      <div class="toast__progress" [style.animation-duration.ms]="toast.duration"></div>
+    </div>
+  }
+</div>

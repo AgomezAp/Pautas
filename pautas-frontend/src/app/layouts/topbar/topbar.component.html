@@ -1,0 +1,30 @@
+<header class="topbar" role="banner">
+  <div class="topbar__left">
+    <button class="topbar__menu-btn" (click)="menuToggle.emit()" aria-label="Toggle menú lateral">
+      <app-icon name="menu" size="md"></app-icon>
+    </button>
+  </div>
+
+  <div class="topbar__right">
+    @if (roleLabel) {
+      <span class="topbar__role-badge" role="status">{{ roleLabel }}</span>
+    }
+    <div ngbDropdown placement="bottom-end" class="d-inline-block">
+      <button class="topbar__avatar-btn" ngbDropdownToggle
+              [attr.aria-label]="'Menú de usuario: ' + userName">
+        <span class="topbar__avatar" aria-hidden="true">{{ userInitials }}</span>
+      </button>
+      <div ngbDropdownMenu class="topbar-menu">
+        <div class="topbar-menu__header dropdown-item-text">
+          <span class="topbar-menu__name">{{ userName }}</span>
+          <span class="topbar-menu__role">{{ roleLabel }}</span>
+        </div>
+        <hr class="dropdown-divider">
+        <button ngbDropdownItem (click)="logoutClick.emit()">
+          <app-icon name="logout" size="sm"></app-icon>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>

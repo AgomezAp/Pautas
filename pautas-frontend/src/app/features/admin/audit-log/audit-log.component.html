@@ -1,0 +1,68 @@
+<h2>Registro de Auditor&iacute;a</h2>
+
+<div class="filter-bar">
+  <div class="filter-field">
+    <label class="form-label">Acci&oacute;n</label>
+    <select class="form-select" [(ngModel)]="filterAction" (change)="applyFilters()">
+      <option [ngValue]="''">Todas</option>
+      @for (action of actionOptions; track action) {
+        <option [ngValue]="action">{{ action }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Usuario</label>
+    <input class="form-control" [(ngModel)]="filterUsername" (keyup.enter)="applyFilters()" placeholder="Buscar usuario">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Desde</label>
+    <input type="date" class="form-control" [(ngModel)]="filterDateFrom" (change)="applyFilters()">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Hasta</label>
+    <input type="date" class="form-control" [(ngModel)]="filterDateTo" (change)="applyFilters()">
+  </div>
+
+  <button class="btn btn-outline-secondary clear-btn" (click)="clearFilters()">
+    <app-icon name="clear" size="sm"></app-icon> Limpiar
+  </button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Usuario</th>
+        <th>Acci&oacute;n</th>
+        <th>Entidad</th>
+        <th>ID</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows; track row.id) {
+        <tr>
+          <td>{{ row.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ row.username || row.full_name || '\u2014' }}</td>
+          <td>
+            <span class="action-badge">{{ row.action }}</span>
+          </td>
+          <td>{{ row.entity_type || '\u2014' }}</td>
+          <td>{{ row.entity_id || '\u2014' }}</td>
+          <td>{{ row.ip_address || '\u2014' }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<app-pagination
+  [totalItems]="totalItems"
+  [pageSize]="pageSize"
+  [currentPage]="page"
+  (pageChange)="onPageChange($event)">
+</app-pagination>

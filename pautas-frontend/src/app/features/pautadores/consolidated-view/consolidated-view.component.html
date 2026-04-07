@@ -1,0 +1,97 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-header__text">
+    <h1 class="page-header__title">Vista Consolidada</h1>
+    <p class="page-header__subtitle">Datos consolidados por usuario, cuenta y pa&iacute;s</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+  <div class="filter-field">
+    <label class="form-label">Pa&iacute;s</label>
+    <select class="form-select" [(ngModel)]="filters.country_id" (ngModelChange)="loadData()">
+      <option [ngValue]="null">Todos</option>
+      @for (c of countries; track c.id) {
+        <option [ngValue]="c.id">{{ c.name }}</option>
+      }
+    </select>
+  </div>
+  <div class="filter-field">
+    <label class="form-label">Desde</label>
+    <input type="date" class="form-control" [(ngModel)]="filters.date_from" (change)="loadData()">
+  </div>
+  <div class="filter-field">
+    <label class="form-label">Hasta</label>
+    <input type="date" class="form-control" [(ngModel)]="filters.date_to" (change)="loadData()">
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-panel">
+  @if (loading) {
+    @for (i of [1,2,3,4,5]; track i) {
+      <div class="skeleton-table-row">
+        @for (j of [1,2,3,4,5,6]; track j) {
+          <div class="skeleton-table-row__cell">
+            <div class="skeleton skeleton--text"></div>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th class="sortable" [class.sort-active]="sortColumn === 'entry_date'" (click)="onSort('entry_date')">
+              Fecha <app-icon [name]="sortColumn === 'entry_date' ? (sortDirection === 'asc' ? 'expand_less' : 'expand_more') : 'sort'" size="sm" class="sort-icon"></app-icon>
+            </th>
+            <th class="sortable" [class.sort-active]="sortColumn === 'user_name'" (click)="onSort('user_name')">
+              Usuario <app-icon [name]="sortColumn === 'user_name' ? (sortDirection === 'asc' ? 'expand_less' : 'expand_more') : 'sort'" size="sm" class="sort-icon"></app-icon>
+            </th>
+            <th>Pa&iacute;s</th>
+            <th>Cuenta</th>
+            <th class="sortable" [class.sort-active]="sortColumn === 'clientes'" (click)="onSort('clientes')">
+              Clientes <app-icon [name]="sortColumn === 'clientes' ? (sortDirection === 'asc' ? 'expand_less' : 'expand_more') : 'sort'" size="sm" class="sort-icon"></app-icon>
+            </th>
+            <th class="sortable" [class.sort-active]="sortColumn === 'clientes_efectivos'" (click)="onSort('clientes_efectivos')">
+              Efectivos <app-icon [name]="sortColumn === 'clientes_efectivos' ? (sortDirection === 'asc' ? 'expand_less' : 'expand_more') : 'sort'" size="sm" class="sort-icon"></app-icon>
+            </th>
+            <th class="sortable" [class.sort-active]="sortColumn === 'conversions'" (click)="onSort('conversions')">
+              Conversiones <app-icon [name]="sortColumn === 'conversions' ? (sortDirection === 'asc' ? 'expand_less' : 'expand_more') : 'sort'" size="sm" class="sort-icon"></app-icon>
+            </th>
+            <th>Estado Ads</th>
+            <th>Presupuesto</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of pagedData; track row) {
+            <tr>
+              <td>{{ row.entry_date | date:'dd/MM/yyyy' }}</td>
+              <td>{{ row.user_name }}</td>
+              <td>{{ row.country_name }}</td>
+              <td>{{ row.customer_account_name || '&mdash;' }}</td>
+              <td class="tabular-nums">{{ row.clientes }}</td>
+              <td class="tabular-nums">{{ row.clientes_efectivos }}</td>
+              <td class="tabular-nums">{{ row.conversions || '&mdash;' }}</td>
+              <td>
+                <span [class]="getStatusBadgeClass(row.ads_status)">
+                  {{ translateStatus(row.ads_status) }}
+                </span>
+              </td>
+              <td class="tabular-nums">{{ row.remaining_budget ? ('$' + row.remaining_budget) : '&mdash;' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  <app-pagination
+    [totalItems]="filteredData.length"
+    [pageSize]="pageSize"
+    [currentPage]="currentPage"
+    [pageSizeOptions]="[10, 25, 50]"
+    (pageChange)="onPageChange($event)">
+  </app-pagination>
+</div>

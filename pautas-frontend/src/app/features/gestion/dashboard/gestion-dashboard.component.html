@@ -1,0 +1,207 @@
+<div class="page-header">
+  <h2>Dashboard - Gestion Administrativa</h2>
+</div>
+
+<div class="kpi-grid">
+  @for (kpi of kpis; track kpi.label) {
+    <div class="card kpi-card">
+      <div class="card-body">
+        <app-icon [name]="kpi.icon" size="md"></app-icon>
+        <div class="kpi-info">
+          <span class="kpi-value">{{ kpi.value }}</span>
+          <span class="kpi-label">{{ kpi.label }}</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<div class="card report-card">
+  <div class="card-body">
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 0" (click)="activeTab = 0; onReportTabChange(0)">Por Pais</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 1" (click)="activeTab = 1; onReportTabChange(1)">Efectividad</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 2" (click)="activeTab = 2; onReportTabChange(2)">Conversiones</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 3" (click)="activeTab = 3; onReportTabChange(3)">Tendencia Semanal</button>
+      </li>
+    </ul>
+
+    <div class="tab-content mt-3">
+      <!-- Tab: Por Pais -->
+      @if (activeTab === 0) {
+        <div class="tab-body">
+          <table class="table table-hover full-width">
+            <thead>
+              <tr>
+                <th>Pais</th>
+                <th>Usuarios</th>
+                <th>Entradas</th>
+                <th>Clientes</th>
+                <th>Efectividad</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of countryReport; track row.country_name) {
+                <tr>
+                  <td>{{ row.country_name }}</td>
+                  <td>{{ row.total_users }}</td>
+                  <td>{{ row.total_entries }}</td>
+                  <td>{{ row.total_clientes }}</td>
+                  <td>{{ (row.effectiveness_rate * 100) | number:'1.1-1' }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Tab: Efectividad -->
+      @if (activeTab === 1) {
+        <div class="tab-body">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="form-label">Pais</label>
+              <select class="form-select" [(ngModel)]="effectivenessCountryId" (ngModelChange)="loadEffectiveness()">
+                <option [ngValue]="null">Todos</option>
+                @for (c of countries; track c.id) {
+                  <option [ngValue]="c.id">{{ c.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <table class="table table-hover full-width">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Campana</th>
+                <th>Pais</th>
+                <th>Clientes</th>
+                <th>Clientes Efectivos</th>
+                <th>Tasa Efectividad</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of effectivenessReport; track $index) {
+                <tr>
+                  <td>{{ row.user_name }}</td>
+                  <td>{{ row.campaign_name || '&#8212;' }}</td>
+                  <td>{{ row.country_name }}</td>
+                  <td>{{ row.total_clientes }}</td>
+                  <td>{{ row.total_clientes_efectivos }}</td>
+                  <td>{{ (row.effectiveness_rate * 100) | number:'1.1-1' }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (effectivenessReport.length === 0) {
+            <div class="empty-state">
+              <app-icon name="bar_chart" size="lg"></app-icon>
+              <p>No hay datos de efectividad</p>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Tab: Conversiones -->
+      @if (activeTab === 2) {
+        <div class="tab-body">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="form-label">Pais</label>
+              <select class="form-select" [(ngModel)]="conversionsCountryId" (ngModelChange)="loadConversions()">
+                <option [ngValue]="null">Todos</option>
+                @for (c of countries; track c.id) {
+                  <option [ngValue]="c.id">{{ c.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <table class="table table-hover full-width">
+            <thead>
+              <tr>
+                <th>Campana</th>
+                <th>Pais</th>
+                <th>Clientes</th>
+                <th>Conversiones</th>
+                <th>Tasa Conversion</th>
+                <th>Costo Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of conversionReport; track $index) {
+                <tr>
+                  <td>{{ row.campaign_name || '&#8212;' }}</td>
+                  <td>{{ row.country_name }}</td>
+                  <td>{{ row.total_clientes }}</td>
+                  <td>{{ row.total_conversions }}</td>
+                  <td>{{ (row.conversion_rate * 100) | number:'1.1-1' }}%</td>
+                  <td>{{ row.total_cost | number:'1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (conversionReport.length === 0) {
+            <div class="empty-state">
+              <app-icon name="swap_horiz" size="lg"></app-icon>
+              <p>No hay datos de conversiones</p>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Tab: Tendencia Semanal -->
+      @if (activeTab === 3) {
+        <div class="tab-body">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="form-label">Pais</label>
+              <select class="form-select" [(ngModel)]="weeklyCountryId" (ngModelChange)="loadWeekly()">
+                <option [ngValue]="null">Todos</option>
+                @for (c of countries; track c.id) {
+                  <option [ngValue]="c.id">{{ c.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <table class="table table-hover full-width">
+            <thead>
+              <tr>
+                <th>Semana</th>
+                <th>Usuarios</th>
+                <th>Clientes</th>
+                <th>Clientes Efectivos</th>
+                <th>Menores</th>
+                <th>Efectividad</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of weeklyReport; track $index) {
+                <tr>
+                  <td>{{ row.iso_year }}-S{{ row.iso_week }}</td>
+                  <td>{{ row.users_reporting }}</td>
+                  <td>{{ row.total_clientes }}</td>
+                  <td>{{ row.total_clientes_efectivos }}</td>
+                  <td>{{ row.total_menores }}</td>
+                  <td>{{ (row.effectiveness_rate * 100) | number:'1.1-1' }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (weeklyReport.length === 0) {
+            <div class="empty-state">
+              <app-icon name="show_chart" size="lg"></app-icon>
+              <p>No hay datos de tendencia semanal</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

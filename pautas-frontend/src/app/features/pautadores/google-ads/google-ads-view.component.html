@@ -1,0 +1,278 @@
+<div class="page-header">
+  <div>
+    <h1>Google Ads</h1>
+    <p class="page-subtitle">Cuentas y recargas</p>
+  </div>
+  @if (isAdmin) {
+    <button class="btn btn-primary sync-btn" (click)="syncNow()" [disabled]="syncing">
+      @if (syncing) {
+        <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+        <span>Sincronizando...</span>
+      } @else {
+        <app-icon name="sync" size="sm"></app-icon>
+        <span>Sincronizar Ahora</span>
+      }
+    </button>
+  }
+</div>
+
+<div class="tabs-wrapper">
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 0" (click)="onTabChange(0)" type="button" role="tab">
+        <app-icon name="account_balance_wallet" size="sm" class="tab-icon"></app-icon> Cuentas
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 1" (click)="onTabChange(1)" type="button" role="tab">
+        <app-icon name="payments" size="sm" class="tab-icon"></app-icon> Recargas
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab content -->
+  <div class="tab-content">
+    <!-- ===== TAB 1: Cuentas (campanas agrupadas por cuenta) ===== -->
+    @if (activeTab === 0) {
+      <div class="tab-body">
+        <div class="tab-toolbar">
+          <div class="filter-select">
+            <select class="form-select" [(ngModel)]="accountsCountryId" (ngModelChange)="loadAccounts()">
+              <option [ngValue]="0">Todos los pa&iacute;ses</option>
+              @for (country of countries; track country.id) {
+                <option [ngValue]="country.id">{{ country.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="input-group filter-search">
+            <input type="text" class="form-control" placeholder="Buscar cuenta o campa&ntilde;a" [(ngModel)]="accountSearch" (keyup)="filterAccounts()">
+            <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+          </div>
+          @if (isPautador) {
+            <button class="btn btn-outline-secondary toggle-mine-btn" (click)="toggleShowMine()" [class.active]="showOnlyMine">
+              <app-icon [name]="showOnlyMine ? 'person' : 'groups'" size="sm"></app-icon>
+              {{ showOnlyMine ? 'Mis cuentas' : 'Todas' }}
+            </button>
+          }
+          <span class="record-count">{{ filteredAccounts.length }} cuentas &middot; {{ totalAccountCampaigns }} campa&ntilde;as</span>
+        </div>
+
+        @if (!accountsLoaded) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando cuentas...</span>
+          </div>
+        } @else if (filteredAccounts.length === 0) {
+          <div class="empty-state">
+            <app-icon name="account_balance" size="xl"></app-icon>
+            <p>No se encontraron cuentas</p>
+            @if (!hasAccountData) {
+              <p class="empty-hint">Presiona "Sincronizar Ahora" para asociar campa&ntilde;as con sus cuentas de Google Ads</p>
+            }
+          </div>
+        } @else {
+          <div class="accounts-list">
+            @for (account of filteredAccounts; track account.customer_account_id) {
+              <div class="account-card" [class.expanded]="expandedAccounts.has(account.customer_account_id || 'unknown')" [class.same-day-recharges]="account.has_same_day_recharges">
+                <!-- Account header (clickable) -->
+                <div class="account-header" (click)="toggleAccount(account.customer_account_id || 'unknown')">
+                  <div class="account-expand">
+                    <app-icon [name]="expandedAccounts.has(account.customer_account_id || 'unknown') ? 'expand_less' : 'expand_more'" size="md"></app-icon>
+                  </div>
+                  <div class="account-info">
+                    <span class="account-name">{{ account.customer_account_name }}</span>
+                    @if (account.customer_account_id) {
+                      <span class="account-id">ID: {{ account.customer_account_id | googleAdsId }}</span>
+                    }
+                  </div>
+                  <div class="account-badges">
+                    <span class="mini-badge total">{{ account.campaigns_count }}</span>
+                    <span class="mini-badge enabled">{{ account.enabled_count }}</span>
+                    <span class="mini-badge paused">{{ account.paused_count }}</span>
+                  </div>
+                </div>
+
+                <!-- Financial KPIs row -->
+                <div class="account-kpis">
+                  <div class="kpi-item">
+                    <app-icon name="account_balance" size="sm" class="kpi-icon budget-icon"></app-icon>
+                    <div class="kpi-data">
+                      <span class="kpi-value">{{ formatMoney(account.total_daily_budget) }}</span>
+                      <span class="kpi-label">Presup. Diario</span>
+                    </div>
+                  </div>
+                  <div class="kpi-item">
+                    <app-icon name="trending_down" size="sm" class="kpi-icon spent-icon"></app-icon>
+                    <div class="kpi-data">
+                      <span class="kpi-value spent">{{ formatMoney(account.total_cost_today) }}</span>
+                      <span class="kpi-label">Gasto Hoy</span>
+                    </div>
+                  </div>
+                  <div class="kpi-item">
+                    <app-icon name="savings" size="sm" class="kpi-icon remaining-icon"></app-icon>
+                    <div class="kpi-data">
+                      <span class="kpi-value" [class.negative]="account.total_remaining < 0">{{ formatMoney(account.total_remaining) }}</span>
+                      <span class="kpi-label">Saldo Restante</span>
+                    </div>
+                  </div>
+                  <div class="kpi-divider"></div>
+                  <div class="kpi-item">
+                    <app-icon name="ads_click" size="sm" class="kpi-icon clicks-icon"></app-icon>
+                    <div class="kpi-data">
+                      <span class="kpi-value">{{ account.total_clicks | number:'1.0-0' }}</span>
+                      <span class="kpi-label">Clicks</span>
+                    </div>
+                  </div>
+                  <div class="kpi-item">
+                    <app-icon name="visibility" size="sm" class="kpi-icon impressions-icon"></app-icon>
+                    <div class="kpi-data">
+                      <span class="kpi-value">{{ account.total_impressions | number:'1.0-0' }}</span>
+                      <span class="kpi-label">Impresiones</span>
+                    </div>
+                  </div>
+                  <div class="kpi-item">
+                    <app-icon name="check_circle" size="sm" class="kpi-icon conversions-icon"></app-icon>
+                    <div class="kpi-data">
+                      <span class="kpi-value">{{ account.total_conversions | number:'1.0-1' }}</span>
+                      <span class="kpi-label">Conversiones</span>
+                    </div>
+                  </div>
+                  <div class="kpi-divider"></div>
+                  <div class="kpi-item">
+                    <app-icon name="payments" size="sm" class="kpi-icon recharges-icon"></app-icon>
+                    <div class="kpi-data">
+                      <span class="kpi-value recharge">{{ formatMoney(account.total_recharged) }}</span>
+                      <span class="kpi-label">Total Recargado ({{ account.recharges_count }} recargas)</span>
+                    </div>
+                  </div>
+                  <div class="kpi-item">
+                    <app-icon name="schedule" size="sm" class="kpi-icon last-recharge-icon"></app-icon>
+                    <div class="kpi-data">
+                      @if (account.last_recharge_date) {
+                        <span class="kpi-value">{{ formatMoney(account.last_recharge_amount) }}</span>
+                        <span class="kpi-label">&Uacute;ltima recarga &middot; {{ account.last_recharge_date | date:'dd/MM/yy':'UTC' }}</span>
+                      } @else {
+                        <span class="kpi-value text-muted">&mdash;</span>
+                        <span class="kpi-label">Sin recargas</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Expanded: campaigns table -->
+                @if (expandedAccounts.has(account.customer_account_id || 'unknown')) {
+                  <div class="campaigns-panel">
+                    <div class="campaigns-panel-header">
+                      <app-icon name="list" size="sm"></app-icon>
+                      <span>Campa&ntilde;as de esta cuenta ({{ account.campaigns_count }})</span>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-hover campaigns-table mb-0">
+                        <thead>
+                          <tr>
+                            <th>Campa&ntilde;a</th>
+                            <th>Pa&iacute;s</th>
+                            <th>Estado</th>
+                            <th>Presup. Diario</th>
+                            <th>Gasto Hoy</th>
+                            <th>Restante</th>
+                            <th>Conv.</th>
+                            <th>Clicks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of account.campaigns; track row.name) {
+                            <tr>
+                              <td><span class="cell-primary">{{ row.name }}</span></td>
+                              <td>{{ row.country_code }}</td>
+                              <td><span class="badge" [class]="getStatusClass(row.ads_status)">{{ translateStatus(row.ads_status) }}</span></td>
+                              <td class="num">{{ row.daily_budget ? formatMoney(row.daily_budget) : '&mdash;' }}</td>
+                              <td class="num">{{ row.cost ? formatMoney(row.cost) : '&mdash;' }}</td>
+                              <td class="num"><span [class.negative]="row.remaining_budget < 0">{{ row.remaining_budget != null ? formatMoney(row.remaining_budget) : '&mdash;' }}</span></td>
+                              <td class="num">{{ row.conversions | number:'1.0-0' }}</td>
+                              <td class="num">{{ row.clicks | number:'1.0-0' }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ===== TAB 2: Recargas ===== -->
+    @if (activeTab === 1) {
+      <div class="tab-body">
+        <div class="tab-toolbar">
+          <div class="filter-date">
+            <label class="form-label">Desde</label>
+            <input type="date" class="form-control" [(ngModel)]="rechargesDateFrom" (change)="applyRechargesFilter()">
+          </div>
+          <div class="filter-date">
+            <label class="form-label">Hasta</label>
+            <input type="date" class="form-control" [(ngModel)]="rechargesDateTo" (change)="applyRechargesFilter()">
+          </div>
+          <div class="input-group filter-account">
+            <input type="text" class="form-control" placeholder="Buscar cuenta" [(ngModel)]="rechargesAccount" (keyup.enter)="applyRechargesFilter()">
+            <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+          </div>
+          <button class="btn btn-outline-secondary action-btn" (click)="clearRechargesFilters()" ngbTooltip="Limpiar filtros">
+            <app-icon name="restart_alt" size="sm"></app-icon>
+          </button>
+          <span class="record-count">{{ totalRecharges | number }} recargas</span>
+          <button class="btn btn-success export-btn" (click)="exportCsv()" ngbTooltip="Exportar datos filtrados a CSV">
+            <app-icon name="download" size="sm"></app-icon>
+            Exportar CSV
+          </button>
+        </div>
+        <div class="data-table-wrap">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Perfil MCC</th>
+                  <th>ID Cuenta</th>
+                  <th>Nombre Cuenta</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>Valor Recargado</th>
+                  <th>Presup. Diario</th>
+                  <th>Saldo Restante</th>
+                  <th>Tipo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of recharges; track row) {
+                  <tr [class.same-day-highlight]="row.same_day_count >= 2">
+                    <td><span class="cell-primary">{{ row.payments_profile_name || '&mdash;' }}</span></td>
+                    <td><span class="mono">{{ row.customer_account_id | googleAdsId }}</span></td>
+                    <td>{{ row.customer_account_name }}</td>
+                    <td>{{ row.recharge_date | date:'dd/MM/yyyy':'UTC' }}</td>
+                    <td class="text-muted">{{ row.recharge_date | date:'HH:mm':'UTC' }}</td>
+                    <td class="num amount-cell">{{ formatMoney(row.recharge_amount) }}</td>
+                    <td class="num">{{ row.total_daily_budget ? formatMoney(row.total_daily_budget) : '&mdash;' }}</td>
+                    <td class="num"><span [class.negative]="row.total_remaining < 0">{{ row.total_remaining != null ? formatMoney(row.total_remaining) : '&mdash;' }}</span></td>
+                    <td><span class="badge" [class]="getProposalTypeClass(row.proposal_type)">{{ getProposalTypeLabel(row.proposal_type) }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <app-pagination
+          [totalItems]="totalRecharges"
+          [pageSize]="50"
+          [currentPage]="rechargesPage"
+          [pageSizeOptions]="[25, 50, 100]"
+          (pageChange)="onRechargesPageChange($event)">
+        </app-pagination>
+      </div>
+    }
+  </div>
+</div>

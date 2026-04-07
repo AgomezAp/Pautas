@@ -1,0 +1,115 @@
+<div class="page-header">
+  <div class="page-header__text">
+    <h1 class="page-header__title">Gesti&oacute;n de Pa&iacute;ses</h1>
+    <p class="page-header__subtitle">Administraci&oacute;n de pa&iacute;ses y zonas horarias</p>
+  </div>
+  <div class="page-header__actions">
+    <button class="btn btn-primary" (click)="openForm()">
+      <app-icon name="add" size="sm"></app-icon> Nuevo Pa&iacute;s
+    </button>
+  </div>
+</div>
+
+<div class="table-panel">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>C&oacute;digo</th>
+          <th>Pa&iacute;s</th>
+          <th>Zona Horaria</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of allData; track row.id) {
+          <tr>
+            <td>
+              <span class="code-badge">{{ row.code }}</span>
+            </td>
+            <td>{{ row.name }}</td>
+            <td>
+              <span class="tz-label">{{ row.timezone }}</span>
+            </td>
+            <td>
+              <span [class]="row.is_active ? 'status-badge status-badge--active' : 'status-badge status-badge--paused'">
+                {{ row.is_active ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline-secondary action-btn" (click)="openForm(row)">
+                <app-icon name="edit" size="sm"></app-icon>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (showForm) {
+  <div class="overlay" (click)="closeForm()">
+    <div class="form-dialog" (click)="$event.stopPropagation()">
+      <div class="form-dialog__header">
+        <h3>{{ editingCountry ? 'Editar Pa&iacute;s' : 'Nuevo Pa&iacute;s' }}</h3>
+        <button class="btn btn-icon dialog-close" (click)="closeForm()" aria-label="Cerrar">
+          <app-icon name="close" size="md"></app-icon>
+        </button>
+      </div>
+      <form (ngSubmit)="save()">
+        <div class="form-dialog__body">
+          <div class="form-row">
+            <div class="mb-3">
+              <label class="form-label">Nombre</label>
+              <div class="input-group">
+                <span class="input-group-text"><app-icon name="public" size="sm"></app-icon></span>
+                <input class="form-control" [(ngModel)]="formData.name" name="name" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">C&oacute;digo (ej: CO, MX)</label>
+              <div class="input-group">
+                <span class="input-group-text"><app-icon name="tag" size="sm"></app-icon></span>
+                <input class="form-control" [(ngModel)]="formData.code" name="code" required maxlength="5">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Zona Horaria</label>
+            <div class="input-group">
+              <span class="input-group-text"><app-icon name="schedule" size="sm"></app-icon></span>
+              <select class="form-select" [(ngModel)]="formData.timezone" name="timezone">
+                @for (tz of timezones; track tz) {
+                  <option [ngValue]="tz">{{ tz }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-check form-switch form-toggle">
+            <input class="form-check-input" type="checkbox" role="switch" [(ngModel)]="formData.is_active" name="is_active" id="countryActiveToggle">
+            <label class="form-check-label" for="countryActiveToggle">Activo</label>
+          </div>
+
+          @if (formError) {
+            <div class="form-error">
+              <app-icon name="error_outline" size="sm"></app-icon>
+              <span>{{ formError }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="form-dialog__footer">
+          <button class="btn btn-outline-secondary dialog-btn-cancel" type="button" (click)="closeForm()">Cancelar</button>
+          <button class="btn btn-primary dialog-btn-submit" type="submit" [disabled]="saving">
+            {{ saving ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

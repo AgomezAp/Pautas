@@ -10,6 +10,7 @@ const poolConfig: PoolConfig = {
   max: env.db.maxConnections,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  client_encoding: 'UTF8',
 };
 
 export const pool = new Pool(poolConfig);

@@ -62,4 +62,20 @@ export class GestionService {
   getEntriesWithImages(params?: any): Observable<ApiResponse<any[]>> {
     return this.http.get<ApiResponse<any[]>>(API_URLS.gestion.soporteImages, { params: this.buildParams(params) });
   }
+
+  getConglomeradoUsers(countryId?: number): Observable<ApiResponse<any[]>> {
+    const params = countryId ? { country_id: countryId.toString() } : {};
+    return this.http.get<ApiResponse<any[]>>(API_URLS.gestion.conglomeradoUsers, { params: this.buildParams(params) });
+  }
+
+  createConglomeradoUser(data: {
+    username: string;
+    full_name: string;
+    email?: string;
+    password?: string;
+    country_id: number;
+    campaign_id?: number;
+  }): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(API_URLS.gestion.conglomeradoUsers, data);
+  }
 }

@@ -38,7 +38,7 @@ export const uploadSoporte = multer({
   storage,
   fileFilter,
   limits: { fileSize: env.upload.maxFileSizeMB * 1024 * 1024 },
-}).single('soporte');
+}).array('soporte', 10);
 
 export const uploadAdsFile = multer({
   storage: multer.diskStorage({

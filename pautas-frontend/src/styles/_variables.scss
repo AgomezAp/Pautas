@@ -1,18 +1,18 @@
 // =============================================================
 // DESIGN TOKENS — PAUTAS APP
-// Vercel + Stripe + Linear inspired
+// Corporate Dashboard Theme
 // =============================================================
 
 :root {
-  // ─── Brand ───
-  --brand-primary: #141414;
-  --brand-primary-hover: #1F1F1F;
-  --brand-primary-active: #000000;
-  --brand-accent: #FFD600;
-  --brand-accent-hover: #E6C200;
-  --brand-accent-active: #CCB000;
-  --brand-accent-light: #FFF8D6;
-  --brand-accent-subtle: #FFFEF5;
+  // ─── Brand (Corporate Blue) ───
+  --brand-primary: #1a365d;
+  --brand-primary-hover: #1e3a5f;
+  --brand-primary-active: #152c4a;
+  --brand-accent: #3b82f6;
+  --brand-accent-hover: #2563eb;
+  --brand-accent-active: #1d4ed8;
+  --brand-accent-light: #dbeafe;
+  --brand-accent-subtle: #eff6ff;
 
   // ─── Neutrals ───
   --gray-0: #FFFFFF;
@@ -113,7 +113,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.06), 0 4px 6px -4px rgba(0,0,0,0.03);
   --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.07), 0 8px 10px -6px rgba(0,0,0,0.03);
   --shadow-card-hover: 0 8px 25px -5px rgba(0,0,0,0.08), 0 4px 10px -4px rgba(0,0,0,0.02);
-  --shadow-focus-accent: 0 0 0 3px rgba(255,214,0,0.18);
+  --shadow-focus-accent: 0 0 0 3px rgba(59,130,246,0.18);
   --shadow-focus-danger: 0 0 0 3px rgba(239,68,68,0.18);
 
   // ─── Borders ───
@@ -153,7 +153,7 @@
   --color-primary-light: var(--brand-primary-hover);
   --color-primary-lighter: var(--gray-700);
   --color-secondary-dark: var(--brand-accent-hover);
-  --color-secondary-soft: rgba(255, 214, 0, 0.12);
+  --color-secondary-soft: rgba(59, 130, 246, 0.12);
   --color-bg: var(--gray-50);
   --color-bg-card: var(--gray-0);
   --color-text: var(--gray-900);

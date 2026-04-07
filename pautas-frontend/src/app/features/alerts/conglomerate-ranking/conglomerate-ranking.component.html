@@ -1,0 +1,91 @@
+<div class="ranking-page">
+  <h2 class="page-title">Ranking de Conglomerados</h2>
+  <p class="page-subtitle">Ranking por tasa de conversion (clientes efectivos / clientes totales) de los ultimos 30 dias.</p>
+
+  <div class="card filter-card">
+    <div class="card-body">
+      <div class="mb-0">
+        <label class="form-label">Filtrar por Pais</label>
+        <select class="form-select" [(ngModel)]="selectedCountry" (ngModelChange)="loadRanking()">
+          <option [ngValue]="undefined">Todos los paises</option>
+          @for (country of countries; track country.id) {
+            <option [ngValue]="country.id">{{ country.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-container">
+      <div class="spinner-border" role="status"></div>
+    </div>
+  } @else {
+    @if (rankings.length === 0) {
+      <div class="card empty-state">
+        <div class="card-body text-center">
+          <app-icon name="emoji_events" size="lg"></app-icon>
+          <p>No hay datos de ranking disponibles.</p>
+        </div>
+      </div>
+    } @else {
+      <div class="card table-card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover ranking-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Conglomerado</th>
+                  <th>Pais</th>
+                  <th>Campana</th>
+                  <th>Conversion</th>
+                  <th>Clientes</th>
+                  <th>Efectivos</th>
+                  <th>Reportes</th>
+                  <th>Ultimo Reporte</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of rankings; track $index) {
+                  <tr [class.top-1]="row.rank_in_country === 1" [class.top-3]="row.rank_in_country <= 3">
+                    <td>
+                      <div class="rank-badge" [class]="getRankClass(row.rank_in_country)">
+                        @if (row.rank_in_country <= 3) {
+                          <app-icon [name]="row.rank_in_country === 1 ? 'emoji_events' : 'military_tech'" size="sm"></app-icon>
+                        }
+                        {{ row.rank_in_country }}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="user-cell">
+                        <span class="user-cell__name">{{ row.full_name }}</span>
+                        <span class="user-cell__username">{{ row.username }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="country-chip">{{ row.country_code }}</span>
+                    </td>
+                    <td>{{ row.campaign_name || '&#8212;' }}</td>
+                    <td>
+                      <div class="rate-cell">
+                        <div class="rate-bar">
+                          <div class="rate-bar__fill" [style.width.%]="row.conversion_rate" [class]="getRateClass(row.conversion_rate)"></div>
+                        </div>
+                        <span class="rate-value">{{ row.conversion_rate }}%</span>
+                      </div>
+                    </td>
+                    <td>{{ row.total_clientes | number }}</td>
+                    <td>{{ row.total_efectivos | number }}</td>
+                    <td>{{ row.total_entries }}</td>
+                    <td>{{ row.last_entry_date ? (row.last_entry_date | date:'dd/MM/yy') : 'Nunca' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

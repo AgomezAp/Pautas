@@ -1,0 +1,1306 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use "sass:color";
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #FFD600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes de texto
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-text-light: #ffffff;
+
+// Fondos
+$color-bg-white: #ffffff;
+$color-bg-light: #f8f9fa;
+
+// Bordes
+$color-border: #dee2e6;
+$color-border-light: #e9ecef;
+
+// Estados
+$color-danger: #dc3545;
+$color-success: #10b981;
+$color-warning: #f59e0b;
+$color-info: #0ea5e9;
+
+// Espaciado
+$spacing-sm: 0.5rem;
+$spacing-md: 1rem;
+$spacing-lg: 1.5rem;
+$spacing-xl: 2rem;
+
+// Border radius
+$radius-sm: 0.375rem;
+$radius-md: 0.5rem;
+$radius-lg: 0.75rem;
+$radius-xl: 1rem;
+
+// Sombras
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+// Transiciones
+$transition-base: all 0.25s ease;
+
+// ============================================
+// KEYFRAMES
+// ============================================
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba($color-danger, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba($color-danger, 0);
+  }
+}
+
+// ============================================
+// HOST
+// ============================================
+:host {
+  display: block;
+  font-family: $font-primary;
+  color: $color-text-dark;
+  background-color: $color-bg-light;
+  min-height: 100vh;
+}
+
+// ============================================
+// ALERTS DASHBOARD (Wrapper)
+// ============================================
+.alerts-dashboard {
+  padding: $spacing-xl;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+// ============================================
+// PAGE TITLE
+// ============================================
+.page-title {
+  font-family: $font-primary;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: $color-text-dark;
+  margin: 0 0 $spacing-xl 0;
+  position: relative;
+  padding-bottom: $spacing-sm;
+
+  // Subrayado decorativo amarillo (regla obligatoria)
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background-color: $color-secondary;
+    border-radius: 2px;
+  }
+}
+
+// ============================================
+// SUMMARY CARDS
+// ============================================
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-lg;
+  margin-bottom: $spacing-xl;
+}
+
+// ---------- Card base ----------
+.summary-card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  cursor: pointer;
+  transition: $transition-base;
+  position: relative;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-2px);
+  }
+
+  .card-body {
+    padding: $spacing-lg;
+
+    &.d-flex {
+      display: flex;
+    }
+
+    &.align-items-center {
+      align-items: center;
+    }
+
+    &.gap-3 {
+      gap: $spacing-md;
+    }
+  }
+
+  // ---------- Icon ----------
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    border-radius: $radius-md;
+    flex-shrink: 0;
+
+    app-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  // ---------- Content ----------
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__value {
+    font-family: $font-primary;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__label {
+    font-family: $font-primary;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  // ---------- Total ----------
+  &__total {
+    font-family: $font-primary;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: $color-text-muted;
+    white-space: nowrap;
+    align-self: flex-start;
+    padding: 0.2rem 0.5rem;
+    background-color: $color-bg-light;
+    border-radius: 50px;
+  }
+
+  // ======== VARIANTES POR SEVERIDAD ========
+
+  // Critical
+  &--critical {
+    border-left: 4px solid $color-danger; // Borde lateral (regla obligatoria para elementos destacados)
+
+    .summary-card__icon {
+      background-color: rgba($color-danger, 0.1);
+      color: $color-danger;
+    }
+
+    .summary-card__value {
+      color: $color-danger;
+    }
+
+    .summary-card__label {
+      color: color.adjust($color-danger, $lightness: 5%);
+    }
+
+    &:hover {
+      border-color: $color-danger;
+    }
+  }
+
+  // Warning
+  &--warning {
+    border-left: 4px solid $color-warning;
+
+    .summary-card__icon {
+      background-color: rgba($color-warning, 0.1);
+      color: $color-warning;
+    }
+
+    .summary-card__value {
+      color: color.adjust($color-warning, $lightness: -8%);
+    }
+
+    .summary-card__label {
+      color: color.adjust($color-warning, $lightness: -5%);
+    }
+
+    &:hover {
+      border-color: $color-warning;
+    }
+  }
+
+  // Info
+  &--info {
+    border-left: 4px solid $color-info;
+
+    .summary-card__icon {
+      background-color: rgba($color-info, 0.1);
+      color: $color-info;
+    }
+
+    .summary-card__value {
+      color: $color-info;
+    }
+
+    .summary-card__label {
+      color: color.adjust($color-info, $lightness: -5%);
+    }
+
+    &:hover {
+      border-color: $color-info;
+    }
+  }
+}
+
+// ============================================
+// FILTERS CARD
+// ============================================
+.filters-card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+  margin-bottom: $spacing-xl;
+  overflow: hidden;
+  border-top: 4px solid $color-secondary; // Borde superior amarillo (regla obligatoria)
+
+  .card-body {
+    padding: $spacing-lg;
+  }
+}
+
+.filters-row {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+}
+
+// ============================================
+// FILTER FIELD
+// ============================================
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 155px;
+  flex: 1;
+  max-width: 200px;
+
+  .form-label {
+    font-family: $font-primary;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: $color-text-dark;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0;
+  }
+}
+
+// ============================================
+// FORM CONTROL & FORM SELECT
+// ============================================
+.form-control,
+.form-select {
+  font-family: $font-primary;
+  font-size: 0.9rem;
+  color: $color-text-dark;
+  background-color: $color-bg-white;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: 0.5rem 0.75rem;
+  height: 40px;
+  line-height: 1.4;
+  transition: $transition-base;
+
+  // Focus amarillo (regla obligatoria)
+  &:focus {
+    outline: none;
+    border-color: $color-secondary;
+    box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
+  }
+
+  &:hover:not(:focus) {
+    border-color: color.adjust($color-border, $lightness: -10%);
+  }
+
+  &::placeholder {
+    color: $color-text-muted;
+    font-weight: 400;
+  }
+}
+
+.form-select {
+  cursor: pointer;
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23141414' d='M6 8.825a.7.7 0 0 1-.5-.206L1.705 4.824a.71.71 0 0 1 1.003-1.003L6 7.113l3.293-3.292a.71.71 0 0 1 1.003 1.003L6.5 8.619a.7.7 0 0 1-.5.206Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+}
+
+.form-control[type="date"] {
+  cursor: pointer;
+
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: $transition-base;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// ============================================
+// CLEAR FILTERS BUTTON
+// ============================================
+.btn-outline-secondary {
+  font-family: $font-primary;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.5rem $spacing-md;
+  height: 40px;
+  border-radius: $radius-md;
+  border: 1px solid $color-border;
+  background-color: transparent;
+  color: $color-text-dark;
+  cursor: pointer;
+  transition: $transition-base;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  app-icon {
+    display: flex;
+    align-items: center;
+  }
+
+  &:hover {
+    background-color: $color-primary;
+    border-color: $color-primary;
+    color: $color-text-light;
+
+    app-icon {
+      color: $color-text-light;
+    }
+  }
+
+  &:active {
+    background-color: color.adjust($color-primary, $lightness: 8%);
+    transform: scale(0.97);
+  }
+}
+
+// ============================================
+// MAIN GRID (Alerts + Sidebar)
+// ============================================
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: $spacing-xl;
+  align-items: flex-start;
+}
+
+// ============================================
+// ALERTS LIST SECTION
+// ============================================
+.alerts-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+// ============================================
+// LOADING CONTAINER
+// ============================================
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl * 3;
+
+  .spinner-border {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid $color-border-light;
+    border-top-color: $color-secondary; // Spinner amarillo (regla obligatoria)
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+}
+
+// ============================================
+// ALERT CARD
+// ============================================
+.alert-card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  transition: $transition-base;
+  position: relative;
+
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+
+  .card-body {
+    padding: $spacing-lg;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  // ======== VARIANTES POR SEVERIDAD ========
+  &--critical {
+    border-left: 4px solid $color-danger;
+
+    &:first-child {
+      animation: pulseGlow 2s ease-in-out 3; // Pulso para la primera alerta crítica
+    }
+
+    .alert-card__severity app-icon {
+      color: $color-danger;
+    }
+  }
+
+  &--warning {
+    border-left: 4px solid $color-warning;
+
+    .alert-card__severity app-icon {
+      color: $color-warning;
+    }
+  }
+
+  &--info {
+    border-left: 4px solid $color-info;
+
+    .alert-card__severity app-icon {
+      color: $color-info;
+    }
+  }
+
+  // ---------- Header ----------
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+  }
+
+  &__severity {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+
+    app-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  &__type-badge {
+    font-family: $font-primary;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $color-text-muted;
+    background-color: $color-bg-light;
+    padding: 0.2rem 0.55rem;
+    border-radius: 50px;
+    border: 1px solid $color-border-light;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__date {
+    font-family: $font-primary;
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // ---------- Status Chip ----------
+  &__status-chip {
+    font-family: $font-primary;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 0.2rem 0.55rem;
+    border-radius: 50px;
+    display: inline-block;
+    line-height: 1.3;
+
+    &.chip--active {
+      background-color: rgba($color-danger, 0.1);
+      color: $color-danger;
+      border: 1px solid rgba($color-danger, 0.18);
+    }
+
+    &.chip--acknowledged {
+      background-color: rgba($color-info, 0.1);
+      color: $color-info;
+      border: 1px solid rgba($color-info, 0.18);
+    }
+
+    &.chip--resolved {
+      background-color: rgba($color-success, 0.1);
+      color: color.adjust($color-success, $lightness: -8%);
+      border: 1px solid rgba($color-success, 0.18);
+    }
+
+    &.chip--dismissed {
+      background-color: $color-bg-light;
+      color: $color-text-muted;
+      border: 1px solid $color-border-light;
+    }
+  }
+
+  // ---------- Title ----------
+  &__title {
+    font-family: $font-primary;
+    font-size: 1rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    margin: 0;
+    line-height: 1.35;
+  }
+
+  // ---------- Message ----------
+  &__message {
+    font-family: $font-primary;
+    font-size: 0.88rem;
+    color: $color-text-muted;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  // ---------- Context Chips ----------
+  &__context {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+  }
+
+  // ---------- Actions ----------
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+    margin-top: $spacing-sm;
+    padding-top: $spacing-sm;
+    border-top: 1px solid $color-border-light;
+  }
+}
+
+// ============================================
+// CONTEXT CHIP
+// ============================================
+.context-chip {
+  font-family: $font-primary;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: $color-text-dark;
+  background-color: $color-bg-light;
+  padding: 0.22rem 0.6rem;
+  border-radius: 50px;
+  border: 1px solid $color-border-light;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+
+  app-icon {
+    display: flex;
+    align-items: center;
+    color: $color-text-muted;
+  }
+}
+
+// ============================================
+// ACTION BUTTONS (dentro de alert cards)
+// ============================================
+.btn {
+  font-family: $font-primary;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: $transition-base;
+  white-space: nowrap;
+  line-height: 1;
+
+  app-icon {
+    display: flex;
+    align-items: center;
+  }
+
+  &.btn-sm {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    height: 34px;
+  }
+
+  // Botón outline primary (Marcar vista)
+  &.btn-outline-primary {
+    background-color: transparent;
+    border: 1px solid $color-secondary;
+    color: $color-text-dark;
+
+    &:hover {
+      background-color: $color-secondary;
+      border-color: $color-secondary;
+      color: $color-text-dark;
+    }
+
+    &:active {
+      background-color: color.adjust($color-secondary, $lightness: -8%);
+      transform: scale(0.97);
+    }
+  }
+
+  // Botón outline secondary (Resolver, Descartar) — inline variant
+  &.btn-outline-secondary.btn-sm {
+    background-color: transparent;
+    border: 1px solid $color-border;
+    color: $color-text-muted;
+    font-weight: 500;
+
+    &:hover {
+      background-color: $color-primary;
+      border-color: $color-primary;
+      color: $color-text-light;
+
+      app-icon {
+        color: $color-text-light;
+      }
+    }
+
+    &:active {
+      background-color: color.adjust($color-primary, $lightness: 8%);
+      transform: scale(0.97);
+    }
+  }
+}
+
+// ============================================
+// EMPTY STATE
+// ============================================
+.empty-state {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+
+  .card-body {
+    padding: $spacing-xl * 2;
+
+    &.text-center {
+      text-align: center;
+    }
+  }
+
+  app-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-border;
+    margin: 0 auto $spacing-md;
+  }
+
+  p {
+    font-family: $font-primary;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: $color-text-muted;
+    margin: 0;
+  }
+}
+
+// ============================================
+// PAGINACIÓN (app-pagination)
+// ============================================
+app-pagination {
+  display: block;
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  padding: $spacing-md $spacing-lg;
+  box-shadow: $shadow-sm;
+
+  ::ng-deep {
+    .pagination-wrapper,
+    .pagination-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $spacing-md;
+      flex-wrap: wrap;
+      font-family: $font-primary;
+    }
+
+    .pagination-info,
+    .pagination-label {
+      font-family: $font-primary;
+      font-size: 0.82rem;
+      color: $color-text-muted;
+      font-weight: 500;
+    }
+
+    .pagination-btn,
+    .page-btn {
+      font-family: $font-primary;
+      font-size: 0.85rem;
+      font-weight: 500;
+      min-width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: $radius-sm;
+      border: 1px solid $color-border;
+      background-color: $color-bg-white;
+      color: $color-text-dark;
+      cursor: pointer;
+      transition: $transition-base;
+      padding: 0 $spacing-sm;
+
+      &:hover:not(:disabled):not(.active) {
+        background-color: $color-bg-light;
+        border-color: color.adjust($color-border, $lightness: -10%);
+      }
+
+      &.active,
+      &--active {
+        background-color: $color-secondary;
+        border-color: $color-secondary;
+        color: $color-text-dark;
+        font-weight: 700;
+
+        &:hover {
+          background-color: color.adjust($color-secondary, $lightness: -8%);
+          border-color: color.adjust($color-secondary, $lightness: -8%);
+        }
+      }
+
+      &:disabled,
+      &--disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    }
+
+    select {
+      font-family: $font-primary;
+      font-size: 0.85rem;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      padding: 0.35rem 0.6rem;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+        border-color: $color-secondary;
+        box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
+      }
+    }
+  }
+}
+
+// ============================================
+// SIDEBAR SECTION
+// ============================================
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  position: sticky;
+  top: $spacing-xl;
+}
+
+// ============================================
+// CHART CARD
+// ============================================
+.chart-card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+
+  .card-body {
+    padding: $spacing-lg;
+  }
+
+  h3 {
+    font-family: $font-primary;
+    font-size: 1rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    margin: 0 0 $spacing-md 0;
+    position: relative;
+    padding-bottom: $spacing-sm;
+
+    // Subrayado decorativo amarillo
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 40px;
+      height: 3px;
+      background-color: $color-secondary;
+      border-radius: 2px;
+    }
+  }
+
+  canvas {
+    width: 100% !important;
+    max-height: 220px;
+  }
+}
+
+// ============================================
+// TOP ALERTED CARD
+// ============================================
+.top-alerted-card {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  border: none;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+
+  .card-body {
+    padding: $spacing-lg;
+  }
+
+  h3 {
+    font-family: $font-primary;
+    font-size: 1rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    margin: 0 0 $spacing-md 0;
+    position: relative;
+    padding-bottom: $spacing-sm;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 40px;
+      height: 3px;
+      background-color: $color-secondary;
+      border-radius: 2px;
+    }
+  }
+}
+
+// ---------- Top Item ----------
+.top-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+  border-bottom: 1px solid $color-border-light;
+  transition: $transition-base;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: rgba($color-secondary, 0.04);
+    margin: 0 (-$spacing-sm);
+    padding-left: $spacing-sm;
+    padding-right: $spacing-sm;
+    border-radius: $radius-sm;
+  }
+
+  &__rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 50%;
+    font-family: $font-primary;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background-color: $color-secondary; // Badge amarillo (regla obligatoria)
+    color: $color-text-dark;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  // Ranks 4+ más discretos
+  &:nth-child(n+5) .top-item__rank {
+    background-color: $color-bg-light;
+    color: $color-text-muted;
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-family: $font-primary;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $color-text-dark;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__country {
+    font-family: $font-primary;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: $color-text-muted;
+  }
+
+  &__counts {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+}
+
+// ---------- Count Badges ----------
+.count-badge {
+  font-family: $font-primary;
+  font-size: 0.68rem;
+  font-weight: 700;
+  min-width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50px;
+  padding: 0 0.35rem;
+  line-height: 1;
+
+  &--critical {
+    background-color: rgba($color-danger, 0.12);
+    color: $color-danger;
+  }
+
+  &--warning {
+    background-color: rgba($color-warning, 0.12);
+    color: color.adjust($color-warning, $lightness: -10%);
+  }
+
+  &--info {
+    background-color: rgba($color-info, 0.12);
+    color: $color-info;
+  }
+}
+
+// ---------- Empty text ----------
+.empty-text {
+  font-family: $font-primary;
+  font-size: 0.88rem;
+  color: $color-text-muted;
+  text-align: center;
+  padding: $spacing-lg 0;
+  margin: 0;
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+// Tablet large
+@media (max-width: 1200px) {
+  .main-grid {
+    grid-template-columns: 1fr 300px;
+    gap: $spacing-lg;
+  }
+}
+
+// Tablet
+@media (max-width: 1024px) {
+  .alerts-dashboard {
+    padding: $spacing-lg;
+  }
+
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-section {
+    position: static;
+    flex-direction: row;
+    gap: $spacing-md;
+
+    .chart-card,
+    .top-alerted-card {
+      flex: 1;
+    }
+  }
+
+  .summary-cards {
+    gap: $spacing-md;
+  }
+
+  .filters-row {
+    gap: $spacing-sm;
+  }
+
+  .filter-field {
+    min-width: 140px;
+    max-width: unset;
+  }
+}
+
+// Mobile
+@media (max-width: 640px) {
+  .alerts-dashboard {
+    padding: $spacing-md;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+    margin-bottom: $spacing-lg;
+  }
+
+  // Summary cards stack
+  .summary-cards {
+    grid-template-columns: 1fr;
+    gap: $spacing-sm;
+  }
+
+  .summary-card {
+    .card-body {
+      padding: $spacing-md;
+    }
+
+    &__icon {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+    }
+
+    &__value {
+      font-size: 1.4rem;
+    }
+
+    &__label {
+      font-size: 0.72rem;
+    }
+  }
+
+  // Filters stack
+  .filters-card .card-body {
+    padding: $spacing-md;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-md;
+  }
+
+  .filter-field {
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+    flex: unset;
+  }
+
+  .btn-outline-secondary:not(.btn-sm) {
+    width: 100%;
+  }
+
+  // Sidebar stack vertical
+  .sidebar-section {
+    flex-direction: column;
+  }
+
+  // Alert card compacto
+  .alert-card {
+    .card-body {
+      padding: $spacing-md;
+    }
+
+    &__header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $spacing-sm;
+    }
+
+    &__title {
+      font-size: 0.92rem;
+    }
+
+    &__message {
+      font-size: 0.82rem;
+    }
+
+    &__context {
+      gap: 0.35rem;
+    }
+
+    &__actions {
+      flex-direction: column;
+      align-items: stretch;
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+
+  .context-chip {
+    font-size: 0.7rem;
+    padding: 0.18rem 0.45rem;
+  }
+
+  // Chart card
+  .chart-card canvas {
+    max-height: 180px;
+  }
+
+  // Top item compacto
+  .top-item {
+    &__rank {
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      font-size: 0.68rem;
+    }
+
+    &__name {
+      font-size: 0.8rem;
+    }
+
+    &__country {
+      font-size: 0.68rem;
+    }
+  }
+
+  .count-badge {
+    font-size: 0.62rem;
+    min-width: 20px;
+    height: 20px;
+  }
+
+  // Pagination compacta
+  app-pagination {
+    padding: $spacing-sm $spacing-md;
+
+    ::ng-deep {
+      .pagination-wrapper,
+      .pagination-container {
+        flex-direction: column;
+        align-items: center;
+        gap: $spacing-sm;
+      }
+
+      .pagination-btn,
+      .page-btn {
+        min-width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+// Extra small
+@media (max-width: 400px) {
+  .summary-card {
+    border-left-width: 3px;
+
+    .card-body {
+      padding: $spacing-sm $spacing-md;
+      gap: $spacing-sm;
+    }
+
+    &__icon {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+    }
+
+    &__value {
+      font-size: 1.2rem;
+    }
+
+    &__total {
+      font-size: 0.68rem;
+    }
+  }
+
+  .alert-card {
+    border-left-width: 3px;
+  }
+
+  .btn.btn-sm {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+    height: 30px;
+  }
+}

@@ -1,0 +1,231 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1>Panel de Administracion</h1>
+    <p class="page-subtitle">Resumen general del sistema y metricas de recargas</p>
+  </div>
+</div>
+
+<!-- System Stats -->
+<div class="stats-row">
+  @for (stat of stats; track stat.label) {
+    <div class="stat-chip">
+      <div class="stat-chip-icon" [style.background]="stat.bg">
+        <app-icon [name]="stat.icon" size="md"></app-icon>
+      </div>
+      <div class="stat-chip-info">
+        <span class="stat-chip-value">{{ stat.value }}</span>
+        <span class="stat-chip-label">{{ stat.label }}</span>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Recharges Section Header -->
+<div class="section-header">
+  <div class="section-header-left">
+    <app-icon name="payments" size="md" class="section-icon"></app-icon>
+    <h2>Recargas Google Ads</h2>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="filters-bar">
+  <div class="filter-field">
+    <label class="form-label">Pais</label>
+    <select class="form-select" [(ngModel)]="filterCountry" (ngModelChange)="loadRechargesDashboard()">
+      <option value="">Todos los paises</option>
+      @for (c of countryOptions; track c.value) {
+        <option [ngValue]="c.value">{{ c.label }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Desde</label>
+    <input type="date" class="form-control" [(ngModel)]="filterDateFrom" (change)="loadRechargesDashboard()">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Hasta</label>
+    <input type="date" class="form-control" [(ngModel)]="filterDateTo" (change)="loadRechargesDashboard()">
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Buscar cuenta</label>
+    <div class="input-group">
+      <input class="form-control" [(ngModel)]="filterAccount" (keyup.enter)="loadRechargesDashboard()">
+      <span class="input-group-text"><app-icon name="search" size="sm"></app-icon></span>
+    </div>
+  </div>
+
+  <div class="filter-field">
+    <label class="form-label">Perfil de pago</label>
+    <select class="form-select" [(ngModel)]="filterPaymentProfile" (ngModelChange)="loadRechargesDashboard()">
+      <option value="">Todos</option>
+      @for (p of paymentProfiles; track p) {
+        <option [ngValue]="p">{{ p }}</option>
+      }
+    </select>
+  </div>
+
+  <button class="btn btn-outline-secondary clear-btn" (click)="clearFilters()" ngbTooltip="Restablecer filtros">
+    <app-icon name="restart_alt" size="sm"></app-icon>
+    Limpiar
+  </button>
+</div>
+
+@if (loadingRecharges) {
+  <div class="loading-state">
+    <div class="spinner-border spinner-border-sm" role="status"></div>
+    <span>Cargando metricas de recargas...</span>
+  </div>
+}
+
+@if (rechargesData) {
+  <!-- Main KPIs Row -->
+  <div class="kpi-row">
+    <div class="kpi-box kpi-total">
+      <div class="kpi-box-inner">
+        <div class="kpi-icon-wrap bg-blue"><app-icon name="account_balance_wallet" size="md"></app-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Total Recargado</span>
+          <span class="kpi-amount">{{ formatCurrency(rechargesData.kpis.totalAmount) }}</span>
+          <span class="kpi-meta">{{ rechargesData.kpis.totalCount | number }} recargas en total</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-box">
+      <div class="kpi-box-inner">
+        <div class="kpi-icon-wrap bg-green"><app-icon name="receipt_long" size="md"></app-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Total Recargas</span>
+          <span class="kpi-amount">{{ rechargesData.kpis.totalCount | number }}</span>
+          <span class="kpi-meta">Operaciones registradas</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-box">
+      <div class="kpi-box-inner">
+        <div class="kpi-icon-wrap bg-orange"><app-icon name="analytics" size="md"></app-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Promedio por Recarga</span>
+          <span class="kpi-amount">{{ formatCurrency(rechargesData.kpis.avgAmount) }}</span>
+          <span class="kpi-meta">Valor promedio</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Period Comparison Cards -->
+  <div class="period-row">
+    <div class="period-card">
+      <div class="period-top">
+        <span class="period-label">
+          <app-icon name="today" size="sm"></app-icon> Hoy
+        </span>
+        <span class="period-badge" [class]="'period-badge ' + getChangeType(rechargesData.kpis.todayChange)">
+          <app-icon [name]="getChangeIcon(rechargesData.kpis.todayChange)" size="sm"></app-icon>
+          {{ formatChange(rechargesData.kpis.todayChange) }}
+        </span>
+      </div>
+      <span class="period-amount">{{ formatCurrency(rechargesData.kpis.todayTotal) }}</span>
+      <span class="period-meta">{{ rechargesData.kpis.todayCount }} recargas &middot; vs ayer</span>
+    </div>
+
+    <div class="period-card">
+      <div class="period-top">
+        <span class="period-label">
+          <app-icon name="date_range" size="sm"></app-icon> Esta Semana
+        </span>
+        <span class="period-badge" [class]="'period-badge ' + getChangeType(rechargesData.kpis.weekChange)">
+          <app-icon [name]="getChangeIcon(rechargesData.kpis.weekChange)" size="sm"></app-icon>
+          {{ formatChange(rechargesData.kpis.weekChange) }}
+        </span>
+      </div>
+      <span class="period-amount">{{ formatCurrency(rechargesData.kpis.thisWeekTotal) }}</span>
+      <span class="period-meta">{{ rechargesData.kpis.thisWeekCount }} recargas &middot; vs sem. anterior</span>
+    </div>
+
+    <div class="period-card">
+      <div class="period-top">
+        <span class="period-label">
+          <app-icon name="calendar_month" size="sm"></app-icon> Este Mes
+        </span>
+        <span class="period-badge" [class]="'period-badge ' + getChangeType(rechargesData.kpis.monthChange)">
+          <app-icon [name]="getChangeIcon(rechargesData.kpis.monthChange)" size="sm"></app-icon>
+          {{ formatChange(rechargesData.kpis.monthChange) }}
+        </span>
+      </div>
+      <span class="period-amount">{{ formatCurrency(rechargesData.kpis.thisMonthTotal) }}</span>
+      <span class="period-meta">{{ rechargesData.kpis.thisMonthCount }} recargas &middot; vs mes anterior</span>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div class="charts-layout">
+    <div class="chart-panel chart-full">
+      <div class="chart-title">Tendencia Diaria <span class="chart-subtitle">(ultimos 30 dias)</span></div>
+      @if (lineChartData) {
+        <canvas baseChart [data]="lineChartData" [options]="lineChartOptions" type="line"></canvas>
+      }
+    </div>
+
+    <div class="chart-panel">
+      <div class="chart-title">Monto por Pais</div>
+      @if (barChartData) {
+        <canvas baseChart [data]="barChartData" [options]="barChartOptions" type="bar"></canvas>
+      }
+    </div>
+
+    <div class="chart-panel">
+      <div class="chart-title">Distribucion por Pais</div>
+      @if (pieChartData) {
+        <canvas baseChart [data]="pieChartData" [options]="pieChartOptions" type="doughnut"></canvas>
+      }
+    </div>
+  </div>
+
+  <!-- Country Breakdown Table -->
+  <div class="table-panel">
+    <div class="table-header">
+      <app-icon name="public" size="md"></app-icon>
+      <span>Desglose por Pais</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Pais</th>
+          <th class="text-right">Recargas</th>
+          <th class="text-right">Total Recargado</th>
+          <th class="text-right">Promedio</th>
+          <th class="text-right">Participacion</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rechargesData.byCountry; track row.country) {
+          <tr>
+            <td>
+              <div class="country-name">
+                <span class="dot" [style.background]="getCountryColor(row.country)"></span>
+                {{ row.country }}
+              </div>
+            </td>
+            <td class="text-right">{{ row.count | number }}</td>
+            <td class="text-right fw-600">{{ formatCurrency(row.total) }}</td>
+            <td class="text-right">{{ formatCurrency(row.count > 0 ? row.total / row.count : 0) }}</td>
+            <td class="text-right">
+              <div class="pct-bar-wrap">
+                <div class="pct-bar" [style.width.%]="(row.total / rechargesData.kpis.totalAmount) * 100"
+                     [style.background]="getCountryColor(row.country)"></div>
+                <span>{{ ((row.total / rechargesData.kpis.totalAmount) * 100).toFixed(1) }}%</span>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

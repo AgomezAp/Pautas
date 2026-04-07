@@ -17,17 +17,24 @@ export class ConglomeradoController {
   async createEntry(req: Request, res: Response, next: NextFunction) {
     try {
       const { clientes, clientes_efectivos, menores } = req.body;
-      let imagePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
-      const originalName = req.file ? req.file.originalname : null;
+      const files = (req.files as Express.Multer.File[]) || [];
 
-      // Process uploaded image (resize + thumbnail)
-      if (imagePath) {
+      // Process each uploaded image
+      const images: { imagePath: string; originalName: string; thumbPath: string | null }[] = [];
+      for (const file of files) {
+        let imagePath = file.path.replace(/\\/g, '/');
+        let thumbPath: string | null = null;
+        const originalName = file.originalname;
+
         try {
           const processed = await imageProcessingService.processUploadedImage(imagePath);
           imagePath = processed.mainPath.replace(/\\/g, '/');
+          thumbPath = processed.thumbPath ? processed.thumbPath.replace(/\\/g, '/') : null;
         } catch (imgErr: any) {
           logger.warn(`Image processing failed, using original: ${imgErr.message}`);
         }
+
+        images.push({ imagePath, originalName, thumbPath });
       }
 
       const entry = await conglomeradoService.createEntry(
@@ -35,8 +42,7 @@ export class ConglomeradoController {
         req.user!.countryId!,
         req.user!.campaignId,
         { clientes: parseInt(clientes), clientes_efectivos: parseInt(clientes_efectivos), menores: parseInt(menores) },
-        imagePath,
-        originalName,
+        images,
         req.ip
       );
 

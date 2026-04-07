@@ -1,0 +1,263 @@
+// ============================================
+// MÓDULOS SASS MODERNOS
+// ============================================
+@use "sass:color";
+
+// ============================================
+// VARIABLES (Identidad de Marca)
+// ============================================
+$color-primary: #141414;
+$color-secondary: #FFD600;
+$font-primary: 'Fira Sans', sans-serif;
+
+// Variantes
+$color-text-light: #ffffff;
+$color-text-dark: #141414;
+$color-text-muted: #6c757d;
+$color-border: #dee2e6;
+$color-bg-light: #f8f9fa;
+
+// Topbar
+$topbar-height: 64px;
+
+// ============================================
+// TOPBAR CONTAINER
+// ============================================
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: $topbar-height;
+  padding: 0 1.5rem;
+  background-color: $color-primary;
+  font-family: $font-primary;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+// ============================================
+// TOPBAR LEFT
+// ============================================
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+// Botón menú hamburguesa
+.topbar__menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid color.adjust($color-text-light, $alpha: -0.8);
+  border-radius: 0.5rem;
+  color: $color-text-light;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: $color-secondary;
+    border-color: $color-secondary;
+    color: $color-primary;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.6);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// ============================================
+// TOPBAR RIGHT
+// ============================================
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+// Badge de rol
+.topbar__role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  font-family: $font-primary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: $color-primary;
+  background-color: $color-secondary;
+  border-radius: 2rem;
+  box-shadow: 0 2px 8px color.adjust($color-secondary, $alpha: -0.7);
+}
+
+// ============================================
+// AVATAR BUTTON
+// ============================================
+.topbar__avatar-btn {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    .topbar__avatar {
+      border-color: $color-secondary;
+      box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.7);
+    }
+  }
+
+  &:focus {
+    outline: none;
+
+    .topbar__avatar {
+      border-color: $color-secondary;
+      box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.6);
+    }
+  }
+
+  // Quitar flecha del dropdown de ngbDropdown
+  &::after {
+    display: none;
+  }
+}
+
+// Avatar circular con iniciales
+.topbar__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  font-family: $font-primary;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $color-primary;
+  background-color: $color-secondary;
+  border: 2px solid $color-secondary;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+// ============================================
+// DROPDOWN MENU
+// ============================================
+.topbar-menu {
+  min-width: 220px;
+  padding: 0;
+  font-family: $font-primary;
+  background-color: $color-text-light;
+  border: 1px solid $color-border;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+
+  // Borde superior amarillo decorativo
+  &::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background-color: $color-secondary;
+  }
+}
+
+// Header del menú (info usuario)
+.topbar-menu__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  background-color: $color-bg-light;
+}
+
+.topbar-menu__name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: $color-text-dark;
+}
+
+.topbar-menu__role {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+// Divider
+.dropdown-divider {
+  margin: 0;
+  border-color: $color-border;
+}
+
+// Dropdown items
+.topbar-menu {
+  [ngbDropdownItem] {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    font-family: $font-primary;
+    font-size: 0.9rem;
+    color: $color-text-dark;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    app-icon {
+      color: $color-text-muted;
+      transition: color 0.15s ease;
+    }
+
+    &:hover {
+      background-color: $color-primary;
+      color: $color-text-light;
+
+      app-icon {
+        color: $color-secondary;
+      }
+    }
+
+    &:focus {
+      outline: none;
+      background-color: $color-primary;
+      color: $color-text-light;
+    }
+
+    &:active {
+      background-color: color.adjust($color-primary, $lightness: 5%);
+    }
+  }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+@media (max-width: 576px) {
+  .topbar {
+    padding: 0 1rem;
+  }
+
+  .topbar__role-badge {
+    display: none; // Ocultar en móvil, se ve en el dropdown
+  }
+
+  .topbar__avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+  }
+}

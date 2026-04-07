@@ -1,4 +1,6 @@
 import { query } from '../../config/database';
+import bcrypt from 'bcryptjs';
+import { logAudit } from '../../services/audit.service';
 
 export class GestionService {
   async getDashboardKpis(queryParams: any) {
@@ -176,11 +178,44 @@ export class GestionService {
     );
   }
 
-  async getEntriesWithImages(queryParams: any) {
-    const { parsePagination, buildPaginationMeta } = require('../../utils/pagination.util');
-    const { page, limit, offset } = parsePagination(queryParams);
+  async createConglomeradoUser(data: {
+    username: string;
+    full_name: string;
+    email?: string;
+    password?: string;
+    country_id: number;
+    campaign_id?: number;
+  }, createdByUserId: number, ip?: string) {
+    // Obtener el role_id de conglomerado
+    const roleResult = await query("SELECT id FROM roles WHERE name = 'conglomerado'");
+    if (roleResult.rows.length === 0) {
+      throw { status: 500, code: 'ROLE_NOT_FOUND', message: 'Rol conglomerado no encontrado' };
+    }
+    const roleId = roleResult.rows[0].id;
 
-    const conditions: string[] = ['de.soporte_image_path IS NOT NULL'];
+    const passwordHash = await bcrypt.hash(data.password || 'Temp1234', 12);
+
+    const result = await query(
+      `INSERT INTO users (username, email, password_hash, full_name, role_id, country_id, campaign_id, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
+       RETURNING id, username, email, full_name, role_id, country_id, campaign_id, is_active, created_at`,
+      [
+        data.username,
+        data.email || null,
+        passwordHash,
+        data.full_name,
+        roleId,
+        data.country_id,
+        data.campaign_id || null,
+      ]
+    );
+
+    await logAudit(createdByUserId, 'CONGLOMERADO_USER_CREATED', 'user', result.rows[0].id, { username: data.username, created_by_role: 'gestion_administrativa' }, ip);
+    return result.rows[0];
+  }
+
+  async getEntriesWithImages(queryParams: any) {
+    const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -202,30 +237,65 @@ export class GestionService {
       paramIndex++;
     }
 
-    const whereClause = 'WHERE ' + conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
 
-    const countResult = await query(
-      `SELECT COUNT(*) FROM daily_entries de JOIN users u ON u.id = de.user_id ${whereClause}`,
-      params
-    );
-    const total = parseInt(countResult.rows[0].count);
-
-    const dataParams = [...params, limit, offset];
+    // Get entries that have images (either in entry_images table or legacy soporte_image_path)
     const result = await query(
-      `SELECT de.id, de.entry_date, de.clientes, de.clientes_efectivos, de.menores,
-              de.soporte_image_path, de.soporte_original_name, de.created_at,
-              u.full_name, u.username,
-              c.name as country_name
+      `SELECT de.id as entry_id, de.entry_date, de.clientes, de.clientes_efectivos, de.menores,
+              de.user_id, u.full_name, u.username,
+              c.name as country_name,
+              ei.id as image_id, ei.image_path, ei.original_name, ei.thumb_path
        FROM daily_entries de
        JOIN users u ON u.id = de.user_id
        JOIN countries c ON c.id = de.country_id
+       JOIN entry_images ei ON ei.entry_id = de.id
        ${whereClause}
-       ORDER BY de.entry_date DESC, u.full_name
-       LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      dataParams
+       ORDER BY u.full_name, de.entry_date DESC, ei.id`,
+      params
     );
 
-    return { data: result.rows, meta: buildPaginationMeta(page, limit, total) };
+    // Group by user -> entries -> images
+    const usersMap = new Map<number, any>();
+    for (const row of result.rows) {
+      if (!usersMap.has(row.user_id)) {
+        usersMap.set(row.user_id, {
+          user_id: row.user_id,
+          full_name: row.full_name,
+          username: row.username,
+          country_name: row.country_name,
+          total_images: 0,
+          entries: new Map<number, any>(),
+        });
+      }
+      const user = usersMap.get(row.user_id)!;
+
+      if (!user.entries.has(row.entry_id)) {
+        user.entries.set(row.entry_id, {
+          entry_id: row.entry_id,
+          entry_date: row.entry_date,
+          clientes: row.clientes,
+          clientes_efectivos: row.clientes_efectivos,
+          menores: row.menores,
+          images: [],
+        });
+      }
+      const entry = user.entries.get(row.entry_id)!;
+      entry.images.push({
+        id: row.image_id,
+        image_path: row.image_path,
+        original_name: row.original_name,
+        thumb_path: row.thumb_path,
+      });
+      user.total_images++;
+    }
+
+    // Convert Maps to arrays
+    const data = Array.from(usersMap.values()).map(user => ({
+      ...user,
+      entries: Array.from(user.entries.values()),
+    }));
+
+    return { data };
   }
 }
 

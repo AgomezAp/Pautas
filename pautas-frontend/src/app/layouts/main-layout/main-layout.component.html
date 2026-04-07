@@ -1,0 +1,22 @@
+<div class="layout" [class.layout--collapsed]="sidebarCollapsed">
+  <app-sidebar
+    [navItems]="navItems"
+    [collapsed]="sidebarCollapsed"
+    (collapsedChange)="sidebarCollapsed = $event"
+  />
+
+  <div class="layout__main">
+    <app-topbar
+      [userName]="userName"
+      [roleLabel]="roleLabel"
+      (menuToggle)="sidebarCollapsed = !sidebarCollapsed"
+      (logoutClick)="logout()"
+    />
+
+    <main class="layout__content">
+      <div [@routeAnimation]="getRouteState(outlet)">
+        <router-outlet #outlet="outlet" />
+      </div>
+    </main>
+  </div>
+</div>
