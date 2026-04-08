@@ -5,6 +5,7 @@ import { query } from '../../config/database';
 import { env } from '../../config/environment';
 import { JwtPayload } from '../../types/express';
 import { logAudit } from '../../services/audit.service';
+import { cacheService } from '../../services/cache.service';
 
 export class AuthService {
   async login(username: string, password: string, ip?: string) {
@@ -34,6 +35,7 @@ export class AuthService {
 
     // Update last login
     await query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+    await cacheService.del(`user:profile:${user.id}`);
 
     const accessToken = this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user.id);
@@ -130,9 +132,14 @@ export class AuthService {
     await query('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1', [userId]);
 
     await logAudit(userId, 'PASSWORD_CHANGED', 'user', userId);
+    await cacheService.del(`user:profile:${userId}`);
   }
 
   async getProfile(userId: number) {
+    const CACHE_KEY = `user:profile:${userId}`;
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
+
     const result = await query(
       `SELECT u.id, u.username, u.email, u.full_name, u.is_active,
               u.country_id, u.campaign_id, u.last_login_at,
@@ -149,6 +156,7 @@ export class AuthService {
       throw { status: 404, code: 'USER_NOT_FOUND', message: 'Usuario no encontrado' };
     }
 
+    await cacheService.set(CACHE_KEY, result.rows[0], 600);
     return result.rows[0];
   }
 

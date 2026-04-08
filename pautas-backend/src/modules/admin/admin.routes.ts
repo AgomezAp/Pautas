@@ -8,6 +8,7 @@ import { query } from '../../config/database';
 import { sendSuccess } from '../../utils/response.util';
 import { parsePagination, buildPaginationMeta } from '../../utils/pagination.util';
 import { googleAdsSyncService } from '../../services/google-ads-sync.service';
+import { cacheService } from '../../services/cache.service';
 
 const router = Router();
 
@@ -70,6 +71,10 @@ router.get('/audit-log', async (req, res, next) => {
 // Admin dashboard stats
 router.get('/stats', async (_req, res, next) => {
   try {
+    const CACHE_KEY = 'admin:stats';
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return sendSuccess(res, cached);
+
     const [usersCount, campaignsCount, entriesCount, countriesCount] = await Promise.all([
       query('SELECT COUNT(*) FROM users WHERE is_active = TRUE'),
       query('SELECT COUNT(*) FROM campaigns WHERE is_active = TRUE'),
@@ -83,13 +88,16 @@ router.get('/stats', async (_req, res, next) => {
        GROUP BY r.name`
     );
 
-    return sendSuccess(res, {
+    const data = {
       totalUsers: parseInt(usersCount.rows[0].count),
       totalCampaigns: parseInt(campaignsCount.rows[0].count),
       totalEntries: parseInt(entriesCount.rows[0].count),
       totalCountries: parseInt(countriesCount.rows[0].count),
       usersByRole: roleBreakdown.rows,
-    });
+    };
+
+    await cacheService.set(CACHE_KEY, data, 300);
+    return sendSuccess(res, data);
   } catch (err) { next(err); }
 });
 
@@ -106,6 +114,10 @@ router.get('/conglomerado-entries', async (req, res, next) => {
   try {
     const { page, limit, offset } = parsePagination(req.query);
     const { country_id, date_from, date_to, search } = req.query as any;
+
+    const CACHE_KEY = `admin:conglomerado-entries:${page}:${limit}:${country_id || ''}:${date_from || ''}:${date_to || ''}:${search || ''}`;
+    const cached = await cacheService.get<{ data: any; meta: any }>(CACHE_KEY);
+    if (cached) return sendSuccess(res, cached.data, cached.meta);
 
     const conditions: string[] = [];
     const params: any[] = [];
@@ -159,7 +171,9 @@ router.get('/conglomerado-entries', async (req, res, next) => {
       dataParams
     );
 
-    return sendSuccess(res, result.rows, buildPaginationMeta(page, limit, total));
+    const meta = buildPaginationMeta(page, limit, total);
+    await cacheService.set(CACHE_KEY, { data: result.rows, meta }, 60);
+    return sendSuccess(res, result.rows, meta);
   } catch (err) { next(err); }
 });
 

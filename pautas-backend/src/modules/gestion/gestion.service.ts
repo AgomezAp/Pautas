@@ -2,9 +2,18 @@ import { query } from '../../config/database';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '../../services/audit.service';
 import { toRelativeImagePath } from '../../utils/image-path.util';
+import { cacheService } from '../../services/cache.service';
+
+function buildParamsKey(params: any): string {
+  return Object.keys(params || {}).sort().map(k => `${k}=${params[k] ?? ''}`).join(':') || 'all';
+}
 
 export class GestionService {
   async getDashboardKpis(queryParams: any) {
+    const CACHE_KEY = `gestion:kpis:${buildParamsKey(queryParams)}`;
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
+
     const params: any[] = [];
     let countryFilter = '';
     let dateFrom = '';
@@ -37,10 +46,15 @@ export class GestionService {
       params
     );
 
+    await cacheService.set(CACHE_KEY, result.rows[0], 180);
     return result.rows[0];
   }
 
   async getEffectivenessReport(queryParams: any) {
+    const CACHE_KEY = `gestion:effectiveness:${buildParamsKey(queryParams)}`;
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
+
     const params: any[] = [];
     let countryFilter = '';
     if (queryParams.country_id) {
@@ -66,10 +80,15 @@ export class GestionService {
       params
     );
 
+    await cacheService.set(CACHE_KEY, result.rows, 180);
     return result.rows;
   }
 
   async getConversionReport(queryParams: any) {
+    const CACHE_KEY = `gestion:conversions:${buildParamsKey(queryParams)}`;
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
+
     const params: any[] = [];
     let countryFilter = '';
     if (queryParams.country_id) {
@@ -95,10 +114,15 @@ export class GestionService {
       params
     );
 
+    await cacheService.set(CACHE_KEY, result.rows, 180);
     return result.rows;
   }
 
   async getByCountryReport() {
+    const CACHE_KEY = 'gestion:by-country';
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
+
     const result = await query(
       `SELECT c.name as country_name, c.code as country_code,
               COUNT(DISTINCT de.user_id) as total_users,
@@ -115,10 +139,15 @@ export class GestionService {
        ORDER BY total_clientes DESC`
     );
 
+    await cacheService.set(CACHE_KEY, result.rows, 300);
     return result.rows;
   }
 
   async getByWeekReport(queryParams: any) {
+    const CACHE_KEY = `gestion:by-week:${buildParamsKey(queryParams)}`;
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
+
     const params: any[] = [];
     let countryFilter = '';
     let yearFilter = '';
@@ -147,10 +176,15 @@ export class GestionService {
       params
     );
 
+    await cacheService.set(CACHE_KEY, result.rows, 300);
     return result.rows;
   }
 
   async getConglomeradoUsers(countryId?: number) {
+    const CACHE_KEY = `gestion:cong-users:${countryId || 'all'}`;
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
+
     const params: any[] = [];
     let countryFilter = '';
     if (countryId) {
@@ -169,6 +203,7 @@ export class GestionService {
        ORDER BY u.full_name`,
       params
     );
+    await cacheService.set(CACHE_KEY, result.rows, 180);
     return result.rows;
   }
 
@@ -177,6 +212,7 @@ export class GestionService {
       'UPDATE users SET google_ads_account_id = $1, updated_at = NOW() WHERE id = $2',
       [googleAdsAccountId, userId]
     );
+    await cacheService.invalidatePattern('gestion:cong-users:*');
   }
 
   async createConglomeradoUser(data: {
@@ -212,10 +248,16 @@ export class GestionService {
     );
 
     await logAudit(createdByUserId, 'CONGLOMERADO_USER_CREATED', 'user', result.rows[0].id, { username: data.username, created_by_role: 'gestion_administrativa' }, ip);
+    await cacheService.invalidatePattern('admin:stats');
+    await cacheService.invalidatePattern('gestion:cong-users:*');
     return result.rows[0];
   }
 
   async getEntriesWithImages(queryParams: any) {
+    const CACHE_KEY = `gestion:soporte-images:${buildParamsKey(queryParams)}`;
+    const cached = await cacheService.get<{ data: any[] }>(CACHE_KEY);
+    if (cached) return cached;
+
     const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
@@ -296,7 +338,9 @@ export class GestionService {
       entries: Array.from(user.entries.values()),
     }));
 
-    return { data };
+    const responseData = { data };
+    await cacheService.set(CACHE_KEY, responseData, 120);
+    return responseData;
   }
 }
 

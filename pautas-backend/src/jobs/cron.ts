@@ -5,6 +5,7 @@ import { weeklySummaryService } from '../services/weekly-summary.service';
 import { alertsEngineService } from '../services/alerts-engine.service';
 import { notificationEmailService } from '../services/notification-email.service';
 import { imageCleanupService } from '../services/image-cleanup.service';
+import { cacheService } from '../services/cache.service';
 
 export function registerCronJobs() {
   // Google Ads campaigns + recharges sync: every hour (ACTIVE accounts only, skips PAUSADA)
@@ -14,6 +15,7 @@ export function registerCronJobs() {
       await googleAdsSyncService.syncAllCampaigns(true);
       await googleAdsSyncService.syncRecharges(true);
       logger.info('[CRON] Hourly sync completed (campaigns + recharges)');
+      await cacheService.invalidatePattern('gestion:*');
     } catch (error: any) {
       logger.error('[CRON] Google Ads hourly sync error: ' + error.message);
     }
@@ -24,6 +26,7 @@ export function registerCronJobs() {
     logger.info('[CRON] Starting Google Ads full daily sync (all accounts)...');
     try {
       await googleAdsSyncService.syncAllCampaigns(false);
+      await cacheService.invalidatePattern('gestion:*');
     } catch (error: any) {
       logger.error('[CRON] Google Ads full sync error: ' + error.message);
     }
@@ -38,6 +41,7 @@ export function registerCronJobs() {
       await googleAdsSyncService.syncRecharges();
       await googleAdsSyncService.syncBillingHistory();
       logger.info('[CRON] Billing sync completed');
+      await cacheService.invalidatePattern('gestion:*');
     } catch (error: any) {
       logger.error('[CRON] Google Ads billing sync error: ' + error.message);
     }
@@ -48,6 +52,8 @@ export function registerCronJobs() {
     logger.info('[CRON] Recomputing weekly summaries...');
     try {
       await weeklySummaryService.recomputeCurrentWeek();
+      await cacheService.invalidatePattern('cong:weekly:*');
+      await cacheService.invalidatePattern('gestion:by-week:*');
     } catch (error: any) {
       logger.error('[CRON] Weekly summary error: ' + error.message);
     }
@@ -84,6 +90,7 @@ export function registerCronJobs() {
     try {
       await alertsEngineService.recomputeStats();
       logger.info('[CRON] conglomerate_stats recomputed');
+      await cacheService.invalidatePattern('admin:stats');
     } catch (error: any) {
       logger.error('[CRON] conglomerate_stats error: ' + error.message);
     }
@@ -110,6 +117,7 @@ export function registerCronJobs() {
     try {
       const result = await imageCleanupService.cleanupOldImages();
       logger.info(`[CRON] Image cleanup completed: ${result.deletedFiles} files deleted, ${result.errors} errors`);
+      await cacheService.invalidatePattern('gestion:soporte-images:*');
     } catch (error: any) {
       logger.error('[CRON] Image cleanup error: ' + error.message);
     }

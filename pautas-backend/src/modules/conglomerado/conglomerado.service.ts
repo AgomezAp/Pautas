@@ -3,15 +3,22 @@ import { logAudit } from '../../services/audit.service';
 import { getISOWeekInfo } from '../../utils/iso-week.util';
 import { parsePagination, buildPaginationMeta } from '../../utils/pagination.util';
 import { toRelativeImagePath } from '../../utils/image-path.util';
+import { cacheService } from '../../services/cache.service';
 
 export class ConglomeradoService {
   async checkTodayEntry(userId: number) {
     const today = new Date().toISOString().split('T')[0];
+    const CACHE_KEY = `cong:today:${userId}:${today}`;
+    const cached = await cacheService.get<{ __cached: true; value: any }>(CACHE_KEY);
+    if (cached && cached.__cached) return cached.value;
+
     const result = await query(
       'SELECT id, entry_date FROM daily_entries WHERE user_id = $1 AND entry_date = $2',
       [userId, today]
     );
-    return result.rows.length > 0 ? result.rows[0] : null;
+    const value = result.rows.length > 0 ? result.rows[0] : null;
+    await cacheService.set(CACHE_KEY, { __cached: true, value }, 120);
+    return value;
   }
 
   async createEntry(
@@ -62,6 +69,13 @@ export class ConglomeradoService {
         images_count: images.length,
       }, ip);
 
+      await Promise.all([
+        cacheService.invalidatePattern('admin:stats'),
+        cacheService.invalidatePattern('admin:conglomerado-entries:*'),
+        cacheService.invalidatePattern('gestion:*'),
+        cacheService.invalidatePattern(`cong:*:${userId}:*`),
+      ]);
+
       return entry;
     } catch (err) {
       await client.query('ROLLBACK');
@@ -73,6 +87,9 @@ export class ConglomeradoService {
 
   async getEntries(userId: number, queryParams: any) {
     const { page, limit, offset } = parsePagination(queryParams);
+    const CACHE_KEY = `cong:entries:${userId}:${page}:${limit}`;
+    const cached = await cacheService.get<{ data: any[]; meta: any }>(CACHE_KEY);
+    if (cached) return cached;
 
     const countResult = await query(
       'SELECT COUNT(*) FROM daily_entries WHERE user_id = $1',
@@ -98,7 +115,9 @@ export class ConglomeradoService {
       return row;
     });
 
-    return { data: rows, meta: buildPaginationMeta(page, limit, total) };
+    const responseData = { data: rows, meta: buildPaginationMeta(page, limit, total) };
+    await cacheService.set(CACHE_KEY, responseData, 120);
+    return responseData;
   }
 
   async getEntryById(id: number, userId: number) {
@@ -121,6 +140,9 @@ export class ConglomeradoService {
     const currentInfo = getISOWeekInfo(now);
     const year = isoYear || currentInfo.isoYear;
     const week = isoWeek || currentInfo.isoWeek;
+    const CACHE_KEY = `cong:weekly:${userId}:${year}:${week}`;
+    const cached = await cacheService.get(CACHE_KEY);
+    if (cached) return cached;
 
     const result = await query(
       `SELECT
@@ -139,12 +161,15 @@ export class ConglomeradoService {
     );
 
     if (result.rows.length === 0) {
-      return {
+      const empty = {
         iso_year: year, iso_week: week, days_with_entries: 0,
         total_clientes: 0, total_clientes_efectivos: 0, total_menores: 0,
         effectiveness_rate: 0,
       };
+      await cacheService.set(CACHE_KEY, empty, 300);
+      return empty;
     }
+    await cacheService.set(CACHE_KEY, result.rows[0], 300);
     return result.rows[0];
   }
 }

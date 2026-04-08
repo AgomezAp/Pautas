@@ -18,6 +18,8 @@ import { systemRoutes } from './modules/system/system.routes';
 import { googleAdsRoutes } from './modules/google-ads/google-ads.routes';
 import { alertsRoutes } from './modules/alerts/alerts.routes';
 import { registerCronJobs } from './jobs/cron';
+import { initRedis } from './config/redis';
+import { cacheService } from './services/cache.service';
 
 const app = express();
 
@@ -70,7 +72,7 @@ app.use('/api/v1/alerts', alertsRoutes);
 
 // Health check
 app.get('/api/v1/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), cache: cacheService.getStats() });
 });
 
 // Global error handler
@@ -79,6 +81,7 @@ app.use(errorHandler);
 // Start server
 app.listen(env.port, () => {
   logger.info(`Server running on port ${env.port} in ${env.nodeEnv} mode`);
+  initRedis();
   registerCronJobs();
 });
 
