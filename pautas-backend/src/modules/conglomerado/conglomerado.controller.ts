@@ -5,6 +5,7 @@ import { imageProcessingService } from '../../services/image-processing.service'
 import { weeklySummaryService } from '../../services/weekly-summary.service';
 import { alertsEngineService } from '../../services/alerts-engine.service';
 import { logger } from '../../utils/logger.util';
+import { toRelativeImagePath } from '../../utils/image-path.util';
 
 export class ConglomeradoController {
   async checkToday(req: Request, res: Response, next: NextFunction) {
@@ -34,7 +35,11 @@ export class ConglomeradoController {
           logger.warn(`Image processing failed, using original: ${imgErr.message}`);
         }
 
-        images.push({ imagePath, originalName, thumbPath });
+        images.push({
+          imagePath: toRelativeImagePath(imagePath),
+          originalName,
+          thumbPath: thumbPath ? toRelativeImagePath(thumbPath) : null,
+        });
       }
 
       const entry = await conglomeradoService.createEntry(

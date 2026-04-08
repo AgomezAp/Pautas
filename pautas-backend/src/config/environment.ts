@@ -12,7 +12,7 @@ export const env = {
     name: process.env.DB_NAME || 'pautas',
     user: process.env.DB_USER || 'pautas_app',
     password: process.env.DB_PASSWORD || '',
-    maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '20', 10),
+    maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '40', 10),
   },
 
   jwt: {
@@ -23,7 +23,7 @@ export const env = {
 
   upload: {
     dir: process.env.UPLOAD_DIR || './uploads',
-    maxFileSizeMB: parseInt(process.env.MAX_FILE_SIZE_MB || '5', 10),
+    maxFileSizeMB: parseInt(process.env.MAX_FILE_SIZE_MB || '20', 10),
   },
 
   googleAds: {

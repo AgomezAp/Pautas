@@ -4,6 +4,7 @@ import { googleAdsSyncService } from '../services/google-ads-sync.service';
 import { weeklySummaryService } from '../services/weekly-summary.service';
 import { alertsEngineService } from '../services/alerts-engine.service';
 import { notificationEmailService } from '../services/notification-email.service';
+import { imageCleanupService } from '../services/image-cleanup.service';
 
 export function registerCronJobs() {
   // Google Ads campaigns + recharges sync: every hour (ACTIVE accounts only, skips PAUSADA)
@@ -102,4 +103,17 @@ export function registerCronJobs() {
   });
 
   logger.info('Alert cron jobs registered: NO_REPORT (7PM L-V), Trends (6AM L-V), Stats (Sun 1:30AM), Email (8PM L-V)');
+
+  // ─── LIMPIEZA: Eliminar imágenes con más de 14 días (diario a las 4:00 AM) ────
+  cron.schedule('0 4 * * *', async () => {
+    logger.info('[CRON] Starting image cleanup (>14 days)...');
+    try {
+      const result = await imageCleanupService.cleanupOldImages();
+      logger.info(`[CRON] Image cleanup completed: ${result.deletedFiles} files deleted, ${result.errors} errors`);
+    } catch (error: any) {
+      logger.error('[CRON] Image cleanup error: ' + error.message);
+    }
+  });
+
+  logger.info('Image cleanup cron registered: daily at 4:00 AM (>14 days)');
 }

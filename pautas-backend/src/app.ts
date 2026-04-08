@@ -22,7 +22,9 @@ import { registerCronJobs } from './jobs/cron';
 const app = express();
 
 // Global middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));

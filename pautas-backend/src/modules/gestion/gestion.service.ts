@@ -1,6 +1,7 @@
 import { query } from '../../config/database';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '../../services/audit.service';
+import { toRelativeImagePath } from '../../utils/image-path.util';
 
 export class GestionService {
   async getDashboardKpis(queryParams: any) {
@@ -282,9 +283,9 @@ export class GestionService {
       const entry = user.entries.get(row.entry_id)!;
       entry.images.push({
         id: row.image_id,
-        image_path: row.image_path,
+        image_path: toRelativeImagePath(row.image_path),
         original_name: row.original_name,
-        thumb_path: row.thumb_path,
+        thumb_path: row.thumb_path ? toRelativeImagePath(row.thumb_path) : null,
       });
       user.total_images++;
     }

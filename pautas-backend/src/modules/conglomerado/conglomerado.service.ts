@@ -2,6 +2,7 @@ import { query, getClient } from '../../config/database';
 import { logAudit } from '../../services/audit.service';
 import { getISOWeekInfo } from '../../utils/iso-week.util';
 import { parsePagination, buildPaginationMeta } from '../../utils/pagination.util';
+import { toRelativeImagePath } from '../../utils/image-path.util';
 
 export class ConglomeradoService {
   async checkTodayEntry(userId: number) {
@@ -90,7 +91,14 @@ export class ConglomeradoService {
       [userId, limit, offset]
     );
 
-    return { data: result.rows, meta: buildPaginationMeta(page, limit, total) };
+    const rows = result.rows.map(row => {
+      if (row.soporte_image_path) {
+        row.soporte_image_path = toRelativeImagePath(row.soporte_image_path);
+      }
+      return row;
+    });
+
+    return { data: rows, meta: buildPaginationMeta(page, limit, total) };
   }
 
   async getEntryById(id: number, userId: number) {
