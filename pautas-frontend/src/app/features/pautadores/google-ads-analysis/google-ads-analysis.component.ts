@@ -38,8 +38,47 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     plugins: {
       legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16 } },
       tooltip: {
-        backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12,
-        titleFont: { size: 13 }, bodyFont: { size: 12 },
+        enabled: true,
+        mode: 'index',
+        intersect: false,
+        backgroundColor: 'rgba(20,20,20,0.92)',
+        cornerRadius: 8,
+        padding: { top: 10, bottom: 10, left: 14, right: 14 },
+        titleFont: { size: 13, weight: 'bold' },
+        bodyFont: { size: 12 },
+        bodySpacing: 6,
+        usePointStyle: true,
+        callbacks: {
+          title: (items) => {
+            if (!items.length) return '';
+            return items[0].label || '';
+          },
+          label: (ctx) => {
+            const val = Number(ctx.parsed.y) || 0;
+            const label = ctx.dataset.label || '';
+            const formatted = val >= 1_000_000
+              ? `$${(val / 1_000_000).toFixed(2)}M`
+              : `$${val.toLocaleString('es-CO')}`;
+            return ` ${label}: ${formatted}`;
+          },
+          afterBody: (items) => {
+            if (!items.length || !this.spendingTrendData.length) return '';
+            const idx = items[0].dataIndex;
+            const row = this.spendingTrendData[idx];
+            if (!row) return '';
+            const lines: string[] = [];
+            if (row.campaigns_count != null) {
+              lines.push(`  Campanas activas: ${row.campaigns_count}`);
+            }
+            const cost = Number(row.total_cost) || 0;
+            const budget = Number(row.total_budget) || 0;
+            if (budget > 0) {
+              const pct = ((cost / budget) * 100).toFixed(1);
+              lines.push(`  Ejecucion: ${pct}%`);
+            }
+            return lines;
+          },
+        },
       },
     },
     scales: {
@@ -83,7 +122,32 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     indexAxis: 'y',
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12 },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(20,20,20,0.92)',
+        cornerRadius: 8,
+        padding: { top: 10, bottom: 10, left: 14, right: 14 },
+        bodyFont: { size: 12 },
+        bodySpacing: 4,
+        callbacks: {
+          title: (items) => items.length ? String(items[0].label) : '',
+          label: (ctx) => {
+            const val = Number(ctx.parsed.x) || 0;
+            return ` CPC: $${val.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          },
+          afterLabel: (ctx) => {
+            const row = this.performanceData
+              .sort((a: any, b: any) => Number(b.cpc) - Number(a.cpc))[ctx.dataIndex];
+            if (!row) return '';
+            const lines: string[] = [];
+            if (row.total_cost != null) lines.push(` Costo total: $${Number(row.total_cost).toLocaleString('es-CO')}`);
+            if (row.total_clicks != null) lines.push(` Clicks: ${Number(row.total_clicks).toLocaleString('es-CO')}`);
+            if (row.total_impressions != null) lines.push(` Impresiones: ${Number(row.total_impressions).toLocaleString('es-CO')}`);
+            if (row.ctr != null) lines.push(` CTR: ${row.ctr}%`);
+            return lines;
+          },
+        },
+      },
     },
     scales: {
       x: {
@@ -106,7 +170,34 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     indexAxis: 'y',
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12 },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(20,20,20,0.92)',
+        cornerRadius: 8,
+        padding: { top: 10, bottom: 10, left: 14, right: 14 },
+        bodyFont: { size: 12 },
+        bodySpacing: 4,
+        callbacks: {
+          title: (items) => items.length ? String(items[0].label) : '',
+          label: (ctx) => {
+            const val = Number(ctx.parsed.x) || 0;
+            const label = this.getMetricLabel();
+            if (this.rankingMetric === 'spend') {
+              return ` ${label}: $${val.toLocaleString('es-CO')}`;
+            }
+            return ` ${label}: ${val.toLocaleString('es-CO')}`;
+          },
+          afterLabel: (ctx) => {
+            const row = this.rankingsData[ctx.dataIndex];
+            if (!row) return '';
+            const lines: string[] = [];
+            if (row.total_cost != null) lines.push(` Costo: $${Number(row.total_cost).toLocaleString('es-CO')}`);
+            if (row.total_clicks != null) lines.push(` Clicks: ${Number(row.total_clicks).toLocaleString('es-CO')}`);
+            if (row.total_conversions != null) lines.push(` Conversiones: ${Number(row.total_conversions).toLocaleString('es-CO')}`);
+            return lines;
+          },
+        },
+      },
     },
     scales: {
       x: {
@@ -126,7 +217,31 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     cutout: '55%',
     plugins: {
       legend: { display: true, position: 'right', labels: { usePointStyle: true, padding: 12, font: { size: 12 } } },
-      tooltip: { backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12 },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(20,20,20,0.92)',
+        cornerRadius: 8,
+        padding: { top: 10, bottom: 10, left: 14, right: 14 },
+        bodyFont: { size: 12 },
+        bodySpacing: 4,
+        callbacks: {
+          label: (ctx) => {
+            const val = Number(ctx.parsed) || 0;
+            const total = (ctx.dataset.data as number[]).reduce((a, b) => a + Number(b), 0);
+            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+            return ` Presupuesto: $${val.toLocaleString('es-CO')} (${pct}%)`;
+          },
+          afterLabel: (ctx) => {
+            const row = this.budgetData[ctx.dataIndex];
+            if (!row) return '';
+            const lines: string[] = [];
+            if (row.spent != null) lines.push(` Gastado: $${Number(row.spent).toLocaleString('es-CO')}`);
+            if (row.execution_pct != null) lines.push(` Ejecucion: ${row.execution_pct}%`);
+            if (row.accounts_count != null) lines.push(` Cuentas: ${row.accounts_count}`);
+            return lines;
+          },
+        },
+      },
     },
   };
 
@@ -187,6 +302,17 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   }
 
   applyFilters(): void {
+    // Invalidate cached data for all tabs so they reload with new filters
+    this.spendingTrendData = [];
+    this.lineChartData = null;
+    this.performanceData = [];
+    this.performanceBarData = null;
+    this.rankingsData = [];
+    this.rankingsBarData = null;
+    this.budgetData = [];
+    this.doughnutChartData = null;
+
+    // Reload current tab
     switch (this.activeTab) {
       case 0: this.loadSpendingTrend(); break;
       case 1: this.loadPerformance(); break;
@@ -202,7 +328,24 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     this.filterDateFrom = this.formatDate(thirtyDaysAgo);
     this.filterDateTo = this.formatDate(today);
     this.filterCountryId = null;
-    this.applyFilters();
+
+    // Invalidate cached data for all tabs
+    this.spendingTrendData = [];
+    this.lineChartData = null;
+    this.performanceData = [];
+    this.performanceBarData = null;
+    this.rankingsData = [];
+    this.rankingsBarData = null;
+    this.budgetData = [];
+    this.doughnutChartData = null;
+
+    // Reload current tab
+    switch (this.activeTab) {
+      case 0: this.loadSpendingTrend(); break;
+      case 1: this.loadPerformance(); break;
+      case 2: this.loadRankings(); break;
+      case 3: this.loadBudgetDistribution(); break;
+    }
   }
 
   onTabChange(index: number): void {
@@ -256,7 +399,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     const pointRadius = data.length <= 10 ? 5 : 3;
     const pointHoverRadius = data.length <= 10 ? 7 : 5;
 
-    this.lineChartData = {
+    const chartData: ChartConfiguration<'line'>['data'] = {
       labels: data.map(d => this.formatPeriod(d.period)),
       datasets: [
         {
@@ -288,6 +431,12 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         },
       ],
     };
+
+    // Defer to let Angular render the canvas before Chart.js initializes
+    setTimeout(() => {
+      this.lineChartData = chartData;
+      this.cdr.detectChanges();
+    });
   }
 
   // ---- Tab 2: Performance ----
@@ -321,7 +470,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       .slice(0, 10);
     if (!sorted.length) { this.performanceBarData = null; return; }
 
-    this.performanceBarData = {
+    const chartData: ChartConfiguration<'bar'>['data'] = {
       labels: sorted.map(d => d.customer_account_name || d.customer_account_id),
       datasets: [{
         label: 'CPC',
@@ -332,6 +481,11 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         borderRadius: 4,
       }],
     };
+
+    setTimeout(() => {
+      this.performanceBarData = chartData;
+      this.cdr.detectChanges();
+    });
   }
 
   // ---- Tab 3: Rankings ----
@@ -364,7 +518,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   private buildRankingsChart(): void {
     if (!this.rankingsData.length) { this.rankingsBarData = null; return; }
 
-    this.rankingsBarData = {
+    const chartData: ChartConfiguration<'bar'>['data'] = {
       labels: this.rankingsData.map(d => d.customer_account_name || d.customer_account_id),
       datasets: [{
         label: this.getMetricLabel(),
@@ -375,6 +529,11 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         borderRadius: 4,
       }],
     };
+
+    setTimeout(() => {
+      this.rankingsBarData = chartData;
+      this.cdr.detectChanges();
+    });
   }
 
   // ---- Tab 4: Budget Distribution ----
@@ -402,7 +561,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   private buildBudgetChart(): void {
     if (!this.budgetData.length) { this.doughnutChartData = null; return; }
 
-    this.doughnutChartData = {
+    const chartData: ChartConfiguration<'doughnut'>['data'] = {
       labels: this.budgetData.map(d => d.country_name || 'Sin pais'),
       datasets: [{
         data: this.budgetData.map(d => Number(d.assigned_budget)),
@@ -411,6 +570,11 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         borderColor: '#fff',
       }],
     };
+
+    setTimeout(() => {
+      this.doughnutChartData = chartData;
+      this.cdr.detectChanges();
+    });
   }
 
   // ---- Helpers ----

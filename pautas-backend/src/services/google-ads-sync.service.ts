@@ -19,7 +19,6 @@ const COUNTRY_PATTERNS: Record<string, string> = {
   'CHILE': 'CL',
   'ECUADOR': 'EC',
   'PANAMA': 'PA',
-  'COSTA RICA': 'CR',
   'BOLIVIA': 'BO',
   'ESPAÑA': 'ES',
 };
@@ -1127,7 +1126,7 @@ export class GoogleAdsSyncService {
         WHEN UPPER(customer_account_name) LIKE '%MEXICO%' OR UPPER(customer_account_name) LIKE '%MÉXICO%' THEN 'México'
         WHEN UPPER(customer_account_name) LIKE '%PANAMA%' OR UPPER(customer_account_name) LIKE '%PANAMÁ%' THEN 'Panamá'
         WHEN UPPER(customer_account_name) LIKE '%ECUADOR%' THEN 'Ecuador'
-        WHEN UPPER(customer_account_name) LIKE '%COSTA RICA%' THEN 'Costa Rica'
+        WHEN UPPER(customer_account_name) LIKE '%BOLIVIA%' THEN 'Bolivia'
         ELSE 'Otros'
       END`;
 

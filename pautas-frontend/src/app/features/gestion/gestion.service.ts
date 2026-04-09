@@ -78,4 +78,12 @@ export class GestionService {
   }): Observable<ApiResponse<any>> {
     return this.http.post<ApiResponse<any>>(API_URLS.gestion.conglomeradoUsers, data);
   }
+
+  resetEntry(entryId: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(API_URLS.gestion.resetEntry(entryId));
+  }
+
+  resetPassword(userId: number, newPassword: string): Observable<ApiResponse<any>> {
+    return this.http.patch<ApiResponse<any>>(API_URLS.gestion.resetPassword(userId), { new_password: newPassword });
+  }
 }

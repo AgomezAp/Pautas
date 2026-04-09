@@ -33,7 +33,7 @@ export class AdminDashboardComponent implements OnInit {
     { value: 'MEXICO', label: 'Mexico' },
     { value: 'PANAMA', label: 'Panama' },
     { value: 'ECUADOR', label: 'Ecuador' },
-    { value: 'COSTA RICA', label: 'Costa Rica' },
+    { value: 'BOLIVIA', label: 'Bolivia' },
   ];
 
   loadingRecharges = false;
@@ -48,11 +48,25 @@ export class AdminDashboardComponent implements OnInit {
     plugins: {
       legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16 } },
       tooltip: {
+        enabled: true,
+        mode: 'index',
+        intersect: false,
         backgroundColor: 'rgba(20,20,20,0.9)',
         cornerRadius: 8,
         padding: 12,
         titleFont: { size: 13 },
         bodyFont: { size: 12 },
+        callbacks: {
+          label: (ctx) => {
+            const val = Number(ctx.parsed.y) || 0;
+            const label = ctx.dataset.label || '';
+            if (ctx.datasetIndex === 1) return ` ${label}: ${val.toLocaleString('es-CO')}`;
+            if (val >= 1_000_000_000) return ` ${label}: $${(val / 1_000_000_000).toFixed(1)}B`;
+            if (val >= 1_000_000) return ` ${label}: $${(val / 1_000_000).toFixed(0)}M`;
+            if (val >= 1_000) return ` ${label}: $${(val / 1_000).toFixed(0)}K`;
+            return ` ${label}: $${val.toLocaleString('es-CO')}`;
+          },
+        },
       },
     },
     scales: {
@@ -87,7 +101,18 @@ export class AdminDashboardComponent implements OnInit {
     indexAxis: 'y',
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12 },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12,
+        callbacks: {
+          label: (ctx) => {
+            const val = Number(ctx.parsed.x) || 0;
+            if (val >= 1_000_000_000) return ` Total: $${(val / 1_000_000_000).toFixed(1)}B`;
+            if (val >= 1_000_000) return ` Total: $${(val / 1_000_000).toFixed(0)}M`;
+            return ` Total: $${val.toLocaleString('es-CO')}`;
+          },
+        },
+      },
     },
     scales: {
       x: {
@@ -112,7 +137,18 @@ export class AdminDashboardComponent implements OnInit {
     cutout: '55%',
     plugins: {
       legend: { display: true, position: 'right', labels: { usePointStyle: true, padding: 12, font: { size: 12 } } },
-      tooltip: { backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12 },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(20,20,20,0.9)', cornerRadius: 8, padding: 12,
+        callbacks: {
+          label: (ctx) => {
+            const val = Number(ctx.parsed) || 0;
+            const total = (ctx.dataset.data as number[]).reduce((a, b) => a + Number(b), 0);
+            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+            return ` ${ctx.label}: $${val.toLocaleString('es-CO')} (${pct}%)`;
+          },
+        },
+      },
     },
   };
 
@@ -123,7 +159,7 @@ export class AdminDashboardComponent implements OnInit {
     'Ecuador': '#8B5CF6',
     'Panama': '#EF4444',
     'Mexico': '#06B6D4',
-    'Costa Rica': '#F97316',
+    'Bolivia': '#F97316',
     'Otros': '#9CA3AF',
   };
 

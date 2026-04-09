@@ -43,4 +43,10 @@ router.post('/conglomerado-users', roleMiddleware('gestion_administrativa', 'adm
 // Soporte images: entries with uploaded images
 router.get('/soporte-images', roleMiddleware('gestion_administrativa', 'admin'), (req, res, next) => gestionController.getEntriesWithImages(req, res, next));
 
+// Reset (hard delete) a conglomerado daily entry
+router.delete('/entries/:entryId', roleMiddleware('gestion_administrativa', 'admin'), (req, res, next) => gestionController.resetEntry(req, res, next));
+
+// Reset password for a conglomerado user
+router.patch('/conglomerado-users/:userId/reset-password', roleMiddleware('gestion_administrativa', 'admin'), (req, res, next) => gestionController.resetPassword(req, res, next));
+
 export { router as gestionRoutes };

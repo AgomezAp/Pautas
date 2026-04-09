@@ -147,6 +147,38 @@ export class GestionController {
       next(err);
     }
   }
+
+  async resetEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const entryId = parseInt(req.params.entryId);
+      if (isNaN(entryId)) {
+        return sendError(res, 'VALIDATION_ERROR', 'ID de entrada inválido', 400);
+      }
+      const result = await gestionService.resetEntry(entryId, req.user!.sub, req.ip);
+      return sendSuccess(res, result);
+    } catch (err: any) {
+      if (err.status) return sendError(res, err.code, err.message, err.status);
+      next(err);
+    }
+  }
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return sendError(res, 'VALIDATION_ERROR', 'ID de usuario inválido', 400);
+      }
+      const { new_password } = req.body;
+      if (!new_password || new_password.length < 6) {
+        return sendError(res, 'VALIDATION_ERROR', 'La contraseña debe tener al menos 6 caracteres', 400);
+      }
+      const result = await gestionService.resetPassword(userId, new_password, req.user!.sub, req.ip);
+      return sendSuccess(res, result);
+    } catch (err: any) {
+      if (err.status) return sendError(res, err.code, err.message, err.status);
+      next(err);
+    }
+  }
 }
 
 export const gestionController = new GestionController();

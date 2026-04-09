@@ -82,11 +82,24 @@
                   <div class="day-section">
                     <div class="day-header">
                       <span class="day-label">{{ formatDay(day.entry_date) }}</span>
-                      <span class="day-stats">
-                        Clientes: {{ day.clientes }} &middot;
-                        Efectivos: {{ day.clientes_efectivos }} &middot;
-                        Menores: {{ day.menores }}
-                      </span>
+                      <div class="day-header-right">
+                        <span class="day-stats">
+                          Clientes: {{ day.clientes }} &middot;
+                          Efectivos: {{ day.clientes_efectivos }} &middot;
+                          Menores: {{ day.menores }}
+                        </span>
+                        <button class="btn btn-outline-danger btn-sm btn-reset"
+                                (click)="$event.stopPropagation(); confirmResetEntry(day, user.full_name)"
+                                [disabled]="resettingEntryId === day.entry_id"
+                                title="Resetear entrada para que el usuario pueda reenviar">
+                          @if (resettingEntryId === day.entry_id) {
+                            <span class="spinner-border spinner-border-sm"></span>
+                          } @else {
+                            <app-icon name="restart_alt" size="sm"></app-icon>
+                          }
+                          Resetear
+                        </button>
+                      </div>
                     </div>
                     <div class="image-grid">
                       @for (img of day.images; track img.id) {

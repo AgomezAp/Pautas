@@ -1,8 +1,11 @@
+import path from 'path';
 import { query } from '../../config/database';
 import bcrypt from 'bcryptjs';
 import { logAudit } from '../../services/audit.service';
 import { toRelativeImagePath } from '../../utils/image-path.util';
 import { cacheService } from '../../services/cache.service';
+import { imageCleanupService } from '../../services/image-cleanup.service';
+import { env } from '../../config/environment';
 
 function buildParamsKey(params: any): string {
   return Object.keys(params || {}).sort().map(k => `${k}=${params[k] ?? ''}`).join(':') || 'all';
@@ -341,6 +344,104 @@ export class GestionService {
     const responseData = { data };
     await cacheService.set(CACHE_KEY, responseData, 120);
     return responseData;
+  }
+
+  async resetEntry(entryId: number, resetByUserId: number, ip?: string) {
+    // 1. Fetch entry data before deletion (for audit)
+    const entryResult = await query(
+      `SELECT de.*, u.full_name, u.username
+       FROM daily_entries de
+       JOIN users u ON u.id = de.user_id
+       WHERE de.id = $1`,
+      [entryId]
+    );
+
+    if (entryResult.rows.length === 0) {
+      throw { status: 404, code: 'ENTRY_NOT_FOUND', message: 'Entrada no encontrada' };
+    }
+
+    const entry = entryResult.rows[0];
+
+    // 2. Fetch associated images for filesystem cleanup
+    const imagesResult = await query(
+      'SELECT id, image_path, thumb_path FROM entry_images WHERE entry_id = $1',
+      [entryId]
+    );
+
+    // 3. Delete image files from filesystem
+    const uploadBase = path.resolve(env.upload.dir);
+    for (const img of imagesResult.rows) {
+      if (img.image_path) {
+        const filePath = imageCleanupService.resolveFilePath(uploadBase, img.image_path);
+        imageCleanupService.deleteFile(filePath);
+      }
+      if (img.thumb_path) {
+        const thumbPath = imageCleanupService.resolveFilePath(uploadBase, img.thumb_path);
+        imageCleanupService.deleteFile(thumbPath);
+      }
+    }
+
+    // 4. Hard DELETE (entry_images cascade-deleted)
+    await query('DELETE FROM daily_entries WHERE id = $1', [entryId]);
+
+    // 5. Audit log with previous data
+    await logAudit(resetByUserId, 'ENTRY_RESET', 'daily_entry', entryId, {
+      previous_data: {
+        entry_date: entry.entry_date,
+        user_id: entry.user_id,
+        user_name: entry.full_name,
+        username: entry.username,
+        clientes: entry.clientes,
+        clientes_efectivos: entry.clientes_efectivos,
+        menores: entry.menores,
+        country_id: entry.country_id,
+        campaign_id: entry.campaign_id,
+      },
+      images_deleted: imagesResult.rows.length,
+    }, ip);
+
+    // 6. Invalidate caches
+    await Promise.all([
+      cacheService.invalidatePattern('admin:stats'),
+      cacheService.invalidatePattern('admin:conglomerado-entries:*'),
+      cacheService.invalidatePattern('gestion:*'),
+      cacheService.invalidatePattern(`cong:*:${entry.user_id}:*`),
+    ]);
+
+    return { id: entryId, deleted: true };
+  }
+
+  async resetPassword(userId: number, newPassword: string, resetByUserId: number, ip?: string) {
+    // Verify the user exists and is a conglomerado user
+    const userResult = await query(
+      `SELECT u.id, u.full_name, u.username, r.name as role_name
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      throw { status: 404, code: 'USER_NOT_FOUND', message: 'Usuario no encontrado' };
+    }
+
+    const user = userResult.rows[0];
+    if (user.role_name !== 'conglomerado') {
+      throw { status: 403, code: 'INVALID_ROLE', message: 'Solo se puede resetear la contraseña de usuarios del conglomerado' };
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [passwordHash, userId]
+    );
+
+    await logAudit(resetByUserId, 'PASSWORD_RESET', 'user', userId, {
+      target_user: user.username,
+      target_name: user.full_name,
+    }, ip);
+
+    return { id: userId, username: user.username, passwordReset: true };
   }
 }
 

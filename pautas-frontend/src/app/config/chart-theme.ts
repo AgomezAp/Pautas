@@ -55,11 +55,9 @@ Chart.defaults.color = tokens.gray500;
 Chart.defaults.responsive = true;
 Chart.defaults.maintainAspectRatio = false;
 
-// Remove global animations clutter — keep snappy
-Chart.defaults.animation = {
-  duration: 300,
-  easing: 'easeOutQuart',
-};
+// Disable global animations to prevent "this._fn is not a function" errors
+// in Chart.js 4.x. Individual charts can re-enable with their own config.
+Chart.defaults.animation = false as any;
 
 // ─── Tooltip defaults ───
 Tooltip.positioners.average = Tooltip.positioners.average; // keep default
@@ -212,7 +210,7 @@ export function lineChartDefaults(overrides: Record<string, any> = {}) {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: overrides['showLegend'] ?? true },
-      tooltip: {},
+      tooltip: { enabled: true, mode: 'index' as const, intersect: false },
     },
     scales: {
       x: { grid: { display: false }, border: { display: false } },
@@ -248,7 +246,7 @@ export function barChartDefaults(overrides: Record<string, any> = {}) {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: overrides['showLegend'] ?? false },
-      tooltip: {},
+      tooltip: { enabled: true },
     },
     scales: {
       x: { grid: { display: false }, border: { display: false } },
@@ -278,7 +276,7 @@ export function doughnutChartDefaults(overrides: Record<string, any> = {}) {
         display: overrides['showLegend'] ?? true,
         position: 'bottom' as const,
       },
-      tooltip: {},
+      tooltip: { enabled: true },
     },
     ...overrides,
   };

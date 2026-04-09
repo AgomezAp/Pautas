@@ -5,6 +5,7 @@ import { NgbCollapseModule } from '@ng-bootstrap/ng-bootstrap';
 import { GestionService } from '../gestion.service';
 import { CountryService } from '../../../core/services/country.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { Country } from '../../../core/models/country.model';
 import { environment } from '../../../../environments/environment';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
@@ -62,6 +63,7 @@ export class SoporteImagesComponent implements OnInit {
   lightboxUrl: string | null = null;
   lightboxImages: EntryImage[] = [];
   lightboxIndex = 0;
+  resettingEntryId: number | null = null;
 
   private backendBase: string;
 
@@ -69,6 +71,7 @@ export class SoporteImagesComponent implements OnInit {
     private gestionService: GestionService,
     private countryService: CountryService,
     private authService: AuthService,
+    private notification: NotificationService,
     private cdr: ChangeDetectorRef,
   ) {
     this.backendBase = environment.apiUrl.replace('/api/v1', '');
@@ -205,5 +208,31 @@ export class SoporteImagesComponent implements OnInit {
 
   toggleUser(user: UserFolder): void {
     user.collapsed = !user.collapsed;
+  }
+
+  confirmResetEntry(day: EntryGroup, userName: string): void {
+    const confirmed = confirm(
+      `¿Está seguro que desea resetear la entrada del día ${this.formatDay(day.entry_date)} de "${userName}"?\n\nEsta acción eliminará la entrada y sus imágenes permanentemente. El usuario podrá volver a enviar datos para este día.`
+    );
+    if (confirmed) {
+      this.doResetEntry(day.entry_id);
+    }
+  }
+
+  private doResetEntry(entryId: number): void {
+    this.resettingEntryId = entryId;
+    this.cdr.detectChanges();
+    this.gestionService.resetEntry(entryId).subscribe({
+      next: () => {
+        this.notification.success('Entrada reseteada exitosamente. El usuario puede volver a enviar sus datos.');
+        this.resettingEntryId = null;
+        this.loadData();
+      },
+      error: (err: any) => {
+        this.notification.error(err.error?.error?.message || 'Error al resetear la entrada');
+        this.resettingEntryId = null;
+        this.cdr.detectChanges();
+      },
+    });
   }
 }

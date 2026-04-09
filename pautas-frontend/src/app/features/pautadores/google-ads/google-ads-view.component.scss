@@ -465,13 +465,12 @@ $radius-xl: 1rem;
     box-shadow: 0 4px 16px color.adjust($color-secondary, $alpha: -0.85);
   }
 
-  // Indicador de recargas del mismo día
   &.same-day-recharges {
     border-left: 4px solid $color-warning;
   }
 }
 
-// Account Header (Clickable)
+// Account Header
 .account-header {
   display: flex;
   align-items: center;
@@ -676,6 +675,28 @@ $radius-xl: 1rem;
 // ============================================
 .campaigns-panel {
   border-top: 1px solid $color-border-light;
+
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      height: 5px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: $color-bg-light;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $color-border;
+      border-radius: 3px;
+
+      &:hover {
+        background: $color-text-muted;
+      }
+    }
+  }
 }
 
 .campaigns-panel-header {
@@ -731,7 +752,7 @@ $radius-xl: 1rem;
       text-align: left;
       white-space: nowrap;
       border: none;
-      background: #141414;
+      background: $color-primary;
     }
   }
 
@@ -748,7 +769,6 @@ $radius-xl: 1rem;
         border-bottom: 1px solid $color-border-light;
       }
 
-      // Highlight para recargas del mismo día
       &.same-day-highlight {
         background-color: color.adjust($color-warning, $alpha: -0.9);
 
@@ -777,13 +797,128 @@ $radius-xl: 1rem;
   }
 }
 
-// Campaigns table (inside account card)
+// ============================================
+// CAMPAIGNS TABLE (Alineación corregida)
+// ============================================
 .campaigns-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 750px;
+
+  // Fondo diferenciado del thead
   thead tr {
     background-color: color.adjust($color-primary, $lightness: 10%);
   }
+
+  // ---------- Anchos y alineación por columna ----------
+  // Columna 1: Campaña
+  thead th:nth-child(1),
+  tbody td:nth-child(1) {
+    width: 24%;
+    text-align: left;
+  }
+
+  // Columna 2: País
+  thead th:nth-child(2),
+  tbody td:nth-child(2) {
+    width: 7%;
+    text-align: center;
+  }
+
+  // Columna 3: Estado
+  thead th:nth-child(3),
+  tbody td:nth-child(3) {
+    width: 10%;
+    text-align: center;
+  }
+
+  // Columna 4: Presup. Diario
+  thead th:nth-child(4),
+  tbody td:nth-child(4) {
+    width: 14%;
+    text-align: right;
+  }
+
+  // Columna 5: Gasto Hoy
+  thead th:nth-child(5),
+  tbody td:nth-child(5) {
+    width: 13%;
+    text-align: right;
+  }
+
+  // Columna 6: Restante
+  thead th:nth-child(6),
+  tbody td:nth-child(6) {
+    width: 13%;
+    text-align: right;
+  }
+
+  // Columna 7: Conv.
+  thead th:nth-child(7),
+  tbody td:nth-child(7) {
+    width: 9%;
+    text-align: right;
+  }
+
+  // Columna 8: Clicks
+  thead th:nth-child(8),
+  tbody td:nth-child(8) {
+    width: 10%;
+    text-align: right;
+  }
+
+  // ---------- Estilos específicos de celdas ----------
+  tbody td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    // Campaña: truncar nombres largos
+    &:nth-child(1) {
+      .cell-primary {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+        color: $color-text-dark;
+      }
+    }
+
+    // País
+    &:nth-child(2) {
+      font-weight: 500;
+      color: $color-text-muted;
+      font-size: 0.82rem;
+    }
+
+    // Estado: centrar badge
+    &:nth-child(3) {
+      .badge {
+        display: inline-flex;
+      }
+    }
+
+    // Columnas numéricas (4 a 8)
+    &.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      padding-right: $spacing-lg;
+    }
+  }
+
+  // Asegurar que los th numéricos tengan padding consistente
+  thead th {
+    &:nth-child(n + 4) {
+      padding-right: $spacing-lg;
+    }
+  }
 }
 
+// ============================================
+// CELL UTILITIES
+// ============================================
 .cell-primary {
   font-weight: 500;
   color: $color-text-dark;
@@ -797,6 +932,7 @@ $radius-xl: 1rem;
 
 .negative {
   color: $color-danger;
+  font-weight: 600;
 }
 
 .amount-cell {
@@ -817,8 +953,33 @@ $radius-xl: 1rem;
   border-radius: 2rem;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
 
-  // Status badges
+  &.badge-green {
+    background-color: color.adjust($color-success, $alpha: -0.85);
+    color: $color-success;
+  }
+
+  &.badge-yellow {
+    background-color: color.adjust($color-warning, $alpha: -0.85);
+    color: $color-warning;
+  }
+
+  &.badge-red {
+    background-color: color.adjust($color-danger, $alpha: -0.85);
+    color: $color-danger;
+  }
+
+  &.badge-gray {
+    background-color: color.adjust($color-text-muted, $alpha: -0.85);
+    color: $color-text-muted;
+  }
+
+  &.badge-blue {
+    background-color: color.adjust($color-info, $alpha: -0.85);
+    color: $color-info;
+  }
+
   &.status-enabled {
     background-color: color.adjust($color-success, $alpha: -0.85);
     color: $color-success;
@@ -834,7 +995,6 @@ $radius-xl: 1rem;
     color: $color-danger;
   }
 
-  // Proposal type badges
   &.type-manual {
     background-color: color.adjust($color-info, $alpha: -0.85);
     color: $color-info;
@@ -923,8 +1083,14 @@ $radius-xl: 1rem;
     min-width: calc(50% - #{$spacing-sm});
   }
 
+  // Tabla genérica — permitir scroll
   .table {
     min-width: 800px;
+  }
+
+  // Campaigns table — scroll propio
+  .campaigns-table {
+    min-width: 750px;
   }
 }
 
@@ -944,5 +1110,28 @@ $radius-xl: 1rem;
 
   .account-name {
     font-size: 0.9rem;
+  }
+
+  // Campaigns table más compacta
+  .campaigns-table {
+    min-width: 650px;
+
+    thead th {
+      padding: 0.7rem $spacing-sm;
+      font-size: 0.7rem;
+    }
+
+    tbody td {
+      padding: 0.6rem $spacing-sm;
+      font-size: 0.8rem;
+
+      &.num {
+        padding-right: $spacing-md;
+      }
+    }
+
+    thead th:nth-child(n + 4) {
+      padding-right: $spacing-md;
+    }
   }
 }

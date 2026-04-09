@@ -79,9 +79,9 @@ app.get('/api/v1/health', (_req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(env.port, () => {
+app.listen(env.port, async () => {
   logger.info(`Server running on port ${env.port} in ${env.nodeEnv} mode`);
-  initRedis();
+  await initRedis();
   registerCronJobs();
 });
 

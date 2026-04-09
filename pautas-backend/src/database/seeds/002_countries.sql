@@ -5,5 +5,5 @@ INSERT INTO countries (name, code, google_sheet_tab, timezone) VALUES
 ('Chile', 'CL', 'Chile', 'America/Santiago'),
 ('Ecuador', 'EC', 'Ecuador', 'America/Guayaquil'),
 ('Panamá', 'PA', 'Panama', 'America/Panama'),
-('Costa Rica', 'CR', 'Costa_Rica', 'America/Costa_Rica')
+('Bolivia', 'BO', 'Bolivia', 'America/La_Paz')
 ON CONFLICT (code) DO NOTHING;

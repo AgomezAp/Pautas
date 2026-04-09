@@ -95,7 +95,7 @@ export class ImageCleanupService {
     return { deletedFiles, errors };
   }
 
-  private resolveFilePath(uploadBase: string, imagePath: string): string {
+  resolveFilePath(uploadBase: string, imagePath: string): string {
     // If path starts with "uploads/", strip that prefix since uploadBase already points to uploads dir
     const normalized = imagePath.replace(/\\/g, '/');
     if (normalized.startsWith('uploads/')) {
@@ -104,7 +104,7 @@ export class ImageCleanupService {
     return path.resolve(normalized);
   }
 
-  private deleteFile(filePath: string): number {
+  deleteFile(filePath: string): number {
     try {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);

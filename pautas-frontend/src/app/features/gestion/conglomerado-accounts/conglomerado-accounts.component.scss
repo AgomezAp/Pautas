@@ -1,13 +1,13 @@
 // ============================================
 // MÓDULOS SASS MODERNOS
 // ============================================
-@use "sass:color";
+@use 'sass:color';
 
 // ============================================
 // VARIABLES (Identidad de Marca)
 // ============================================
 $color-primary: #141414;
-$color-secondary: #FFD600;
+$color-secondary: #ffd600;
 $font-primary: 'Fira Sans', sans-serif;
 
 // Variantes de texto
@@ -86,9 +86,8 @@ $transition-base: all 0.25s ease;
     position: relative;
     padding-bottom: $spacing-sm;
 
-    // Subrayado decorativo amarillo (regla obligatoria)
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       bottom: 0;
       left: 0;
@@ -132,7 +131,7 @@ $transition-base: all 0.25s ease;
   flex-wrap: wrap;
   padding: $spacing-lg;
   border-bottom: 1px solid $color-border-light;
-  border-top: 4px solid $color-secondary; // Borde superior amarillo (regla obligatoria)
+  border-top: 4px solid $color-secondary;
   background-color: $color-bg-white;
 }
 
@@ -173,7 +172,6 @@ $transition-base: all 0.25s ease;
     background-position: right 0.75rem center;
     background-size: 12px;
 
-    // Focus amarillo (regla obligatoria)
     &:focus {
       outline: none;
       border-color: $color-secondary;
@@ -218,7 +216,7 @@ $transition-base: all 0.25s ease;
   color: $color-text-muted;
 }
 
-// Spinner amarillo (regla obligatoria)
+// Spinner amarillo
 .spinner-border {
   display: inline-block;
   border: 3px solid $color-border-light;
@@ -297,7 +295,6 @@ $transition-base: all 0.25s ease;
   font-size: 0.88rem;
   margin: 0;
 
-  // ---------- THEAD — fondo principal oscuro (regla obligatoria) ----------
   thead {
     th {
       font-family: $font-primary;
@@ -312,9 +309,8 @@ $transition-base: all 0.25s ease;
       white-space: nowrap;
       position: relative;
 
-      // Separador sutil entre columnas
       &:not(:last-child)::after {
-        content: "";
+        content: '';
         position: absolute;
         right: 0;
         top: 22%;
@@ -325,7 +321,6 @@ $transition-base: all 0.25s ease;
     }
   }
 
-  // ---------- TBODY ----------
   tbody {
     tr {
       border-bottom: 1px solid $color-border-light;
@@ -368,7 +363,7 @@ $transition-base: all 0.25s ease;
 }
 
 // ============================================
-// ACCOUNT DISPLAY (Edición inline)
+// ACCOUNT DISPLAY (Edición inline cuenta)
 // ============================================
 .account-display {
   display: inline-flex;
@@ -415,40 +410,27 @@ $transition-base: all 0.25s ease;
 }
 
 // ============================================
-// INLINE EDIT
+// INLINE EDIT (Edición de cuenta y contraseña)
 // ============================================
 .inline-edit {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-
-  &.d-flex {
-    display: flex;
-  }
-
-  &.align-items-center {
-    align-items: center;
-  }
-
-  &.gap-1 {
-    gap: 0.35rem;
-  }
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  flex-wrap: nowrap;
 }
 
 .edit-field {
-  font-family: 'Fira Code', 'Fira Mono', monospace;
+  font-family: $font-primary;
   font-size: 0.85rem;
   color: $color-text-dark;
   background-color: $color-bg-white;
   border: 1px solid $color-border;
   border-radius: $radius-sm;
   padding: 0.3rem 0.5rem;
-  width: 130px;
+  width: 150px;
   height: 34px;
   transition: $transition-base;
-  letter-spacing: 0.3px;
 
-  // Focus amarillo (regla obligatoria)
   &:focus {
     outline: none;
     border-color: $color-secondary;
@@ -463,7 +445,6 @@ $transition-base: all 0.25s ease;
   }
 }
 
-// Override para form-control-sm dentro de inline-edit
 .form-control-sm {
   height: 34px;
   font-size: 0.85rem;
@@ -471,12 +452,12 @@ $transition-base: all 0.25s ease;
 }
 
 // ============================================
-// BOTONES ICON (Check, Close)
+// BOTONES ICON (Check, Close, genéricos)
 // ============================================
 .btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   border-radius: $radius-sm;
   border: 1px solid $color-border;
   background-color: transparent;
@@ -484,19 +465,46 @@ $transition-base: all 0.25s ease;
   transition: $transition-base;
   padding: 0;
   flex-shrink: 0;
+  overflow: visible;
+  line-height: 1;
 
   app-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+    pointer-events: none;
+    color: inherit;
+
+    ::ng-deep {
+      .material-icons,
+      .material-symbols-outlined,
+      mat-icon,
+      i,
+      span,
+      svg {
+        font-size: 18px !important;
+        width: 18px !important;
+        height: 18px !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        line-height: 1 !important;
+        color: inherit;
+      }
+    }
   }
 
   &.btn-sm {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
   }
 
-  // Botón guardar (check)
+  // Botón confirmar (check) — verde
   &.text-primary {
     color: $color-text-dark;
 
@@ -507,6 +515,17 @@ $transition-base: all 0.25s ease;
 
       app-icon {
         color: $color-text-light;
+
+        ::ng-deep {
+          .material-icons,
+          .material-symbols-outlined,
+          mat-icon,
+          i,
+          span,
+          svg {
+            color: $color-text-light !important;
+          }
+        }
       }
     }
 
@@ -521,8 +540,8 @@ $transition-base: all 0.25s ease;
     }
   }
 
-  // Botón cancelar (close) — sin clase especial
-  &:not(.text-primary) {
+  // Botón cancelar (close) — rojo
+  &:not(.text-primary):not(.btn-reset-password) {
     color: $color-text-muted;
 
     &:hover {
@@ -532,6 +551,17 @@ $transition-base: all 0.25s ease;
 
       app-icon {
         color: $color-text-light;
+
+        ::ng-deep {
+          .material-icons,
+          .material-symbols-outlined,
+          mat-icon,
+          i,
+          span,
+          svg {
+            color: $color-text-light !important;
+          }
+        }
       }
     }
 
@@ -539,6 +569,95 @@ $transition-base: all 0.25s ease;
       background-color: color.adjust($color-danger, $lightness: -8%);
       transform: scale(0.95);
     }
+  }
+}
+
+// ============================================
+// RESET PASSWORD BUTTON — CORREGIDO
+// ============================================
+.btn-reset-password {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: $radius-sm;
+  border: 1px solid $color-border;
+  background-color: $color-bg-white;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: $transition-base;
+  overflow: visible;
+  line-height: 1;
+  flex-shrink: 0;
+
+  // Forzar visibilidad del icono
+  app-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px;
+    height: 20px;
+    color: inherit;
+    line-height: 1;
+    pointer-events: none;
+
+    ::ng-deep {
+      .material-icons,
+      .material-symbols-outlined,
+      mat-icon,
+      i,
+      span,
+      svg {
+        font-size: 20px !important;
+        width: 20px !important;
+        height: 20px !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        line-height: 1 !important;
+        color: inherit;
+      }
+    }
+  }
+
+  // Hover — amarillo de marca
+  &:hover {
+    background-color: $color-secondary;
+    border-color: $color-secondary;
+    color: $color-primary;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba($color-secondary, 0.35);
+
+    app-icon {
+      color: $color-primary;
+
+      ::ng-deep {
+        .material-icons,
+        .material-symbols-outlined,
+        mat-icon,
+        i,
+        span,
+        svg {
+          color: $color-primary !important;
+        }
+      }
+    }
+  }
+
+  // Active
+  &:active {
+    background-color: color.adjust($color-secondary, $lightness: -8%);
+    transform: scale(0.95);
+  }
+
+  // Focus visible
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($color-secondary, 0.25);
   }
 }
 
@@ -589,7 +708,7 @@ $transition-base: all 0.25s ease;
   }
 
   .edit-field {
-    width: 110px;
+    width: 120px;
   }
 }
 
@@ -609,7 +728,6 @@ $transition-base: all 0.25s ease;
     }
   }
 
-  // Toolbar stack vertical
   .tab-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -628,7 +746,6 @@ $transition-base: all 0.25s ease;
     align-self: stretch;
   }
 
-  // Tabla compacta
   .table {
     font-size: 0.82rem;
     min-width: 650px;
@@ -668,8 +785,35 @@ $transition-base: all 0.25s ease;
   }
 
   .btn-icon.btn-sm {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+  }
+
+  .btn-reset-password {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+
+    app-icon {
+      width: 18px;
+      height: 18px;
+
+      ::ng-deep {
+        .material-icons,
+        .material-symbols-outlined,
+        mat-icon,
+        i,
+        span,
+        svg {
+          font-size: 18px !important;
+          width: 18px !important;
+          height: 18px !important;
+        }
+      }
+    }
   }
 
   .badge {
@@ -677,7 +821,6 @@ $transition-base: all 0.25s ease;
     padding: 0.2rem 0.5rem;
   }
 
-  // Loading y Empty
   .loading-state {
     padding: $spacing-xl * 2;
     font-size: 0.85rem;
@@ -718,7 +861,7 @@ $transition-base: all 0.25s ease;
   }
 
   .inline-edit {
-    gap: 0.2rem;
+    gap: 0.2rem !important;
   }
 
   .edit-field {
@@ -729,5 +872,14 @@ $transition-base: all 0.25s ease;
   .btn-icon.btn-sm {
     width: 26px;
     height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+  }
+
+  .btn-reset-password {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
   }
 }

@@ -53,6 +53,8 @@ export const API_URLS = {
     rotationsCampaigns: `${BASE}/gestion/rotations/campaigns`,
     conglomeradoUsers: `${BASE}/gestion/conglomerado-users`,
     soporteImages: `${BASE}/gestion/soporte-images`,
+    resetEntry: (id: number) => `${BASE}/gestion/entries/${id}`,
+    resetPassword: (id: number) => `${BASE}/gestion/conglomerado-users/${id}/reset-password`,
   },
   system: {
     countries: `${BASE}/system/countries`,

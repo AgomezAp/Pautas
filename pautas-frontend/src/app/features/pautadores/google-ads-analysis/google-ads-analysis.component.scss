@@ -577,6 +577,7 @@ table {
   border-collapse: collapse;
   font-family: $font-primary;
   font-size: 0.88rem;
+  table-layout: fixed;
 
   // THEAD — fondo principal oscuro (regla obligatoria)
   thead {
@@ -591,17 +592,14 @@ table {
       padding: 0.8rem $spacing-md;
       border: none;
       white-space: nowrap;
-      position: relative;
 
       // Separador sutil entre columnas
-      &:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 22%;
-        height: 56%;
-        width: 1px;
-        background-color: rgba($color-text-light, 0.12);
+      &:not(:last-child) {
+        border-right: 1px solid rgba($color-text-light, 0.12);
+      }
+
+      &.text-right {
+        text-align: right;
       }
     }
   }
@@ -629,6 +627,14 @@ table {
       border: none;
       vertical-align: middle;
       white-space: nowrap;
+
+      &.text-right {
+        text-align: right;
+      }
+
+      &.fw-600 {
+        font-weight: 600;
+      }
     }
   }
 }

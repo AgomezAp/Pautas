@@ -45,7 +45,22 @@ export class AlertDashboardComponent implements OnInit {
   trendChartData: ChartConfiguration<'bar'>['data'] | null = null;
   trendChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
-    plugins: { legend: { position: 'bottom' } },
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        enabled: true,
+        mode: 'index',
+        intersect: false,
+        backgroundColor: 'rgba(20,20,20,0.9)',
+        cornerRadius: 8,
+        padding: 12,
+        callbacks: {
+          label: (ctx) => {
+            return ` ${ctx.dataset.label}: ${ctx.parsed.y} alertas`;
+          },
+        },
+      },
+    },
     scales: {
       x: { stacked: true },
       y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } },
@@ -88,7 +103,10 @@ export class AlertDashboardComponent implements OnInit {
 
   loadSummary(): void {
     this.alertsService.getSummary().subscribe({
-      next: (res) => this.summary = res.data,
+      next: (res) => {
+        this.summary = res.data;
+        this.cdr.detectChanges();
+      },
       error: () => {},
     });
   }
@@ -105,8 +123,12 @@ export class AlertDashboardComponent implements OnInit {
         this.alerts = res.data || [];
         this.totalAlerts = res.meta?.total || 0;
         this.loading = false;
+        this.cdr.detectChanges();
       },
-      error: () => { this.loading = false; },
+      error: () => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
     });
   }
 
@@ -122,7 +144,10 @@ export class AlertDashboardComponent implements OnInit {
 
   loadTopAlerted(): void {
     this.alertsService.getTopAlerted(10).subscribe({
-      next: (res) => this.topAlerted = res.data || [],
+      next: (res) => {
+        this.topAlerted = res.data || [];
+        this.cdr.detectChanges();
+      },
       error: () => {},
     });
   }

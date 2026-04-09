@@ -40,6 +40,7 @@
             <th>Campana</th>
             <th>Cuenta Google Ads</th>
             <th>Estado</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -54,18 +55,30 @@
               <td>
                 @if (editingUserId === row.id) {
                   <div class="inline-edit d-flex align-items-center gap-1">
-                    <input class="form-control form-control-sm edit-field" [(ngModel)]="editValue" placeholder="1234567890"
-                           (keyup.enter)="saveAccountId(row)"
-                           (keyup.escape)="cancelEdit()">
-                    <button class="btn btn-icon btn-sm text-primary" (click)="saveAccountId(row)"
-                            ngbTooltip="Guardar" [disabled]="saving">
+                    <input
+                      class="form-control form-control-sm edit-field"
+                      [(ngModel)]="editValue"
+                      placeholder="1234567890"
+                      (keyup.enter)="saveAccountId(row)"
+                      (keyup.escape)="cancelEdit()"
+                    />
+                    <button
+                      class="btn btn-icon btn-sm text-primary"
+                      (click)="saveAccountId(row)"
+                      ngbTooltip="Guardar"
+                      [disabled]="saving"
+                    >
                       @if (saving) {
                         <div class="spinner-border spinner-border-sm" role="status"></div>
                       } @else {
                         <app-icon name="check" size="sm"></app-icon>
                       }
                     </button>
-                    <button class="btn btn-icon btn-sm" (click)="cancelEdit()" ngbTooltip="Cancelar">
+                    <button
+                      class="btn btn-icon btn-sm"
+                      (click)="cancelEdit()"
+                      ngbTooltip="Cancelar"
+                    >
                       <app-icon name="close" size="sm"></app-icon>
                     </button>
                   </div>
@@ -76,14 +89,63 @@
                     } @else {
                       <span class="text-muted">Sin asignar</span>
                     }
-                    <app-icon name="edit" size="sm" class="edit-icon" ngbTooltip="Editar cuenta"></app-icon>
+                    <app-icon
+                      name="edit"
+                      size="sm"
+                      class="edit-icon"
+                      ngbTooltip="Editar cuenta"
+                    ></app-icon>
                   </div>
                 }
               </td>
               <td>
-                <span class="badge" [class]="row.is_active ? 'badge badge-green' : 'badge badge-red'">
+                <span
+                  class="badge"
+                  [class]="row.is_active ? 'badge badge-green' : 'badge badge-red'"
+                >
                   {{ row.is_active ? 'Activo' : 'Inactivo' }}
                 </span>
+              </td>
+              <td>
+                @if (resettingPasswordUserId === row.id) {
+                  <div class="inline-edit d-flex align-items-center gap-1">
+                    <input
+                      type="password"
+                      class="form-control form-control-sm edit-field"
+                      [(ngModel)]="newPassword"
+                      placeholder="Nueva contrase&ntilde;a"
+                      (keyup.enter)="confirmResetPassword(row)"
+                      (keyup.escape)="cancelPasswordReset()"
+                    />
+                    <button
+                      class="btn btn-icon btn-sm text-primary"
+                      (click)="confirmResetPassword(row)"
+                      ngbTooltip="Confirmar"
+                      [disabled]="resettingPassword"
+                    >
+                      @if (resettingPassword) {
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                      } @else {
+                        <app-icon name="check" size="sm"></app-icon>
+                      }
+                    </button>
+                    <button
+                      class="btn btn-icon btn-sm"
+                      (click)="cancelPasswordReset()"
+                      ngbTooltip="Cancelar"
+                    >
+                      <app-icon name="close" size="sm"></app-icon>
+                    </button>
+                  </div>
+                } @else {
+                  <button
+                    class="btn btn-outline-secondary btn-sm btn-reset-password"
+                    (click)="startPasswordReset(row)"
+                    ngbTooltip="Restablecer contraseña"
+                  >
+                    <span class="material-symbols-outlined reset-icon">lock_reset</span>
+                  </button>
+                }
               </td>
             </tr>
           }

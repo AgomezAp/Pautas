@@ -8,7 +8,7 @@ export function getRedisClient(): Redis | null {
   return redisClient;
 }
 
-export function initRedis(): void {
+export async function initRedis(): Promise<void> {
   if (!env.redis.enabled) {
     logger.info('Redis disabled by configuration, using in-memory cache fallback');
     return;
@@ -21,12 +21,12 @@ export function initRedis(): void {
       password: env.redis.password || undefined,
       db: env.redis.db,
       maxRetriesPerRequest: 3,
+      enableOfflineQueue: false,
       retryStrategy(times: number) {
-        if (times > 10) {
-          logger.warn('Redis: max retries reached, giving up reconnection');
+        if (times > 3) {
           return null;
         }
-        return Math.min(times * 200, 5000);
+        return Math.min(times * 500, 3000);
       },
       lazyConnect: true,
     });
@@ -35,21 +35,23 @@ export function initRedis(): void {
       logger.info('Redis connected');
     });
 
+    let errorLogged = false;
     client.on('error', (err) => {
-      logger.error(`Redis error: ${err.message}`);
+      if (!errorLogged) {
+        logger.warn(`Redis unavailable: ${err.message}. Using in-memory cache fallback.`);
+        errorLogged = true;
+      }
     });
 
     client.on('close', () => {
-      logger.warn('Redis connection closed');
+      // Silent — avoid log spam when Redis is not installed
     });
 
-    client.connect().catch((err) => {
-      logger.warn(`Redis initial connection failed: ${err.message}. Using in-memory fallback.`);
-      redisClient = null;
-    });
-
+    await client.connect();
     redisClient = client;
+    logger.info('Redis connection established successfully');
   } catch (err: any) {
-    logger.warn(`Redis init failed: ${err.message}. Using in-memory fallback.`);
+    redisClient = null;
+    logger.info(`Redis not available (${err.message}). Using in-memory cache — this is fine for development.`);
   }
 }

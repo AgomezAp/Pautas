@@ -5,6 +5,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { CountryService } from '../../../core/services/country.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { GestionService } from '../gestion.service';
 import { API_URLS } from '../../../core/constants/api-urls';
 import { ApiResponse } from '../../../core/models/api-response.model';
 import { Country } from '../../../core/models/country.model';
@@ -40,9 +41,15 @@ export class ConglomeradoAccountsComponent implements OnInit {
   editingUserId: number | null = null;
   editValue = '';
 
+  // Password reset
+  resettingPasswordUserId: number | null = null;
+  newPassword = '';
+  resettingPassword = false;
+
   constructor(
     private http: HttpClient,
     private countryService: CountryService,
+    private gestionService: GestionService,
     private notification: NotificationService,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -114,6 +121,44 @@ export class ConglomeradoAccountsComponent implements OnInit {
       error: () => {
         this.saving = false;
         this.notification.error('Error al actualizar la cuenta de Google Ads');
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  // ===== Password Reset =====
+  startPasswordReset(user: ConglomeradoUser): void {
+    this.resettingPasswordUserId = user.id;
+    this.newPassword = '';
+    this.cdr.detectChanges();
+  }
+
+  cancelPasswordReset(): void {
+    this.resettingPasswordUserId = null;
+    this.newPassword = '';
+    this.cdr.detectChanges();
+  }
+
+  confirmResetPassword(user: ConglomeradoUser): void {
+    if (!this.newPassword || this.newPassword.length < 6) {
+      this.notification.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    this.resettingPassword = true;
+    this.cdr.detectChanges();
+
+    this.gestionService.resetPassword(user.id, this.newPassword).subscribe({
+      next: () => {
+        this.notification.success(`Contraseña de "${user.full_name}" restablecida exitosamente`);
+        this.resettingPasswordUserId = null;
+        this.newPassword = '';
+        this.resettingPassword = false;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.notification.error(err.error?.error?.message || 'Error al restablecer la contraseña');
+        this.resettingPassword = false;
         this.cdr.detectChanges();
       },
     });

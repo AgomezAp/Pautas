@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { GestionService } from '../gestion.service';
@@ -29,7 +29,6 @@ export class CreateConglomeradoComponent implements OnInit {
     private gestionService: GestionService,
     private countryService: CountryService,
     private notification: NotificationService,
-    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -51,7 +50,6 @@ export class CreateConglomeradoComponent implements OnInit {
     this.countryService.getAll().subscribe({
       next: (res: any) => {
         this.countries = res.data || [];
-        this.cdr.detectChanges();
       },
     });
   }

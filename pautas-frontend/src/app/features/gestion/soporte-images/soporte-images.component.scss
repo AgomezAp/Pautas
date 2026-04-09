@@ -458,6 +458,44 @@ $transition-slow: all 0.35s ease;
   color: $color-text-muted;
 }
 
+.day-header-right {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.btn-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: $radius-sm;
+  transition: $transition-base;
+  white-space: nowrap;
+
+  app-icon {
+    display: flex;
+    align-items: center;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: $color-danger;
+    border-color: $color-danger;
+    color: $color-text-light;
+
+    app-icon {
+      color: $color-text-light;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 // ============================================
 // LOADING STATE
 // ============================================
