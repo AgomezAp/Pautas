@@ -643,7 +643,22 @@ export class GoogleAdsAnalysisService {
     }
 
     const sql = `
-      WITH account_metrics AS (
+      WITH distinct_campaign_budgets AS (
+        SELECT
+          customer_account_id,
+          id,
+          daily_budget
+        FROM campaigns
+        GROUP BY customer_account_id, id, daily_budget
+      ),
+      account_budgets AS (
+        SELECT
+          customer_account_id,
+          SUM(COALESCE(daily_budget, 0)) AS total_daily_budget
+        FROM distinct_campaign_budgets
+        GROUP BY customer_account_id
+      ),
+      account_metrics AS (
         SELECT
           c.customer_account_id,
           c.customer_account_name,
@@ -655,12 +670,13 @@ export class GoogleAdsAnalysisService {
           COUNT(DISTINCT c.id) AS campaigns_count,
           MIN(gs.snapshot_date) AS first_date,
           MAX(gs.snapshot_date) AS last_date,
-          COALESCE(SUM(DISTINCT c.daily_budget), 0) AS total_distinct_daily_budget
+          COALESCE(ab.total_daily_budget, 0) AS total_distinct_daily_budget
         FROM google_ads_snapshots gs
         JOIN campaigns c ON c.id = gs.campaign_id
         LEFT JOIN countries co ON co.id = c.country_id
+        LEFT JOIN account_budgets ab ON ab.customer_account_id = c.customer_account_id
         WHERE ${conditions.join(' AND ')}
-        GROUP BY c.customer_account_id, c.customer_account_name, co.name
+        GROUP BY c.customer_account_id, c.customer_account_name, co.name, ab.total_daily_budget
       ),
       with_recommendations AS (
         SELECT
@@ -687,20 +703,13 @@ export class GoogleAdsAnalysisService {
             THEN ROUND((total_cost / days_with_data) * 30, 2)
             ELSE 0
           END AS projected_monthly_spend,
-          -- Budget recommendation based on conversion trends
           CASE
             WHEN total_conversions > 0 AND total_cost > 0
-              THEN ROUND((total_cost / total_conversions * 20)::numeric, 2)  -- Recommend budget for ~20 conversions/month
+              THEN ROUND((total_cost / total_conversions * 20)::numeric, 2)
             WHEN total_clicks > 0 AND total_cost > 0
-              THEN ROUND((total_cost / total_clicks * 100)::numeric, 2)  -- Recommend budget for ~100 clicks/month
+              THEN ROUND((total_cost / total_clicks * 100)::numeric, 2)
             ELSE total_distinct_daily_budget
-          END AS recommended_daily_budget,
-          -- Efficiency score
-          CASE
-            WHEN pacing_pct <= 80 THEN 'Under-pacing (increase budget)'
-            WHEN pacing_pct >= 120 THEN 'Over-pacing (reduce budget)'
-            ELSE 'On-track (maintain budget)'
-          END AS budget_status
+          END AS recommended_daily_budget
         FROM account_metrics
       )
       SELECT
@@ -717,7 +726,11 @@ export class GoogleAdsAnalysisService {
         daily_run_rate,
         projected_monthly_spend,
         recommended_daily_budget,
-        budget_status,
+        CASE
+          WHEN pacing_pct <= 80 THEN 'Under-pacing (increase budget)'
+          WHEN pacing_pct >= 120 THEN 'Over-pacing (reduce budget)'
+          ELSE 'On-track (maintain budget)'
+        END AS budget_status,
         ROUND((recommended_daily_budget - total_distinct_daily_budget)::numeric, 2) AS budget_adjustment
       FROM with_recommendations
       ORDER BY total_cost DESC
