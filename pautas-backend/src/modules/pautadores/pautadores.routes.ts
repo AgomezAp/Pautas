@@ -51,6 +51,7 @@ router.get('/google-ads/analysis/waste-detection', (req, res, next) => pautadore
 router.get('/google-ads/analysis/optimal-schedule', (req, res, next) => pautadoresController.getAnalysisOptimalSchedule(req, res, next));
 router.get('/google-ads/analysis/budget-forecast', (req, res, next) => pautadoresController.getAnalysisBudgetForecast(req, res, next));
 router.get('/google-ads/analysis/budget-redistribution', (req, res, next) => pautadoresController.getAnalysisBudgetRedistribution(req, res, next));
+router.get('/google-ads/analysis/smart-budget-recommendations', (req, res, next) => pautadoresController.getAnalysisSmartBudgetRecommendations(req, res, next));
 
 // Phase 2: Comparaciones & Tendencias
 router.get('/google-ads/analysis/temporal-comparison', (req, res, next) => pautadoresController.getAnalysisTemporalComparison(req, res, next));

@@ -459,6 +459,19 @@ export class PautadoresController {
     } catch (err) { next(err); }
   }
 
+  async getAnalysisSmartBudgetRecommendations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getSmartBudgetRecommendations({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
   // ============ Phase 2: Comparaciones & Tendencias ============
 
   async getAnalysisTemporalComparison(req: Request, res: Response, next: NextFunction) {

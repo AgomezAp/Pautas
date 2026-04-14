@@ -649,38 +649,77 @@ export class GoogleAdsAnalysisService {
           c.customer_account_name,
           co.name AS country_name,
           SUM(gs.cost) AS total_cost,
-          SUM(COALESCE(gs.daily_budget, c.daily_budget, 0)) AS total_daily_budget,
+          SUM(gs.clicks) AS total_clicks,
+          SUM(gs.conversions) AS total_conversions,
           COUNT(DISTINCT gs.snapshot_date) AS days_with_data,
           COUNT(DISTINCT c.id) AS campaigns_count,
           MIN(gs.snapshot_date) AS first_date,
-          MAX(gs.snapshot_date) AS last_date
+          MAX(gs.snapshot_date) AS last_date,
+          COALESCE(SUM(DISTINCT c.daily_budget), 0) AS total_distinct_daily_budget
         FROM google_ads_snapshots gs
         JOIN campaigns c ON c.id = gs.campaign_id
         LEFT JOIN countries co ON co.id = c.country_id
         WHERE ${conditions.join(' AND ')}
         GROUP BY c.customer_account_id, c.customer_account_name, co.name
+      ),
+      with_recommendations AS (
+        SELECT
+          customer_account_id,
+          customer_account_name,
+          country_name,
+          total_cost,
+          total_distinct_daily_budget,
+          days_with_data,
+          campaigns_count,
+          first_date,
+          last_date,
+          total_clicks,
+          total_conversions,
+          CASE WHEN total_distinct_daily_budget > 0 AND days_with_data > 0
+            THEN ROUND((total_cost / (total_distinct_daily_budget * days_with_data)) * 100, 2)
+            ELSE 0
+          END AS pacing_pct,
+          CASE WHEN days_with_data > 0
+            THEN ROUND(total_cost / days_with_data, 2)
+            ELSE 0
+          END AS daily_run_rate,
+          CASE WHEN days_with_data > 0
+            THEN ROUND((total_cost / days_with_data) * 30, 2)
+            ELSE 0
+          END AS projected_monthly_spend,
+          -- Budget recommendation based on conversion trends
+          CASE
+            WHEN total_conversions > 0 AND total_cost > 0
+              THEN ROUND((total_cost / total_conversions * 20)::numeric, 2)  -- Recommend budget for ~20 conversions/month
+            WHEN total_clicks > 0 AND total_cost > 0
+              THEN ROUND((total_cost / total_clicks * 100)::numeric, 2)  -- Recommend budget for ~100 clicks/month
+            ELSE total_distinct_daily_budget
+          END AS recommended_daily_budget,
+          -- Efficiency score
+          CASE
+            WHEN pacing_pct <= 80 THEN 'Under-pacing (increase budget)'
+            WHEN pacing_pct >= 120 THEN 'Over-pacing (reduce budget)'
+            ELSE 'On-track (maintain budget)'
+          END AS budget_status
+        FROM account_metrics
       )
       SELECT
         customer_account_id,
         customer_account_name,
         country_name,
         total_cost,
-        total_daily_budget,
+        total_distinct_daily_budget,
         days_with_data,
         campaigns_count,
-        CASE WHEN total_daily_budget > 0 AND days_with_data > 0
-          THEN ROUND((total_cost / (total_daily_budget * days_with_data)) * 100, 2)
-          ELSE 0
-        END AS pacing_pct,
-        CASE WHEN days_with_data > 0
-          THEN ROUND(total_cost / days_with_data, 2)
-          ELSE 0
-        END AS daily_run_rate,
-        CASE WHEN days_with_data > 0
-          THEN ROUND((total_cost / days_with_data) * 30, 2)
-          ELSE 0
-        END AS projected_monthly_spend
-      FROM account_metrics
+        first_date,
+        last_date,
+        pacing_pct,
+        daily_run_rate,
+        projected_monthly_spend,
+        recommended_daily_budget,
+        budget_status,
+        ROUND((recommended_daily_budget - total_distinct_daily_budget)::numeric, 2) AS budget_adjustment
+      FROM with_recommendations
       ORDER BY total_cost DESC
     `;
 
@@ -966,6 +1005,122 @@ export class GoogleAdsAnalysisService {
     return result.rows;
   }
 
+  // ========== Smart Budget Recommendations ==========
+
+  async getSmartBudgetRecommendations(params: {
+    dateFrom: string;
+    dateTo: string;
+    accountId?: string;
+    countryId?: number;
+  }) {
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const values: any[] = [params.dateFrom, params.dateTo];
+    let paramIdx = 3;
+
+    if (params.accountId) {
+      conditions.push(`c.customer_account_id = $${paramIdx}`);
+      values.push(params.accountId);
+      paramIdx++;
+    }
+    if (params.countryId) {
+      conditions.push(`c.country_id = $${paramIdx}`);
+      values.push(params.countryId);
+      paramIdx++;
+    }
+
+    const sql = `
+      WITH campaign_analysis AS (
+        SELECT
+          c.id AS campaign_id,
+          c.name AS campaign_name,
+          c.customer_account_id,
+          c.customer_account_name,
+          co.name AS country_name,
+          c.daily_budget AS current_daily_budget,
+          SUM(gs.cost) AS total_cost,
+          SUM(gs.clicks) AS total_clicks,
+          SUM(gs.impressions) AS total_impressions,
+          SUM(gs.conversions) AS total_conversions,
+          COUNT(DISTINCT gs.snapshot_date) AS days_with_data,
+          CASE WHEN SUM(gs.conversions) > 0
+            THEN ROUND(SUM(gs.cost) / SUM(gs.conversions), 2)
+            ELSE NULL
+          END AS current_cpa,
+          CASE WHEN SUM(gs.impressions) > 0
+            THEN ROUND((SUM(gs.clicks)::numeric / SUM(gs.impressions)) * 100, 2)
+            ELSE 0
+          END AS ctr,
+          CASE WHEN SUM(gs.clicks) > 0
+            THEN ROUND(SUM(gs.cost) / SUM(gs.clicks), 2)
+            ELSE 0
+          END AS cpc
+        FROM google_ads_snapshots gs
+        JOIN campaigns c ON c.id = gs.campaign_id
+        LEFT JOIN countries co ON co.id = c.country_id
+        WHERE ${conditions.join(' AND ')}
+        GROUP BY c.id, c.name, c.customer_account_id, c.customer_account_name, co.name, c.daily_budget
+        HAVING SUM(gs.cost) > 0
+      ),
+      account_targets AS (
+        SELECT
+          customer_account_id,
+          ROUND(AVG(current_cpa), 2) AS target_cpa,
+          ROUND(AVG(ctr), 2) AS avg_ctr
+        FROM campaign_analysis
+        WHERE current_cpa IS NOT NULL
+        GROUP BY customer_account_id
+      )
+      SELECT
+        ca.campaign_id,
+        ca.campaign_name,
+        ca.customer_account_id,
+        ca.customer_account_name,
+        ca.country_name,
+        ca.current_daily_budget,
+        ca.total_cost,
+        ca.total_clicks,
+        ca.total_conversions,
+        ca.current_cpa,
+        ca.ctr,
+        ca.cpc,
+        ca.days_with_data,
+        -- Recommended budget based on conversion goals
+        CASE
+          WHEN ca.total_conversions = 0 THEN ca.current_daily_budget * 0.5  -- Reduce underperforming
+          WHEN ca.current_cpa IS NULL THEN ca.current_daily_budget
+          WHEN ca.current_cpa <= at.target_cpa * 0.8 THEN ca.current_daily_budget * 1.3  -- High performer, increase
+          WHEN ca.current_cpa >= at.target_cpa * 1.5 THEN ca.current_daily_budget * 0.7  -- Low performer, reduce
+          ELSE ca.current_daily_budget  -- On target, maintain
+        END AS recommended_daily_budget,
+        -- Expected conversions with new budget
+        CASE
+          WHEN ca.total_conversions > 0 AND ca.days_with_data > 0
+            THEN ROUND((ca.total_conversions / ca.days_with_data) * 30, 0)
+          ELSE 0
+        END AS expected_monthly_conversions,
+        -- ROI projection
+        CASE
+          WHEN ca.total_conversions > 0 AND ca.total_cost > 0
+            THEN ROUND(((ca.total_conversions * 50) / ca.total_cost), 2)  -- Assuming $50 value per conversion
+          ELSE 0
+        END AS projected_roi_multiplier,
+        -- Recommendation reason
+        CASE
+          WHEN ca.total_conversions = 0 THEN 'No conversions - reduce budget'
+          WHEN ca.current_cpa IS NULL THEN 'Insufficient data - maintain budget'
+          WHEN ca.current_cpa <= at.target_cpa * 0.8 THEN 'High performer - increase budget'
+          WHEN ca.current_cpa >= at.target_cpa * 1.5 THEN 'Low performer - reduce budget'
+          ELSE 'On target - maintain budget'
+        END AS recommendation
+      FROM campaign_analysis ca
+      LEFT JOIN account_targets at ON at.customer_account_id = ca.customer_account_id
+      ORDER BY ca.total_conversions DESC
+    `;
+
+    const result = await query(sql, values);
+    return result.rows;
+  }
+
   // ========== Hourly Heatmap ==========
 
   async getHourlyHeatmap(params: {
@@ -1001,14 +1156,16 @@ export class GoogleAdsAnalysisService {
 
     const sql = `
       SELECT
+        hs.snapshot_date,
         hs.hour_of_day,
-        hs.day_of_week,
+        TO_CHAR(hs.snapshot_date, 'Dy') AS day_name,
+        EXTRACT(DOW FROM hs.snapshot_date) AS day_of_week,
         ${metricExpr} AS value
       FROM google_ads_hourly_snapshots hs
       JOIN campaigns c ON c.id = hs.campaign_id
       WHERE ${conditions.join(' AND ')}
-      GROUP BY hs.hour_of_day, hs.day_of_week
-      ORDER BY hs.day_of_week, hs.hour_of_day
+      GROUP BY hs.snapshot_date, hs.hour_of_day
+      ORDER BY hs.snapshot_date, hs.hour_of_day
     `;
 
     const result = await query(sql, values);
