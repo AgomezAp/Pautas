@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { pautadoresService } from './pautadores.service';
-import { sendSuccess } from '../../utils/response.util';
+import { sendSuccess, sendError } from '../../utils/response.util';
 import { exportExcelService } from '../../services/export-excel.service';
 import { exportPdfService } from '../../services/export-pdf.service';
 import { googleAdsSyncService } from '../../services/google-ads-sync.service';
@@ -1039,6 +1039,23 @@ export class PautadoresController {
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
         countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ ML Predictive Analysis ============
+
+  async getAnalysisPredictiveBudget(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id } = req.query as any;
+      if (!account_id) {
+        return sendError(res, 'MISSING_PARAM', 'account_id parameter is required', 400);
+      }
+      const data = await googleAdsAnalysisService.getPredictiveAnalysis({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
       });
       return sendSuccess(res, data);
     } catch (err) { next(err); }

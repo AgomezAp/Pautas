@@ -1,5 +1,6 @@
 import { query } from '../config/database';
 import { EnumMappingService } from './enum-mapping.service';
+import { predictiveBudgetService } from './predictive-budget.service';
 
 export class GoogleAdsAnalysisService {
 
@@ -3421,6 +3422,21 @@ export class GoogleAdsAnalysisService {
     `;
     const result = await query(sql, values);
     return result.rows;
+  }
+
+  // ========== ML Predictive Budget Analysis ==========
+
+  async getPredictiveAnalysis(params: {
+    accountId: string;
+    dateFrom: string;
+    dateTo: string;
+  }) {
+    return predictiveBudgetService.getPredictiveAnalysis({
+      accountId: params.accountId,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      daysOfHistoryForRegression: 30,
+    });
   }
 }
 

@@ -107,6 +107,9 @@ router.get('/google-ads/analysis/account-benchmark', (req, res, next) => pautado
 router.get('/google-ads/analysis/portfolio-recommendation', (req, res, next) => pautadoresController.getAnalysisPortfolioRecommendation(req, res, next));
 router.get('/google-ads/analysis/account-patterns', (req, res, next) => pautadoresController.getAnalysisAccountPatterns(req, res, next));
 
+// ML Predictive Analytics
+router.get('/google-ads/analysis/predictive-budget', (req, res, next) => pautadoresController.getAnalysisPredictiveBudget(req, res, next));
+
 // Conglomerado contrast endpoint
 router.get('/conglomerado-contrast', (req, res, next) => pautadoresController.getConglomeradoContrast(req, res, next));
 
