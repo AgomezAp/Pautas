@@ -5,6 +5,7 @@ import { weeklySummaryService } from '../services/weekly-summary.service';
 import { alertsEngineService } from '../services/alerts-engine.service';
 import { notificationEmailService } from '../services/notification-email.service';
 import { imageCleanupService } from '../services/image-cleanup.service';
+import { scheduledReportsService } from '../services/scheduled-reports.service';
 import { cacheService } from '../services/cache.service';
 
 export function registerCronJobs() {
@@ -124,4 +125,118 @@ export function registerCronJobs() {
   });
 
   logger.info('Image cleanup cron registered: daily at 4:00 AM (>14 days)');
+
+  // ─── ENHANCED ANALYTICS: Keywords, dispositivos, geo, horario (diario a las 4:30 AM) ────
+  cron.schedule('30 4 * * *', async () => {
+    logger.info('[CRON] Starting enhanced analytics sync (keywords, devices, geo, hourly)...');
+    try {
+      await googleAdsSyncService.syncEnhancedAnalytics();
+      logger.info('[CRON] Enhanced analytics sync completed');
+      await cacheService.invalidatePattern('gestion:*');
+    } catch (error: any) {
+      logger.error('[CRON] Enhanced analytics sync error: ' + error.message);
+    }
+  });
+
+  logger.info('Enhanced analytics cron registered: daily at 4:30 AM');
+
+  // ─── ALERTAS PRESUPUESTO: Detectar sobregasto/subgasto/agotamiento (diario 12 PM y 6 PM) ────
+  cron.schedule('0 12,18 * * 1-5', async () => {
+    logger.info('[CRON] Starting budget alert detection...');
+    try {
+      const count = await alertsEngineService.detectBudgetAlerts();
+      logger.info(`[CRON] Budget alert detection completed: ${count} alert(s)`);
+    } catch (error: any) {
+      logger.error('[CRON] Budget alert detection error: ' + error.message);
+    }
+  });
+
+  logger.info('Budget alerts cron registered: daily at 12PM & 6PM (Mon-Fri)');
+
+  // ─── ALERTAS ANOMALÍAS: CPC spike, CTR anomaly, IS drop, QS drop, oportunidades (7 AM L-V) ────
+  cron.schedule('0 7 * * 1-5', async () => {
+    logger.info('[CRON] Starting Google Ads anomaly detection...');
+    try {
+      const count = await alertsEngineService.detectGoogleAdsAnomalies();
+      logger.info(`[CRON] Anomaly detection completed: ${count} alert(s)`);
+    } catch (error: any) {
+      logger.error('[CRON] Anomaly detection error: ' + error.message);
+    }
+  });
+
+  logger.info('Anomaly detection cron registered: daily at 7AM (Mon-Fri)');
+
+  // ─── AUCTION INSIGHTS: Sync semanal (domingos a las 5:00 AM) ────
+  cron.schedule('0 5 * * 0', async () => {
+    logger.info('[CRON] Starting auction insights weekly sync...');
+    try {
+      await googleAdsSyncService.syncAuctionInsights();
+      logger.info('[CRON] Auction insights sync completed');
+      await cacheService.invalidatePattern('gestion:*');
+    } catch (error: any) {
+      logger.error('[CRON] Auction insights sync error: ' + error.message);
+    }
+  });
+
+  logger.info('Auction insights cron registered: weekly on Sundays at 5AM');
+
+  // ─── SCHEDULED REPORTS: Weekly reports (Monday 8 AM) ────
+  cron.schedule('0 8 * * 1', async () => {
+    logger.info('[CRON] Processing weekly scheduled reports...');
+    try {
+      const reports = await scheduledReportsService.getDueReports('WEEKLY');
+      logger.info(`[CRON] ${reports.length} weekly reports due`);
+      for (const report of reports) {
+        try {
+          const now = new Date();
+          const dateTo = now.toISOString().split('T')[0];
+          const dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const filters = report.filters || {};
+          const content = await scheduledReportsService.generateReportContent({
+            dateFrom: filters.date_from || dateFrom,
+            dateTo: filters.date_to || dateTo,
+            accountId: filters.account_id,
+            countryId: filters.country_id ? Number(filters.country_id) : undefined,
+          });
+          logger.info(`[CRON] Weekly report "${report.name}" generated: ${content.summary.total_accounts} accounts, $${content.summary.total_cost} total cost`);
+          await scheduledReportsService.markSent(report.id);
+        } catch (reportErr: any) {
+          logger.error(`[CRON] Failed to generate report "${report.name}": ${reportErr.message}`);
+        }
+      }
+    } catch (error: any) {
+      logger.error('[CRON] Weekly scheduled reports error: ' + error.message);
+    }
+  });
+
+  // ─── SCHEDULED REPORTS: Monthly reports (1st of month 8 AM) ────
+  cron.schedule('0 8 1 * *', async () => {
+    logger.info('[CRON] Processing monthly scheduled reports...');
+    try {
+      const reports = await scheduledReportsService.getDueReports('MONTHLY');
+      logger.info(`[CRON] ${reports.length} monthly reports due`);
+      for (const report of reports) {
+        try {
+          const now = new Date();
+          const dateTo = now.toISOString().split('T')[0];
+          const dateFrom = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().split('T')[0];
+          const filters = report.filters || {};
+          const content = await scheduledReportsService.generateReportContent({
+            dateFrom: filters.date_from || dateFrom,
+            dateTo: filters.date_to || dateTo,
+            accountId: filters.account_id,
+            countryId: filters.country_id ? Number(filters.country_id) : undefined,
+          });
+          logger.info(`[CRON] Monthly report "${report.name}" generated: ${content.summary.total_accounts} accounts, $${content.summary.total_cost} total cost`);
+          await scheduledReportsService.markSent(report.id);
+        } catch (reportErr: any) {
+          logger.error(`[CRON] Failed to generate report "${report.name}": ${reportErr.message}`);
+        }
+      }
+    } catch (error: any) {
+      logger.error('[CRON] Monthly scheduled reports error: ' + error.message);
+    }
+  });
+
+  logger.info('Scheduled reports cron registered: weekly (Mon 8AM), monthly (1st 8AM)');
 }

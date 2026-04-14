@@ -403,6 +403,426 @@ export class AlertsEngineService {
     return alertCount;
   }
 
+  // ─── Cron: detectar alertas de presupuesto Google Ads ──────────
+
+  async detectBudgetAlerts(): Promise<number> {
+    logger.info('[ALERTS-ENGINE] Detecting budget alerts...');
+
+    const result = await query(`
+      SELECT
+        c.id AS campaign_id,
+        c.name AS campaign_name,
+        c.country_id,
+        co.name AS country_name,
+        gas.cost,
+        gas.daily_budget,
+        gas.snapshot_date
+      FROM google_ads_snapshots gas
+      JOIN campaigns c ON c.id = gas.campaign_id
+      JOIN countries co ON co.id = c.country_id
+      WHERE gas.snapshot_date = CURRENT_DATE
+        AND gas.daily_budget > 0
+    `);
+
+    let alertCount = 0;
+    const alerts: AlertPayload[] = [];
+
+    for (const row of result.rows) {
+      const cost = parseFloat(row.cost);
+      const budget = parseFloat(row.daily_budget);
+      const pct = (cost / budget) * 100;
+
+      // BUDGET_OVERSPEND: costo > 110% del presupuesto diario
+      if (pct > 110) {
+        const existing = await query(`
+          SELECT id FROM alerts
+          WHERE alert_type = 'BUDGET_OVERSPEND'
+            AND campaign_id = $1
+            AND status = 'ACTIVE'
+            AND created_at::date = CURRENT_DATE
+          LIMIT 1
+        `, [row.campaign_id]);
+
+        if (existing.rows.length === 0) {
+          alerts.push({
+            alert_type: 'BUDGET_OVERSPEND',
+            severity: 'WARNING',
+            user_id: null as any,
+            country_id: row.country_id,
+            campaign_id: row.campaign_id,
+            daily_entry_id: null,
+            title: 'Sobregasto de presupuesto',
+            message: `Campaña "${row.campaign_name}" (${row.country_name}): gasto $${cost.toFixed(2)} excede el presupuesto diario $${budget.toFixed(2)} (${pct.toFixed(1)}%).`,
+            metadata: { cost, daily_budget: budget, pct, campaign_name: row.campaign_name },
+          });
+          alertCount++;
+        }
+      }
+
+      // BUDGET_UNDERSPEND: costo < 50% del presupuesto
+      if (pct < 50 && cost > 0) {
+        const existing = await query(`
+          SELECT id FROM alerts
+          WHERE alert_type = 'BUDGET_UNDERSPEND'
+            AND campaign_id = $1
+            AND status = 'ACTIVE'
+            AND created_at::date = CURRENT_DATE
+          LIMIT 1
+        `, [row.campaign_id]);
+
+        if (existing.rows.length === 0) {
+          alerts.push({
+            alert_type: 'BUDGET_UNDERSPEND',
+            severity: 'INFO',
+            user_id: null as any,
+            country_id: row.country_id,
+            campaign_id: row.campaign_id,
+            daily_entry_id: null,
+            title: 'Subgasto de presupuesto',
+            message: `Campaña "${row.campaign_name}" (${row.country_name}): solo se gastó $${cost.toFixed(2)} de $${budget.toFixed(2)} disponibles (${pct.toFixed(1)}%).`,
+            metadata: { cost, daily_budget: budget, pct, campaign_name: row.campaign_name },
+          });
+          alertCount++;
+        }
+      }
+    }
+
+    // BUDGET_EXHAUSTION: proyección mensual agota el presupuesto
+    const pacingResult = await query(`
+      SELECT
+        uga.account_id,
+        uga.account_name,
+        u.country_id,
+        co.name AS country_name,
+        SUM(gas.cost) AS accumulated_cost,
+        SUM(gas.daily_budget) AS total_daily_budget,
+        EXTRACT(DAY FROM CURRENT_DATE) AS day_of_month,
+        EXTRACT(DAY FROM (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month - 1 day')) AS days_in_month
+      FROM google_ads_snapshots gas
+      JOIN campaigns c ON c.id = gas.campaign_id
+      JOIN user_google_ads_accounts uga ON uga.account_id = c.google_ads_account_id
+      JOIN users u ON u.id = uga.user_id
+      JOIN countries co ON co.id = u.country_id
+      WHERE gas.snapshot_date >= DATE_TRUNC('month', CURRENT_DATE)
+      GROUP BY uga.account_id, uga.account_name, u.country_id, co.name
+    `);
+
+    for (const row of pacingResult.rows) {
+      const accumulated = parseFloat(row.accumulated_cost);
+      const dailyBudget = parseFloat(row.total_daily_budget);
+      const dayOfMonth = parseInt(row.day_of_month);
+      const daysInMonth = parseInt(row.days_in_month);
+
+      if (dailyBudget <= 0 || dayOfMonth <= 1) continue;
+
+      const expectedCost = dailyBudget * dayOfMonth;
+      const pacingPct = (accumulated / expectedCost) * 100;
+
+      // Si pacing > 80% se proyecta agotar antes de fin de mes
+      if (pacingPct > 130) {
+        const existing = await query(`
+          SELECT id FROM alerts
+          WHERE alert_type = 'BUDGET_EXHAUSTION'
+            AND metadata->>'account_id' = $1
+            AND status = 'ACTIVE'
+            AND created_at >= CURRENT_DATE - INTERVAL '3 days'
+          LIMIT 1
+        `, [row.account_id]);
+
+        if (existing.rows.length === 0) {
+          const projectedMonthly = (accumulated / dayOfMonth) * daysInMonth;
+          alerts.push({
+            alert_type: 'BUDGET_EXHAUSTION',
+            severity: 'WARNING',
+            user_id: null as any,
+            country_id: row.country_id,
+            campaign_id: null,
+            daily_entry_id: null,
+            title: 'Riesgo de agotamiento de presupuesto',
+            message: `Cuenta "${row.account_name}" (${row.country_name}): pacing al ${pacingPct.toFixed(1)}%. Proyección mensual: $${projectedMonthly.toFixed(2)} vs presupuesto esperado: $${(dailyBudget * daysInMonth).toFixed(2)}.`,
+            metadata: {
+              account_id: row.account_id,
+              account_name: row.account_name,
+              pacing_pct: pacingPct,
+              projected_monthly: projectedMonthly,
+              expected_monthly: dailyBudget * daysInMonth,
+            },
+          });
+          alertCount++;
+        }
+      }
+    }
+
+    if (alerts.length > 0) {
+      await this.saveAlerts(alerts);
+    }
+
+    logger.info(`[ALERTS-ENGINE] ${alertCount} budget alert(s) generated`);
+    return alertCount;
+  }
+
+  // ─── Cron: detectar anomalías en Google Ads ──────────
+
+  async detectGoogleAdsAnomalies(): Promise<number> {
+    logger.info('[ALERTS-ENGINE] Detecting Google Ads anomalies...');
+    let alertCount = 0;
+    const alerts: AlertPayload[] = [];
+
+    // 1. CPC_SPIKE: CPC incrementó > 30% vs promedio 7 días
+    const cpcResult = await query(`
+      WITH daily_cpc AS (
+        SELECT
+          c.id AS campaign_id,
+          c.name AS campaign_name,
+          c.country_id,
+          co.name AS country_name,
+          gs.snapshot_date,
+          CASE WHEN SUM(gs.clicks) > 0 THEN SUM(gs.cost) / SUM(gs.clicks) ELSE 0 END AS cpc
+        FROM google_ads_snapshots gs
+        JOIN campaigns c ON c.id = gs.campaign_id
+        JOIN countries co ON co.id = c.country_id
+        WHERE gs.snapshot_date >= CURRENT_DATE - INTERVAL '8 days'
+        GROUP BY c.id, c.name, c.country_id, co.name, gs.snapshot_date
+      ),
+      avg_cpc AS (
+        SELECT campaign_id, AVG(cpc) AS avg_cpc, STDDEV_POP(cpc) AS stddev_cpc
+        FROM daily_cpc
+        WHERE snapshot_date < CURRENT_DATE
+        GROUP BY campaign_id
+        HAVING COUNT(*) >= 3
+      ),
+      today_cpc AS (
+        SELECT campaign_id, campaign_name, country_id, country_name, cpc
+        FROM daily_cpc
+        WHERE snapshot_date = CURRENT_DATE AND cpc > 0
+      )
+      SELECT t.*, a.avg_cpc,
+        CASE WHEN a.avg_cpc > 0 THEN ((t.cpc - a.avg_cpc) / a.avg_cpc) * 100 ELSE 0 END AS spike_pct
+      FROM today_cpc t
+      JOIN avg_cpc a ON a.campaign_id = t.campaign_id
+      WHERE a.avg_cpc > 0 AND ((t.cpc - a.avg_cpc) / a.avg_cpc) * 100 > 30
+    `);
+
+    for (const row of cpcResult.rows) {
+      const existing = await query(`
+        SELECT id FROM alerts WHERE alert_type = 'CPC_SPIKE' AND campaign_id = $1 AND status = 'ACTIVE' AND created_at::date = CURRENT_DATE LIMIT 1
+      `, [row.campaign_id]);
+      if (existing.rows.length === 0) {
+        alerts.push({
+          alert_type: 'CPC_SPIKE',
+          severity: 'WARNING',
+          user_id: null as any,
+          country_id: row.country_id,
+          campaign_id: row.campaign_id,
+          daily_entry_id: null,
+          title: 'Pico de CPC',
+          message: `Campaña "${row.campaign_name}" (${row.country_name}): CPC subió ${parseFloat(row.spike_pct).toFixed(1)}% vs promedio 7 días ($${parseFloat(row.avg_cpc).toFixed(2)} → $${parseFloat(row.cpc).toFixed(2)}).`,
+          metadata: { cpc: parseFloat(row.cpc), avg_cpc: parseFloat(row.avg_cpc), spike_pct: parseFloat(row.spike_pct) },
+        });
+        alertCount++;
+      }
+    }
+
+    // 2. CTR_ANOMALY: CTR desvió > 2 desviaciones estándar
+    const ctrResult = await query(`
+      WITH daily_ctr AS (
+        SELECT
+          c.id AS campaign_id,
+          c.name AS campaign_name,
+          c.country_id,
+          co.name AS country_name,
+          gs.snapshot_date,
+          CASE WHEN SUM(gs.impressions) > 0 THEN (SUM(gs.clicks)::numeric / SUM(gs.impressions)::numeric) * 100 ELSE 0 END AS ctr
+        FROM google_ads_snapshots gs
+        JOIN campaigns c ON c.id = gs.campaign_id
+        JOIN countries co ON co.id = c.country_id
+        WHERE gs.snapshot_date >= CURRENT_DATE - INTERVAL '14 days'
+        GROUP BY c.id, c.name, c.country_id, co.name, gs.snapshot_date
+      ),
+      stats AS (
+        SELECT campaign_id, AVG(ctr) AS avg_ctr, STDDEV_POP(ctr) AS stddev_ctr
+        FROM daily_ctr WHERE snapshot_date < CURRENT_DATE
+        GROUP BY campaign_id HAVING COUNT(*) >= 5 AND STDDEV_POP(ctr) > 0
+      ),
+      today AS (
+        SELECT campaign_id, campaign_name, country_id, country_name, ctr
+        FROM daily_ctr WHERE snapshot_date = CURRENT_DATE
+      )
+      SELECT t.*, s.avg_ctr, s.stddev_ctr,
+        ABS(t.ctr - s.avg_ctr) / s.stddev_ctr AS z_score
+      FROM today t
+      JOIN stats s ON s.campaign_id = t.campaign_id
+      WHERE ABS(t.ctr - s.avg_ctr) / s.stddev_ctr > 2
+    `);
+
+    for (const row of ctrResult.rows) {
+      const existing = await query(`
+        SELECT id FROM alerts WHERE alert_type = 'CTR_ANOMALY' AND campaign_id = $1 AND status = 'ACTIVE' AND created_at::date = CURRENT_DATE LIMIT 1
+      `, [row.campaign_id]);
+      if (existing.rows.length === 0) {
+        const direction = parseFloat(row.ctr) > parseFloat(row.avg_ctr) ? 'subió' : 'bajó';
+        alerts.push({
+          alert_type: 'CTR_ANOMALY',
+          severity: 'WARNING',
+          user_id: null as any,
+          country_id: row.country_id,
+          campaign_id: row.campaign_id,
+          daily_entry_id: null,
+          title: 'Anomalía de CTR',
+          message: `Campaña "${row.campaign_name}" (${row.country_name}): CTR ${direction} a ${parseFloat(row.ctr).toFixed(2)}% (promedio: ${parseFloat(row.avg_ctr).toFixed(2)}%, z-score: ${parseFloat(row.z_score).toFixed(1)}).`,
+          metadata: { ctr: parseFloat(row.ctr), avg_ctr: parseFloat(row.avg_ctr), z_score: parseFloat(row.z_score) },
+        });
+        alertCount++;
+      }
+    }
+
+    // 3. IMPRESSION_SHARE_DROP: IS cayó > 20% vs semana anterior
+    const isResult = await query(`
+      WITH weekly_is AS (
+        SELECT
+          c.id AS campaign_id,
+          c.name AS campaign_name,
+          c.country_id,
+          co.name AS country_name,
+          CASE WHEN gs.snapshot_date >= CURRENT_DATE - INTERVAL '7 days' THEN 'current' ELSE 'previous' END AS period,
+          AVG(gs.search_impression_share) AS avg_is
+        FROM google_ads_snapshots gs
+        JOIN campaigns c ON c.id = gs.campaign_id
+        JOIN countries co ON co.id = c.country_id
+        WHERE gs.snapshot_date >= CURRENT_DATE - INTERVAL '14 days'
+          AND gs.search_impression_share IS NOT NULL
+          AND gs.search_impression_share > 0
+        GROUP BY c.id, c.name, c.country_id, co.name,
+          CASE WHEN gs.snapshot_date >= CURRENT_DATE - INTERVAL '7 days' THEN 'current' ELSE 'previous' END
+      )
+      SELECT
+        cur.campaign_id, cur.campaign_name, cur.country_id, cur.country_name,
+        cur.avg_is AS current_is, prev.avg_is AS previous_is,
+        ((prev.avg_is - cur.avg_is) / prev.avg_is) * 100 AS drop_pct
+      FROM weekly_is cur
+      JOIN weekly_is prev ON prev.campaign_id = cur.campaign_id AND prev.period = 'previous'
+      WHERE cur.period = 'current'
+        AND prev.avg_is > 0
+        AND ((prev.avg_is - cur.avg_is) / prev.avg_is) * 100 > 20
+    `);
+
+    for (const row of isResult.rows) {
+      const existing = await query(`
+        SELECT id FROM alerts WHERE alert_type = 'IMPRESSION_SHARE_DROP' AND campaign_id = $1 AND status = 'ACTIVE' AND created_at >= CURRENT_DATE - INTERVAL '7 days' LIMIT 1
+      `, [row.campaign_id]);
+      if (existing.rows.length === 0) {
+        alerts.push({
+          alert_type: 'IMPRESSION_SHARE_DROP',
+          severity: 'WARNING',
+          user_id: null as any,
+          country_id: row.country_id,
+          campaign_id: row.campaign_id,
+          daily_entry_id: null,
+          title: 'Caída de Impression Share',
+          message: `Campaña "${row.campaign_name}" (${row.country_name}): IS cayó ${parseFloat(row.drop_pct).toFixed(1)}% vs semana anterior (${parseFloat(row.previous_is).toFixed(1)}% → ${parseFloat(row.current_is).toFixed(1)}%).`,
+          metadata: { current_is: parseFloat(row.current_is), previous_is: parseFloat(row.previous_is), drop_pct: parseFloat(row.drop_pct) },
+        });
+        alertCount++;
+      }
+    }
+
+    // 4. KEYWORD_QS_DROP: QS promedio cayó > 1 punto
+    const qsResult = await query(`
+      WITH weekly_qs AS (
+        SELECT
+          c.google_ads_account_id AS account_id,
+          uga.account_name,
+          u.country_id,
+          co.name AS country_name,
+          CASE WHEN ks.snapshot_date >= CURRENT_DATE - INTERVAL '7 days' THEN 'current' ELSE 'previous' END AS period,
+          AVG(ks.quality_score) AS avg_qs
+        FROM google_ads_keyword_snapshots ks
+        JOIN campaigns c ON c.id = ks.campaign_id
+        LEFT JOIN user_google_ads_accounts uga ON uga.account_id = c.google_ads_account_id
+        LEFT JOIN users u ON u.id = uga.user_id
+        LEFT JOIN countries co ON co.id = u.country_id
+        WHERE ks.snapshot_date >= CURRENT_DATE - INTERVAL '14 days'
+          AND ks.quality_score IS NOT NULL AND ks.quality_score > 0
+        GROUP BY c.google_ads_account_id, uga.account_name, u.country_id, co.name,
+          CASE WHEN ks.snapshot_date >= CURRENT_DATE - INTERVAL '7 days' THEN 'current' ELSE 'previous' END
+      )
+      SELECT
+        cur.account_id, cur.account_name, cur.country_id, cur.country_name,
+        cur.avg_qs AS current_qs, prev.avg_qs AS previous_qs,
+        prev.avg_qs - cur.avg_qs AS qs_drop
+      FROM weekly_qs cur
+      JOIN weekly_qs prev ON prev.account_id = cur.account_id AND prev.period = 'previous'
+      WHERE cur.period = 'current' AND prev.avg_qs - cur.avg_qs > 1
+    `);
+
+    for (const row of qsResult.rows) {
+      const existing = await query(`
+        SELECT id FROM alerts WHERE alert_type = 'KEYWORD_QS_DROP' AND metadata->>'account_id' = $1 AND status = 'ACTIVE' AND created_at >= CURRENT_DATE - INTERVAL '7 days' LIMIT 1
+      `, [row.account_id]);
+      if (existing.rows.length === 0) {
+        alerts.push({
+          alert_type: 'KEYWORD_QS_DROP',
+          severity: 'WARNING',
+          user_id: null as any,
+          country_id: row.country_id,
+          campaign_id: null,
+          daily_entry_id: null,
+          title: 'Caída de Quality Score',
+          message: `Cuenta "${row.account_name}" (${row.country_name}): QS promedio cayó ${parseFloat(row.qs_drop).toFixed(1)} puntos (${parseFloat(row.previous_qs).toFixed(1)} → ${parseFloat(row.current_qs).toFixed(1)}).`,
+          metadata: { account_id: row.account_id, current_qs: parseFloat(row.current_qs), previous_qs: parseFloat(row.previous_qs), qs_drop: parseFloat(row.qs_drop) },
+        });
+        alertCount++;
+      }
+    }
+
+    // 5. OPPORTUNITY_ALERT: Alto budget_lost_IS (> 30%) con buena conversión
+    const oppResult = await query(`
+      SELECT
+        c.id AS campaign_id,
+        c.name AS campaign_name,
+        c.country_id,
+        co.name AS country_name,
+        AVG(gs.search_budget_lost_is) AS avg_budget_lost_is,
+        SUM(gs.conversions) AS total_conversions,
+        SUM(gs.cost) AS total_cost,
+        CASE WHEN SUM(gs.conversions) > 0 THEN SUM(gs.cost) / SUM(gs.conversions) ELSE 0 END AS cpa
+      FROM google_ads_snapshots gs
+      JOIN campaigns c ON c.id = gs.campaign_id
+      JOIN countries co ON co.id = c.country_id
+      WHERE gs.snapshot_date >= CURRENT_DATE - INTERVAL '7 days'
+        AND gs.search_budget_lost_is IS NOT NULL
+      GROUP BY c.id, c.name, c.country_id, co.name
+      HAVING AVG(gs.search_budget_lost_is) > 30 AND SUM(gs.conversions) > 0
+    `);
+
+    for (const row of oppResult.rows) {
+      const existing = await query(`
+        SELECT id FROM alerts WHERE alert_type = 'OPPORTUNITY_ALERT' AND campaign_id = $1 AND status = 'ACTIVE' AND created_at >= CURRENT_DATE - INTERVAL '7 days' LIMIT 1
+      `, [row.campaign_id]);
+      if (existing.rows.length === 0) {
+        alerts.push({
+          alert_type: 'OPPORTUNITY_ALERT',
+          severity: 'INFO',
+          user_id: null as any,
+          country_id: row.country_id,
+          campaign_id: row.campaign_id,
+          daily_entry_id: null,
+          title: 'Oportunidad de crecimiento',
+          message: `Campaña "${row.campaign_name}" (${row.country_name}): pierde ${parseFloat(row.avg_budget_lost_is).toFixed(1)}% IS por presupuesto pero tiene CPA $${parseFloat(row.cpa).toFixed(2)}. Incrementar presupuesto podría generar más conversiones.`,
+          metadata: { budget_lost_is: parseFloat(row.avg_budget_lost_is), cpa: parseFloat(row.cpa), conversions: parseFloat(row.total_conversions) },
+        });
+        alertCount++;
+      }
+    }
+
+    if (alerts.length > 0) {
+      await this.saveAlerts(alerts);
+    }
+
+    logger.info(`[ALERTS-ENGINE] ${alertCount} anomaly alert(s) generated`);
+    return alertCount;
+  }
+
   // ─── Obtener resumen del día para email ──────────
 
   async getDailySummary(): Promise<{

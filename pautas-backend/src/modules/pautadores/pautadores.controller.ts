@@ -7,6 +7,7 @@ import { googleAdsSyncService } from '../../services/google-ads-sync.service';
 import { googleAdsAnalysisService } from '../../services/google-ads-analysis.service';
 import { parsePagination, buildPaginationMeta } from '../../utils/pagination.util';
 import { query as dbQuery } from '../../config/database';
+import { scheduledReportsService } from '../../services/scheduled-reports.service';
 
 export class PautadoresController {
   async getEntriesDaily(req: Request, res: Response, next: NextFunction) {
@@ -204,12 +205,22 @@ export class PautadoresController {
   async triggerGoogleAdsSync(req: Request, res: Response, next: NextFunction) {
     try {
       const full = req.query.full === 'true';
+      const enhanced = req.query.enhanced === 'true';
+      const backfill = req.query.backfill === 'true';
       await googleAdsSyncService.syncAllCampaigns(!full);
       // Also sync billing data (recharges — recent only for speed)
       await googleAdsSyncService.syncBillingAccounts();
       await googleAdsSyncService.syncRecharges(true);
       await googleAdsSyncService.syncAccountCharges();
-      return sendSuccess(res, { message: 'Sincronización completada (campañas + recargas)' });
+
+      if (enhanced) {
+        await googleAdsSyncService.syncEnhancedAnalytics(backfill);
+      }
+
+      const msg = enhanced
+        ? `Sincronización completada (campañas + recargas + analíticas avanzadas${backfill ? ' BACKFILL 30 días' : ''})`
+        : 'Sincronización completada (campañas + recargas)';
+      return sendSuccess(res, { message: msg });
     } catch (err) { next(err); }
   }
 
@@ -271,6 +282,348 @@ export class PautadoresController {
     } catch (err) { next(err); }
   }
 
+  async getAnalysisImpressionShare(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { granularity, date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getImpressionShareTrend({
+        granularity: granularity || 'daily',
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisCampaignTypes(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getCampaignTypeBreakdown({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisBiddingStrategies(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getBiddingStrategyAnalysis({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisKeywords(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, metric, match_type, account_id, country_id, limit } = req.query as any;
+      const data = await googleAdsAnalysisService.getTopKeywords({
+        dateFrom: date_from,
+        dateTo: date_to,
+        metric,
+        matchType: match_type,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisKeywordQuality(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getKeywordQualityDistribution({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisDevices(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getDeviceBreakdown({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisGeo(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id, limit } = req.query as any;
+      const data = await googleAdsAnalysisService.getGeoPerformance({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisHourlyHeatmap(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, metric, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getHourlyHeatmap({
+        dateFrom: date_from,
+        dateTo: date_to,
+        metric,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Budget Intelligence Endpoints ============
+
+  async getAnalysisBudgetPacing(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getBudgetPacing({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisWasteDetection(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getWasteDetection({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisOptimalSchedule(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getOptimalSchedule({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisBudgetForecast(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getBudgetForecast({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisBudgetRedistribution(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getBudgetRedistribution({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 2: Comparaciones & Tendencias ============
+
+  async getAnalysisTemporalComparison(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from_1, date_to_1, date_from_2, date_to_2, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getTemporalComparison({
+        dateFrom1: date_from_1,
+        dateTo1: date_to_1,
+        dateFrom2: date_from_2,
+        dateTo2: date_to_2,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisCPAAnalysis(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getCPAAnalysis({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisQualityScoreTrend(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getQualityScoreTrend({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisCPCTrend(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getCPCTrend({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisSeasonality(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getSeasonalityPatterns({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 4: Search Terms & Keywords ============
+
+  async getAnalysisSearchTerms(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id, limit } = req.query as any;
+      const data = await googleAdsAnalysisService.getSearchTerms({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisNegativeKeywordCandidates(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getNegativeKeywordCandidates({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisLongTail(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getLongTailAnalysis({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisKeywordCannibalization(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getKeywordCannibalization({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 5: Ad Performance & Fatigue Detection ============
+
+  async getAnalysisAdPerformanceComparison(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAdPerformanceComparison({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisAdFatigue(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAdFatigueDetection({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisAdTypePerformance(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAdTypePerformance({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
   // ============ Conglomerado Contrast Endpoint ============
 
   async getConglomeradoContrast(req: Request, res: Response, next: NextFunction) {
@@ -325,6 +678,356 @@ export class PautadoresController {
 
       const result = await dbQuery(sql, values);
       return sendSuccess(res, result.rows);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 6: Competitive Intelligence / Auction Insights ============
+
+  async getAnalysisAuctionInsights(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAuctionInsightsSummary({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisCompetitivePosition(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getCompetitivePosition({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisMarketOpportunities(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getMarketOpportunities({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 7: Demographics ============
+
+  async getAnalysisAgeBreakdown(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAgeBreakdown({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisGenderBreakdown(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getGenderBreakdown({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 8: Scheduled Reports ============
+
+  async getScheduledReports(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userRole = (req as any).user.role;
+      const userId = (req as any).user.id;
+      const reports = await scheduledReportsService.getAll(userRole === 'admin' ? undefined : userId);
+      return sendSuccess(res, reports);
+    } catch (err) { next(err); }
+  }
+
+  async createScheduledReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user.id;
+      const report = await scheduledReportsService.create({ ...req.body, created_by: userId });
+      return sendSuccess(res, report);
+    } catch (err) { next(err); }
+  }
+
+  async updateScheduledReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      const report = await scheduledReportsService.update(id, req.body);
+      return sendSuccess(res, report);
+    } catch (err) { next(err); }
+  }
+
+  async deleteScheduledReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      const deleted = await scheduledReportsService.delete(id);
+      return sendSuccess(res, { deleted });
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 9: Enhanced Tabs ============
+
+  async getAnalysisDeviceBidRecommendations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getDeviceBidRecommendations({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisDeviceExclusions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getDeviceExclusions({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisGeoTierClassification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getGeoTierClassification({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisRegionalPatterns(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getRegionalPatterns({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisKeywordActionPlan(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getKeywordActionPlan({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisMatchTypeRecommendations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getMatchTypeRecommendations({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisCrossAccountKeywords(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getCrossAccountKeywords({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisFullForecast(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getFullForecast({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisScalingHealth(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getScalingHealth({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisCompetitiveMarketTrend(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getCompetitiveMarketTrend({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 10: Dashboard Ejecutivo ============
+
+  async getAnalysisAccountHealthScores(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAccountHealthScores({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisExecutiveSummary(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getExecutiveSummary({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisTopRecommendations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getTopRecommendations({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 11: Auditoria Financiera ============
+
+  async getAnalysisZombieKeywords(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getZombieKeywords({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisVampireCampaigns(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getVampireCampaigns({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisConsolidatedActionPlan(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getConsolidatedActionPlan({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ============ Phase 12: Benchmark Cross-Account ============
+
+  async getAnalysisAccountBenchmark(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAccountBenchmark({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisPortfolioRecommendation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getPortfolioRecommendation({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisAccountPatterns(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getAccountPatterns({
+        dateFrom: date_from, dateTo: date_to,
+        accountId: account_id || undefined,
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
     } catch (err) { next(err); }
   }
 }

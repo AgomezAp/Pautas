@@ -54,6 +54,51 @@
     <li class="nav-item" role="presentation">
       <button class="nav-link" [class.active]="activeTab === 3" (click)="onTabChange(3)" type="button" role="tab">Distribucion Presupuestal</button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 4" (click)="onTabChange(4)" type="button" role="tab">Impression Share</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 5" (click)="onTabChange(5)" type="button" role="tab">Tipos y Estrategias</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 6" (click)="onTabChange(6)" type="button" role="tab">Palabras Clave</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 7" (click)="onTabChange(7)" type="button" role="tab">Dispositivos</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 8" (click)="onTabChange(8)" type="button" role="tab">Geografia</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 9" (click)="onTabChange(9)" type="button" role="tab">Horario</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 10" (click)="onTabChange(10)" type="button" role="tab">Presupuesto Inteligente</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 11" (click)="onTabChange(11)" type="button" role="tab">Comparaciones</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 12" (click)="onTabChange(12)" type="button" role="tab">Estrategia Keywords</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 13" (click)="onTabChange(13)" type="button" role="tab">Anuncios</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 14" (click)="onTabChange(14)" type="button" role="tab">Competencia</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 15" (click)="onTabChange(15)" type="button" role="tab">Audiencia</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 16" (click)="onTabChange(16)" type="button" role="tab">Dashboard Ejecutivo</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 17" (click)="onTabChange(17)" type="button" role="tab">Auditoria Financiera</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 18" (click)="onTabChange(18)" type="button" role="tab">Benchmark</button>
+    </li>
   </ul>
 
   <div class="tab-content-body">
@@ -320,5 +365,2295 @@
         }
       </div>
     }
+
+    <!-- Tab 5: Impression Share -->
+    @if (activeTab === 4) {
+      <div class="tab-content">
+        <div class="toggle-row">
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" [class.active]="isGranularity === 'daily'" (click)="isGranularity = 'daily'; loadImpressionShare()">Diario</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="isGranularity === 'weekly'" (click)="isGranularity = 'weekly'; loadImpressionShare()">Semanal</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="isGranularity === 'monthly'" (click)="isGranularity = 'monthly'; loadImpressionShare()">Mensual</button>
+          </div>
+        </div>
+
+        @if (loadingImpressionShare) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando impression share...</span>
+          </div>
+        }
+
+        @if (isLineChartData) {
+          <div class="chart-panel">
+            <div class="chart-container">
+              <canvas baseChart [data]="isLineChartData" [options]="isLineChartOptions" type="line"></canvas>
+            </div>
+          </div>
+        }
+
+        @if (impressionShareData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="visibility" size="md"></app-icon>
+              <span>Detalle Impression Share</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Periodo</th>
+                    <th class="text-right">IS Promedio</th>
+                    <th class="text-right">Top IS</th>
+                    <th class="text-right">Abs Top IS</th>
+                    <th class="text-right">Perdido (Budget)</th>
+                    <th class="text-right">Perdido (Rank)</th>
+                    <th class="text-right">Campanas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of impressionShareData; track row.period) {
+                    <tr>
+                      <td>{{ formatPeriod(row.period) }}</td>
+                      <td class="text-right fw-600">{{ row.avg_impression_share || 0 }}%</td>
+                      <td class="text-right">{{ row.avg_top_impression_rate || 0 }}%</td>
+                      <td class="text-right">{{ row.avg_abs_top_impression_rate || 0 }}%</td>
+                      <td class="text-right text-danger">{{ row.avg_budget_lost_is || 0 }}%</td>
+                      <td class="text-right text-warning">{{ row.avg_rank_lost_is || 0 }}%</td>
+                      <td class="text-right">{{ row.campaigns_count }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 6: Tipos y Estrategias -->
+    @if (activeTab === 5) {
+      <div class="tab-content">
+        @if (loadingCampaignTypes) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando tipos de campana...</span>
+          </div>
+        }
+
+        @if (campaignTypesChartData) {
+          <div class="chart-panel">
+            <div class="chart-title">Gasto por Tipo de Campana</div>
+            <div class="chart-container chart-container-doughnut">
+              <canvas baseChart [data]="campaignTypesChartData" [options]="doughnutChartOptions" type="doughnut"></canvas>
+            </div>
+          </div>
+        }
+
+        @if (campaignTypesData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="campaign" size="md"></app-icon>
+              <span>Rendimiento por Tipo de Campana</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th class="text-right">Campanas</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">Impresiones</th>
+                    <th class="text-right">Conversiones</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">CTR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of campaignTypesData; track row.channel_type; let i = $index) {
+                    <tr>
+                      <td>
+                        <div class="country-name">
+                          <span class="dot" [style.background]="getColor(i)"></span>
+                          {{ formatChannelType(row.channel_type) }}
+                        </div>
+                      </td>
+                      <td class="text-right">{{ row.campaigns_count }}</td>
+                      <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.total_impressions | number }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                      <td class="text-right">{{ row.ctr }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        @if (loadingBiddingStrategies) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando estrategias de puja...</span>
+          </div>
+        }
+
+        @if (biddingStrategiesData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="price_change" size="md"></app-icon>
+              <span>Rendimiento por Estrategia de Puja</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Estrategia</th>
+                    <th class="text-right">Campanas</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">Conversiones</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">CTR</th>
+                    <th class="text-right">ROI</th>
+                    <th class="text-right">IS Prom.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of biddingStrategiesData; track row.bidding_strategy) {
+                    <tr>
+                      <td>{{ formatBiddingStrategy(row.bidding_strategy) }}</td>
+                      <td class="text-right">{{ row.campaigns_count }}</td>
+                      <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                      <td class="text-right">{{ row.ctr }}%</td>
+                      <td class="text-right">{{ row.roi }}%</td>
+                      <td class="text-right">{{ row.avg_impression_share || '—' }}{{ row.avg_impression_share ? '%' : '' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 7: Palabras Clave -->
+    @if (activeTab === 6) {
+      <div class="tab-content">
+        <div class="toggle-row">
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" [class.active]="keywordMetric === 'clicks'" (click)="keywordMetric = 'clicks'; loadKeywords()">Clicks</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="keywordMetric === 'conversions'" (click)="keywordMetric = 'conversions'; loadKeywords()">Conversiones</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="keywordMetric === 'cost'" (click)="keywordMetric = 'cost'; loadKeywords()">Costo</button>
+          </div>
+          <select class="form-select form-select-sm match-filter" [(ngModel)]="keywordMatchFilter" (ngModelChange)="loadKeywords()">
+            <option value="">Todos los tipos</option>
+            <option value="EXACT">Exacta</option>
+            <option value="PHRASE">Frase</option>
+            <option value="BROAD">Amplia</option>
+          </select>
+        </div>
+
+        @if (loadingKeywords) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando palabras clave...</span>
+          </div>
+        }
+
+        @if (keywordsData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="key" size="md"></app-icon>
+              <span>Top Palabras Clave ({{ keywordsData.length }})</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Palabra Clave</th>
+                    <th>Match</th>
+                    <th class="text-center">QS</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">Impresiones</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Conversiones</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">CTR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of keywordsData; track row.keyword_text + row.match_type) {
+                    <tr>
+                      <td class="fw-600">{{ row.keyword_text }}</td>
+                      <td><span class="badge badge-outline">{{ row.match_type || '—' }}</span></td>
+                      <td class="text-center">
+                        @if (row.avg_quality_score) {
+                          <span class="badge" [class]="getQualityScoreClass(row.avg_quality_score)">{{ row.avg_quality_score }}</span>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.total_impressions | number }}</td>
+                      <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                      <td class="text-right">{{ row.ctr }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 8: Dispositivos -->
+    @if (activeTab === 7) {
+      <div class="tab-content">
+        @if (loadingDevices) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando dispositivos...</span>
+          </div>
+        }
+
+        @if (devicesChartData) {
+          <div class="chart-panel">
+            <div class="chart-title">Distribucion de Gasto por Dispositivo</div>
+            <div class="chart-container chart-container-doughnut">
+              <canvas baseChart [data]="devicesChartData" [options]="doughnutChartOptions" type="doughnut"></canvas>
+            </div>
+          </div>
+        }
+
+        @if (devicesData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="devices" size="md"></app-icon>
+              <span>Rendimiento por Dispositivo</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dispositivo</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">Impresiones</th>
+                    <th class="text-right">Conversiones</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">CTR</th>
+                    <th class="text-right">Conv. Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of devicesData; track row.device; let i = $index) {
+                    <tr>
+                      <td>
+                        <div class="country-name">
+                          <span class="dot" [style.background]="getColor(i)"></span>
+                          {{ formatDevice(row.device) }}
+                        </div>
+                      </td>
+                      <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.total_impressions | number }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                      <td class="text-right">{{ row.ctr }}%</td>
+                      <td class="text-right">{{ row.conv_rate }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+    <!-- Phase 9: Device Bid Recommendations -->
+    <h5 class="section-title mt-4">Recomendaciones de Ajuste por Dispositivo</h5>
+    @if (loadingDeviceBidRecs) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Analizando dispositivos...</span>
+      </div>
+    }
+    @if (!loadingDeviceBidRecs && deviceBidRecsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Campana</th>
+              <th>Cuenta</th>
+              <th>Dispositivo</th>
+              <th class="text-right">CPA Dispositivo</th>
+              <th class="text-right">CPA Promedio</th>
+              <th class="text-right">Ajuste Recomendado</th>
+              <th class="text-right">Ahorro Estimado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of deviceBidRecsData; track row.campaign_name + row.device) {
+              <tr>
+                <td class="fw-600">{{ row.campaign_name }}</td>
+                <td>{{ row.customer_account_name }}</td>
+                <td>{{ formatDevice(row.device) }}</td>
+                <td class="text-right">{{ row.current_cpa ? formatCurrency(row.current_cpa) : '---' }}</td>
+                <td class="text-right">{{ row.avg_cpa ? formatCurrency(row.avg_cpa) : '---' }}</td>
+                <td class="text-right">
+                  <span [class]="row.recommended_adjustment_pct < 0 ? 'text-danger fw-600' : 'text-success fw-600'">
+                    {{ row.recommended_adjustment_pct > 0 ? '+' : '' }}{{ row.recommended_adjustment_pct }}%
+                  </span>
+                </td>
+                <td class="text-right fw-600 text-danger">{{ formatCurrency(row.estimated_savings) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingDeviceBidRecs && deviceBidRecsData.length === 0) {
+      <div class="empty-state">Sin recomendaciones de ajuste por dispositivo</div>
+    }
+
+    <!-- Phase 9: Device Exclusions -->
+    <h5 class="section-title mt-4">Dispositivos a Excluir (Gasto sin Conversiones)</h5>
+    @if (loadingDeviceExclusions) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Detectando exclusiones...</span>
+      </div>
+    }
+    @if (!loadingDeviceExclusions && deviceExclusionsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Cuenta</th>
+              <th>Dispositivo</th>
+              <th class="text-right">Campanas Afectadas</th>
+              <th class="text-right">Gasto Total</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">Conversiones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of deviceExclusionsData; track row.customer_account_id + row.device) {
+              <tr class="waste-row">
+                <td class="fw-600">{{ row.customer_account_name }}</td>
+                <td>{{ formatDevice(row.device) }}</td>
+                <td class="text-right">{{ row.campaigns_affected }}</td>
+                <td class="text-right fw-600 text-danger">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_clicks | number }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingDeviceExclusions && deviceExclusionsData.length === 0) {
+      <div class="empty-state">No se detectaron dispositivos para excluir</div>
+    }
+
+      </div>
+    }
+
+    <!-- Tab 9: Geografia -->
+    @if (activeTab === 8) {
+      <div class="tab-content">
+        @if (loadingGeo) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando geografia...</span>
+          </div>
+        }
+
+        @if (geoData.length > 0) {
+          <div class="table-panel">
+            <div class="table-header">
+              <app-icon name="public" size="md"></app-icon>
+              <span>Rendimiento por Ubicacion ({{ geoData.length }})</span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ubicacion</th>
+                    <th>Tipo</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">Impresiones</th>
+                    <th class="text-right">Conversiones</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">CTR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of geoData; track row.geo_target_name) {
+                    <tr>
+                      <td class="fw-600">{{ row.geo_target_name }}</td>
+                      <td><span class="badge badge-outline">{{ row.geo_target_type || '—' }}</span></td>
+                      <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.total_impressions | number }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                      <td class="text-right">{{ row.ctr }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+    <!-- Phase 9: Geo Tier Classification -->
+    <h5 class="section-title mt-4">Clasificacion por Tiers</h5>
+    @if (loadingGeoTier) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Clasificando ubicaciones...</span>
+      </div>
+    }
+    @if (!loadingGeoTier && geoTierData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ubicacion</th>
+              <th>Tipo</th>
+              <th>Tier</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">CPA Promedio</th>
+              <th class="text-right">Ahorro Estimado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of geoTierData; track row.geo_target_name) {
+              <tr>
+                <td class="fw-600">{{ row.geo_target_name }}</td>
+                <td><span class="badge badge-outline">{{ row.geo_target_type || '---' }}</span></td>
+                <td><span class="badge" [ngClass]="getTierBadgeClass(row.tier)">{{ getTierLabel(row.tier) }}</span></td>
+                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.cpa ? formatCurrency(row.cpa) : '---' }}</td>
+                <td class="text-right">{{ row.avg_cpa ? formatCurrency(row.avg_cpa) : '---' }}</td>
+                <td class="text-right fw-600 text-danger">{{ formatCurrency(row.estimated_savings) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingGeoTier && geoTierData.length === 0) {
+      <div class="empty-state">Sin datos para clasificacion de tiers</div>
+    }
+
+    <!-- Phase 9: Regional Patterns -->
+    <h5 class="section-title mt-4">Patrones Regionales por Tipo</h5>
+    @if (loadingRegionalPatterns) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Analizando patrones regionales...</span>
+      </div>
+    }
+    @if (!loadingRegionalPatterns && regionalPatternsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tipo de Region</th>
+              <th class="text-right">Ubicaciones</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CPC</th>
+              <th class="text-right">CTR</th>
+              <th class="text-right">CPA</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of regionalPatternsData; track row.geo_type) {
+              <tr>
+                <td class="fw-600">{{ row.geo_type }}</td>
+                <td class="text-right">{{ row.locations_count }}</td>
+                <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_clicks | number }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                <td class="text-right">{{ row.ctr }}%</td>
+                <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '---' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingRegionalPatterns && regionalPatternsData.length === 0) {
+      <div class="empty-state">Sin datos de patrones regionales</div>
+    }
+
+      </div>
+    }
+
+    <!-- Tab 10: Horario (Heatmap) -->
+    @if (activeTab === 9) {
+      <div class="tab-content">
+        <div class="toggle-row">
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" [class.active]="heatmapMetric === 'clicks'" (click)="heatmapMetric = 'clicks'; loadHeatmap()">Clicks</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="heatmapMetric === 'conversions'" (click)="heatmapMetric = 'conversions'; loadHeatmap()">Conversiones</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="heatmapMetric === 'cost'" (click)="heatmapMetric = 'cost'; loadHeatmap()">Costo</button>
+            <button type="button" class="btn btn-outline-secondary" [class.active]="heatmapMetric === 'cpc'" (click)="heatmapMetric = 'cpc'; loadHeatmap()">CPC</button>
+          </div>
+        </div>
+
+        @if (loadingHeatmap) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando heatmap...</span>
+          </div>
+        }
+
+        @if (heatmapGrid.length > 0) {
+          <div class="heatmap-panel">
+            <div class="heatmap-header">
+              <div class="heatmap-corner"></div>
+              @for (h of [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]; track h) {
+                <div class="heatmap-hour-label">{{ h }}</div>
+              }
+            </div>
+            @for (day of heatmapGrid; track $index; let d = $index) {
+              <div class="heatmap-row">
+                <div class="heatmap-day-label">{{ getDayName(d) }}</div>
+                @for (val of day; track $index; let h = $index) {
+                  <div
+                    class="heatmap-cell"
+                    [style.background]="getHeatmapColor(val)"
+                    [ngbTooltip]="getDayName(d) + ' ' + h + ':00 — ' + formatHeatmapValue(val)"
+                  >
+                    @if (val > 0 && heatmapMax > 0 && val / heatmapMax > 0.3) {
+                      <span class="heatmap-val">{{ formatHeatmapCell(val) }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab 11: Presupuesto Inteligente -->
+    @if (activeTab === 10) {
+      <div class="tab-content">
+        <!-- Budget Pacing -->
+        <h5 class="section-title">Pacing de Presupuesto</h5>
+        @if (loadingPacing) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando pacing...</span>
+          </div>
+        }
+        @if (!loadingPacing && pacingData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Cuenta</th>
+                  <th class="text-right">Presupuesto Diario</th>
+                  <th class="text-right">Gasto Acumulado</th>
+                  <th class="text-right">Pacing</th>
+                  <th class="text-right">Run Rate Diario</th>
+                  <th class="text-right">Proyeccion Mensual</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of pacingData; track row.customer_account_id) {
+                  <tr>
+                    <td>{{ row.customer_account_name }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_daily_budget) }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                    <td class="text-right">
+                      <span [class]="getPacingClass(row.pacing_pct)">{{ row.pacing_pct | number:'1.1-1' }}%</span>
+                    </td>
+                    <td class="text-right">{{ formatCurrency(row.daily_run_rate) }}</td>
+                    <td class="text-right">{{ formatCurrency(row.projected_monthly_spend) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingPacing && pacingData.length === 0) {
+          <div class="empty-state">Sin datos de pacing disponibles</div>
+        }
+
+        <!-- Waste Detection -->
+        <h5 class="section-title mt-4">Deteccion de Desperdicio</h5>
+        @if (loadingWaste) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Analizando desperdicio...</span>
+          </div>
+        }
+        @if (!loadingWaste && wasteData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Campana</th>
+                  <th>Cuenta</th>
+                  <th>Razon</th>
+                  <th class="text-right">Gasto</th>
+                  <th class="text-right">Conversiones</th>
+                  <th class="text-right">CPA</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of wasteData; track row.campaign_id) {
+                  <tr class="waste-row">
+                    <td>{{ row.campaign_name }}</td>
+                    <td>{{ row.customer_account_name }}</td>
+                    <td>
+                      @if (row.waste_reason === 'ZERO_CONVERSIONS') {
+                        <span class="badge bg-danger">Sin conversiones</span>
+                      } @else {
+                        <span class="badge bg-warning text-dark">CPA alto</span>
+                      }
+                    </td>
+                    <td class="text-right text-danger">{{ formatCurrency(row.total_cost) }}</td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ row.cpa ? formatCurrency(row.cpa) : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingWaste && wasteData.length === 0) {
+          <div class="empty-state">No se detectaron campanas con desperdicio significativo</div>
+        }
+
+        <!-- Budget Forecast -->
+        <h5 class="section-title mt-4">Pronostico de Presupuesto</h5>
+        @if (loadingForecast) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Calculando pronostico...</span>
+          </div>
+        }
+        @if (!loadingForecast && forecastData) {
+          <div class="kpi-row">
+            <div class="kpi-card">
+              <span class="kpi-label">Proyeccion 7 dias</span>
+              <span class="kpi-value">{{ formatCurrency(forecastData.forecast?.projected_7d) }}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Proyeccion 14 dias</span>
+              <span class="kpi-value">{{ formatCurrency(forecastData.forecast?.projected_14d) }}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Proyeccion 30 dias</span>
+              <span class="kpi-value">{{ formatCurrency(forecastData.forecast?.projected_30d) }}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Tendencia Diaria</span>
+              <span class="kpi-value" [class]="forecastData.forecast?.slope > 0 ? 'text-danger' : 'text-success'">
+                {{ forecastData.forecast?.slope > 0 ? '+' : '' }}{{ formatCurrency(forecastData.forecast?.slope) }}/dia
+              </span>
+            </div>
+          </div>
+
+          @if (forecastChartData) {
+            <div class="chart-panel mt-3">
+              <canvas baseChart
+                [data]="forecastChartData"
+                [options]="lineChartOptions"
+                type="line"
+                height="300">
+              </canvas>
+            </div>
+          }
+        }
+
+        <!-- Optimal Schedule -->
+        <h5 class="section-title mt-4">Horario Optimo (CPA por Hora/Dia)</h5>
+        @if (loadingOptimalSchedule) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Calculando horario optimo...</span>
+          </div>
+        }
+        @if (optimalScheduleGrid.length > 0) {
+          <div class="heatmap-panel">
+            <div class="heatmap-header">
+              <div class="heatmap-corner">CPA</div>
+              @for (h of [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]; track h) {
+                <div class="heatmap-hour-label">{{ h }}</div>
+              }
+            </div>
+            @for (day of optimalScheduleGrid; track $index; let d = $index) {
+              <div class="heatmap-row">
+                <div class="heatmap-day-label">{{ getDayName(d) }}</div>
+                @for (val of day; track $index; let h = $index) {
+                  <div
+                    class="heatmap-cell"
+                    [style.background]="getScheduleColor(val)"
+                    [ngbTooltip]="getDayName(d) + ' ' + h + ':00 — CPA: ' + formatCurrency(val)"
+                  >
+                    @if (val > 0 && optimalScheduleMax > 0 && val / optimalScheduleMax > 0.3) {
+                      <span class="heatmap-val">{{ formatScheduleCell(val) }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <div class="heatmap-legend mt-2">
+            <span class="legend-item"><span class="legend-color" style="background: #10B981"></span> CPA bajo (eficiente)</span>
+            <span class="legend-item"><span class="legend-color" style="background: #F59E0B"></span> CPA medio</span>
+            <span class="legend-item"><span class="legend-color" style="background: #EF4444"></span> CPA alto (ineficiente)</span>
+          </div>
+        }
+
+        <!-- Budget Redistribution -->
+        <h5 class="section-title mt-4">Redistribucion de Presupuesto</h5>
+        @if (loadingRedistribution) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Analizando redistribucion...</span>
+          </div>
+        }
+        @if (!loadingRedistribution && redistributionData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Campana</th>
+                  <th>Cuenta</th>
+                  <th class="text-right">CPA</th>
+                  <th class="text-right">Conversiones</th>
+                  <th class="text-right">Gasto</th>
+                  <th>Clasificacion</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of redistributionData; track row.campaign_id) {
+                  <tr>
+                    <td>{{ row.campaign_name }}</td>
+                    <td>{{ row.customer_account_name }}</td>
+                    <td class="text-right">{{ formatCurrency(row.cpa) }}</td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                    <td>
+                      <span class="badge" [class]="getTierClass(row.performance_tier)">{{ formatTier(row.performance_tier) }}</span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingRedistribution && redistributionData.length === 0) {
+          <div class="empty-state">Sin datos para redistribucion</div>
+        }
+
+    <!-- Phase 9: Full Forecast -->
+    <h5 class="section-title mt-4">Pronostico Extendido (Conversiones + CPA)</h5>
+    @if (loadingFullForecast) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Calculando pronostico extendido...</span>
+      </div>
+    }
+    @if (!loadingFullForecast && fullForecastData?.forecast) {
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Conversiones 30d</div>
+          <div class="kpi-value">{{ fullForecastData.forecast.conversions_30d | number:'1.0-0' }}</div>
+          <div class="kpi-delta" [class]="fullForecastData.forecast.conv_slope >= 0 ? 'text-success' : 'text-danger'">
+            {{ fullForecastData.forecast.conv_slope >= 0 ? '+' : '' }}{{ fullForecastData.forecast.conv_slope }} conv/dia
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Conversiones 90d</div>
+          <div class="kpi-value">{{ fullForecastData.forecast.conversions_90d | number:'1.0-0' }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">CPA Proyectado 30d</div>
+          <div class="kpi-value">{{ fullForecastData.forecast.cpa_30d ? formatCurrency(fullForecastData.forecast.cpa_30d) : '---' }}</div>
+          <div class="kpi-delta" [class]="(fullForecastData.forecast.cpa_slope || 0) <= 0 ? 'text-success' : 'text-danger'">
+            {{ fullForecastData.forecast.cpa_slope ? ((fullForecastData.forecast.cpa_slope >= 0 ? '+' : '') + fullForecastData.forecast.cpa_slope + '/dia') : '' }}
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">CPA Proyectado 90d</div>
+          <div class="kpi-value">{{ fullForecastData.forecast.cpa_90d ? formatCurrency(fullForecastData.forecast.cpa_90d) : '---' }}</div>
+        </div>
+      </div>
+    }
+    @if (!loadingFullForecast && !fullForecastData?.forecast) {
+      <div class="empty-state">Datos insuficientes para pronostico extendido (min 7 dias)</div>
+    }
+
+    <!-- Phase 9: Scaling Health -->
+    <h5 class="section-title mt-4">Salud de Escalamiento</h5>
+    @if (loadingScalingHealth) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Evaluando escalamiento...</span>
+      </div>
+    }
+    @if (!loadingScalingHealth && scalingHealthData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Semana</th>
+              <th class="text-right">Gasto</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">Crecimiento Gasto</th>
+              <th class="text-right">Crecimiento Conv.</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of scalingHealthData; track row.week_start) {
+              <tr>
+                <td class="fw-600">{{ row.week_start }}</td>
+                <td class="text-right">{{ formatCurrency(row.weekly_cost) }}</td>
+                <td class="text-right">{{ row.weekly_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.weekly_cpa ? formatCurrency(row.weekly_cpa) : '---' }}</td>
+                <td class="text-right">
+                  @if (row.cost_growth_pct !== null) {
+                    <span [class]="row.cost_growth_pct > 0 ? 'text-danger' : 'text-success'">{{ row.cost_growth_pct > 0 ? '+' : '' }}{{ row.cost_growth_pct }}%</span>
+                  } @else { <span class="text-muted">---</span> }
+                </td>
+                <td class="text-right">
+                  @if (row.conv_growth_pct !== null) {
+                    <span [class]="row.conv_growth_pct >= 0 ? 'text-success' : 'text-danger'">{{ row.conv_growth_pct > 0 ? '+' : '' }}{{ row.conv_growth_pct }}%</span>
+                  } @else { <span class="text-muted">---</span> }
+                </td>
+                <td>
+                  @if (row.conv_growth_pct !== null && row.cost_growth_pct !== null) {
+                    @if (row.conv_growth_pct >= row.cost_growth_pct) {
+                      <span class="badge badge-green">Saludable</span>
+                    } @else {
+                      <span class="badge badge-red">No saludable</span>
+                    }
+                  } @else {
+                    <span class="badge badge-outline">---</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingScalingHealth && scalingHealthData.length === 0) {
+      <div class="empty-state">Sin datos de escalamiento</div>
+    }
+
+    <!-- Phase 9: Competitive Market Trend -->
+    <h5 class="section-title mt-4">Tendencia Competitiva del Mercado</h5>
+    @if (loadingCompMarketTrend) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Analizando tendencia competitiva...</span>
+      </div>
+    }
+    @if (compMarketTrendChartData) {
+      <div class="chart-panel">
+        <div class="chart-title">Impression Share vs CPC</div>
+        <div class="chart-container">
+          <canvas baseChart [data]="compMarketTrendChartData" [options]="lineChartOptions" type="line" height="280"></canvas>
+        </div>
+      </div>
+    }
+    @if (!loadingCompMarketTrend && compMarketTrendData.length === 0) {
+      <div class="empty-state">Sin datos de tendencia competitiva</div>
+    }
+
+      </div>
+    }
+
+    <!-- Tab 12: Comparaciones & Tendencias -->
+    @if (activeTab === 11) {
+      <div class="tab-content">
+        <!-- Temporal Comparison -->
+        <h5 class="section-title">Comparacion Temporal</h5>
+        @if (loadingComparison) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Comparando periodos...</span>
+          </div>
+        }
+        @if (!loadingComparison && comparisonData) {
+          <div class="kpi-row">
+            <div class="kpi-card">
+              <span class="kpi-label">Costo</span>
+              <span class="kpi-value">{{ formatCurrency(comparisonData.cost.value_2) }}</span>
+              <span class="kpi-delta" [class]="getComparisonArrowClass(comparisonData.cost.percent, true)">
+                {{ getComparisonArrow(comparisonData.cost.percent) }}{{ comparisonData.cost.percent | number:'1.1-1' }}%
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Clicks</span>
+              <span class="kpi-value">{{ comparisonData.clicks.value_2 | number }}</span>
+              <span class="kpi-delta" [class]="getComparisonArrowClass(comparisonData.clicks.percent)">
+                {{ getComparisonArrow(comparisonData.clicks.percent) }}{{ comparisonData.clicks.percent | number:'1.1-1' }}%
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Conversiones</span>
+              <span class="kpi-value">{{ comparisonData.conversions.value_2 | number:'1.0-1' }}</span>
+              <span class="kpi-delta" [class]="getComparisonArrowClass(comparisonData.conversions.percent)">
+                {{ getComparisonArrow(comparisonData.conversions.percent) }}{{ comparisonData.conversions.percent | number:'1.1-1' }}%
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">CPC</span>
+              <span class="kpi-value">{{ formatCurrency(comparisonData.cpc.value_2) }}</span>
+              <span class="kpi-delta" [class]="getComparisonArrowClass(comparisonData.cpc.percent, true)">
+                {{ getComparisonArrow(comparisonData.cpc.percent) }}{{ comparisonData.cpc.percent | number:'1.1-1' }}%
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">CPA</span>
+              <span class="kpi-value">{{ formatCurrency(comparisonData.cpa.value_2) }}</span>
+              <span class="kpi-delta" [class]="getComparisonArrowClass(comparisonData.cpa.percent, true)">
+                {{ getComparisonArrow(comparisonData.cpa.percent) }}{{ comparisonData.cpa.percent | number:'1.1-1' }}%
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">CTR</span>
+              <span class="kpi-value">{{ comparisonData.ctr.value_2 | number:'1.2-2' }}%</span>
+              <span class="kpi-delta" [class]="getComparisonArrowClass(comparisonData.ctr.percent)">
+                {{ getComparisonArrow(comparisonData.ctr.percent) }}{{ comparisonData.ctr.percent | number:'1.1-1' }}%
+              </span>
+            </div>
+          </div>
+        }
+
+        <!-- CPA Analysis -->
+        <h5 class="section-title mt-4">Analisis CPA por Campana</h5>
+        @if (loadingCPA) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Analizando CPA...</span>
+          </div>
+        }
+        @if (!loadingCPA && cpaData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Campana</th>
+                  <th>Cuenta</th>
+                  <th class="text-right">CPA</th>
+                  <th class="text-right">CPC</th>
+                  <th class="text-right">Conversiones</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">Gasto Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of cpaData; track row.campaign_id) {
+                  <tr>
+                    <td>{{ row.campaign_name }}</td>
+                    <td>{{ row.account_name }}</td>
+                    <td class="text-right fw-600">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '—' }}</td>
+                    <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ row.total_clicks | number }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingCPA && cpaData.length === 0) {
+          <div class="empty-state">Sin datos de CPA</div>
+        }
+
+        <!-- CPC Trend -->
+        <h5 class="section-title mt-4">Tendencia de CPC</h5>
+        @if (loadingCPCTrend) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando tendencia CPC...</span>
+          </div>
+        }
+        @if (cpcTrendChartData) {
+          <div class="chart-panel">
+            <canvas baseChart
+              [data]="cpcTrendChartData"
+              [options]="lineChartOptions"
+              type="line"
+              height="280">
+            </canvas>
+          </div>
+          @if (cpcTrendData?.forecast) {
+            <div class="kpi-row mt-3">
+              <div class="kpi-card">
+                <span class="kpi-label">Tendencia CPC/dia</span>
+                <span class="kpi-value" [class]="cpcTrendData.forecast.slope > 0 ? 'text-danger' : 'text-success'">
+                  {{ cpcTrendData.forecast.slope > 0 ? '+' : '' }}{{ formatCurrency(cpcTrendData.forecast.slope) }}
+                </span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-label">CPC Proyectado 30d</span>
+                <span class="kpi-value">{{ formatCurrency(cpcTrendData.forecast.projected_30d) }}</span>
+              </div>
+            </div>
+          }
+        }
+
+        <!-- Quality Score Trend -->
+        <h5 class="section-title mt-4">Tendencia Quality Score</h5>
+        @if (loadingQSTrend) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando Quality Score...</span>
+          </div>
+        }
+        @if (qsTrendChartData) {
+          <div class="chart-panel">
+            <canvas baseChart
+              [data]="qsTrendChartData"
+              [options]="lineChartOptions"
+              type="line"
+              height="280">
+            </canvas>
+          </div>
+        }
+        @if (!loadingQSTrend && !qsTrendChartData && qsTrendData.length === 0) {
+          <div class="empty-state">Sin datos de Quality Score</div>
+        }
+
+        <!-- Seasonality -->
+        <h5 class="section-title mt-4">Estacionalidad por Dia de Semana</h5>
+        @if (loadingSeasonality) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Analizando estacionalidad...</span>
+          </div>
+        }
+        @if (seasonalityChartData) {
+          <div class="chart-panel">
+            <canvas baseChart
+              [data]="seasonalityChartData"
+              [options]="barChartOptions"
+              type="bar"
+              height="280">
+            </canvas>
+          </div>
+        }
+        @if (!loadingSeasonality && !seasonalityChartData) {
+          <div class="empty-state">Sin datos de estacionalidad</div>
+        }
+      </div>
+    }
+
+    <!-- Tab 13: Estrategia de Keywords -->
+    @if (activeTab === 12) {
+      <div class="tab-content">
+        <!-- Negative Keyword Candidates -->
+        <h5 class="section-title">Candidatos a Negativos (Gasto sin Conversiones)</h5>
+        @if (loadingNegativeKeywords) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Buscando negativos candidatos...</span>
+          </div>
+        }
+        @if (!loadingNegativeKeywords && negativeKeywordsData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Termino de Busqueda</th>
+                  <th class="text-right">Gasto Desperdiciado</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">Impressions</th>
+                  <th>Campanas</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of negativeKeywordsData; track row.search_term) {
+                  <tr class="waste-row">
+                    <td class="fw-600">{{ row.search_term }}</td>
+                    <td class="text-right text-danger">{{ formatCurrency(row.wasted_cost) }}</td>
+                    <td class="text-right">{{ row.clicks | number }}</td>
+                    <td class="text-right">{{ row.impressions | number }}</td>
+                    <td>{{ row.campaign_names }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingNegativeKeywords && negativeKeywordsData.length === 0) {
+          <div class="empty-state">No se encontraron candidatos a negativos</div>
+        }
+
+        <!-- Long-Tail Distribution -->
+        <h5 class="section-title mt-4">Distribucion Head / Mid / Long-tail</h5>
+        @if (loadingLongTail) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Analizando distribucion...</span>
+          </div>
+        }
+        @if (longTailData.length > 0) {
+          <div class="long-tail-grid">
+            <div class="chart-panel chart-container-doughnut">
+              @if (longTailChartData) {
+                <canvas baseChart
+                  [data]="longTailChartData"
+                  [options]="doughnutChartOptions"
+                  type="doughnut"
+                  height="260">
+                </canvas>
+              }
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Categoria</th>
+                    <th class="text-right">Terminos</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">CPA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of longTailData; track row.category) {
+                    <tr>
+                      <td class="fw-600">{{ row.category }}</td>
+                      <td class="text-right">{{ row.term_count | number }}</td>
+                      <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ formatCurrency(row.avg_cpc) }}</td>
+                      <td class="text-right">{{ row.avg_cpa > 0 ? formatCurrency(row.avg_cpa) : '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <!-- Keyword Cannibalization -->
+        <h5 class="section-title mt-4">Canibalizacion de Keywords</h5>
+        @if (loadingCannibalization) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Detectando canibalizacion...</span>
+          </div>
+        }
+        @if (!loadingCannibalization && cannibalizationData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Keyword</th>
+                  <th class="text-right">Campanas</th>
+                  <th>Nombres de Campanas</th>
+                  <th class="text-right">Costo Total</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">Conversiones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of cannibalizationData; track row.keyword_text) {
+                  <tr>
+                    <td class="fw-600">{{ row.keyword_text }}</td>
+                    <td class="text-right"><span class="badge bg-warning text-dark">{{ row.campaigns_count }}</span></td>
+                    <td>{{ row.campaign_names }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                    <td class="text-right">{{ row.total_clicks | number }}</td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingCannibalization && cannibalizationData.length === 0) {
+          <div class="empty-state">No se detecto canibalizacion de keywords</div>
+        }
+
+        <!-- Top Search Terms -->
+        <h5 class="section-title mt-4">Top Terminos de Busqueda</h5>
+        @if (loadingSearchTerms) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando terminos...</span>
+          </div>
+        }
+        @if (!loadingSearchTerms && searchTermsData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Termino</th>
+                  <th>Status</th>
+                  <th class="text-right">Costo</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">CTR</th>
+                  <th class="text-right">CPC</th>
+                  <th class="text-right">Conv.</th>
+                  <th class="text-right">CPA</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of searchTermsData; track row.search_term) {
+                  <tr>
+                    <td>{{ row.search_term }}</td>
+                    <td>
+                      @if (row.status === 'ADDED') {
+                        <span class="badge bg-success">Agregado</span>
+                      } @else if (row.status === 'EXCLUDED') {
+                        <span class="badge bg-danger">Excluido</span>
+                      } @else {
+                        <span class="badge badge-outline">{{ row.status || 'N/A' }}</span>
+                      }
+                    </td>
+                    <td class="text-right">{{ formatCurrency(row.cost) }}</td>
+                    <td class="text-right">{{ row.clicks | number }}</td>
+                    <td class="text-right">{{ row.ctr }}%</td>
+                    <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                    <td class="text-right">{{ row.conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingSearchTerms && searchTermsData.length === 0) {
+          <div class="empty-state">Sin datos de terminos de busqueda</div>
+        }
+
+    <!-- Phase 9: Keyword Action Plan -->
+    <h5 class="section-title mt-4">Plan de Accion de Keywords</h5>
+    @if (loadingKeywordActionPlan) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Clasificando keywords...</span>
+      </div>
+    }
+    @if (!loadingKeywordActionPlan && keywordActionPlanData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Match Type</th>
+              <th>Cuenta</th>
+              <th>Accion</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conv.</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">QS</th>
+              <th class="text-right">Ahorro Potencial</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of keywordActionPlanData; track row.keyword_text + row.customer_account_id) {
+              <tr [class]="row.action === 'PAUSAR' ? 'waste-row' : ''">
+                <td class="fw-600">{{ row.keyword_text }}</td>
+                <td><span class="badge badge-outline">{{ row.match_type || '---' }}</span></td>
+                <td>{{ row.customer_account_name }}</td>
+                <td><span class="badge" [ngClass]="getActionBadgeClass(row.action)">{{ getActionLabel(row.action) }}</span></td>
+                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.cpa ? formatCurrency(row.cpa) : '---' }}</td>
+                <td class="text-right">{{ row.avg_qs || '---' }}</td>
+                <td class="text-right fw-600 text-danger">{{ row.potential_savings > 0 ? formatCurrency(row.potential_savings) : '---' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingKeywordActionPlan && keywordActionPlanData.length === 0) {
+      <div class="empty-state">Sin datos para plan de accion</div>
+    }
+
+    <!-- Phase 9: Match Type Recommendations -->
+    <h5 class="section-title mt-4">Recomendaciones de Tipo de Concordancia</h5>
+    @if (loadingMatchTypeRecs) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Analizando concordancias...</span>
+      </div>
+    }
+    @if (!loadingMatchTypeRecs && matchTypeRecsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Match Actual</th>
+              <th>Match Sugerido</th>
+              <th>Razon</th>
+              <th>Cuenta</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conv.</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of matchTypeRecsData; track row.keyword_text + row.customer_account_id) {
+              <tr>
+                <td class="fw-600">{{ row.keyword_text }}</td>
+                <td><span class="badge badge-outline">{{ row.match_type }}</span></td>
+                <td><span class="badge badge-green">{{ row.suggested_match_type }}</span></td>
+                <td class="text-muted">{{ row.reason }}</td>
+                <td>{{ row.customer_account_name }}</td>
+                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingMatchTypeRecs && matchTypeRecsData.length === 0) {
+      <div class="empty-state">Sin recomendaciones de concordancia</div>
+    }
+
+    <!-- Phase 9: Cross-Account Keywords -->
+    <h5 class="section-title mt-4">Keywords Exitosas para Replicar</h5>
+    @if (loadingCrossAccountKws) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Buscando oportunidades cross-account...</span>
+      </div>
+    }
+    @if (!loadingCrossAccountKws && crossAccountKwsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Cuenta Origen</th>
+              <th class="text-right">Conv. en Origen</th>
+              <th class="text-right">CPA en Origen</th>
+              <th class="text-right">CTR en Origen</th>
+              <th class="text-right">Cuentas Destino</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of crossAccountKwsData; track row.keyword_text + row.source_account_id) {
+              <tr>
+                <td class="fw-600">{{ row.keyword_text }}</td>
+                <td>{{ row.source_account_name }}</td>
+                <td class="text-right">{{ row.source_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ formatCurrency(row.source_cpa) }}</td>
+                <td class="text-right">{{ row.source_ctr }}%</td>
+                <td class="text-right"><span class="badge badge-green">{{ row.potential_accounts }} cuentas</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingCrossAccountKws && crossAccountKwsData.length === 0) {
+      <div class="empty-state">Sin keywords para replicar entre cuentas</div>
+    }
+
+      </div>
+    }
+
+    <!-- Tab 14: Ad Performance & Fatigue Detection -->
+    @if (activeTab === 13) {
+      <div class="tab-content">
+        <!-- Ad Performance Comparison by Ad Group -->
+        <h5 class="section-title">Comparacion de Anuncios por Grupo</h5>
+        @if (loadingAdComparison) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando comparacion de anuncios...</span>
+          </div>
+        }
+        @if (!loadingAdComparison && adComparisonData.length > 0) {
+          @for (group of getAdGroupGroups(); track group.adGroupName) {
+            <div class="table-panel mb-3">
+              <div class="table-header">
+                <app-icon name="ad_group" size="md"></app-icon>
+                <span>{{ group.adGroupName }}</span>
+                <span class="badge badge-outline ms-2">{{ group.ads.length }} anuncios</span>
+              </div>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Ad ID</th>
+                      <th>Tipo</th>
+                      <th>Status</th>
+                      <th class="text-right">Clicks</th>
+                      <th class="text-right">Impresiones</th>
+                      <th class="text-right">CTR</th>
+                      <th class="text-right">Costo</th>
+                      <th class="text-right">CPC</th>
+                      <th class="text-right">Conv.</th>
+                      <th class="text-right">CPA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (ad of group.ads; track ad.ad_id) {
+                      <tr>
+                        <td>{{ ad.ad_id }}</td>
+                        <td>{{ formatAdType(ad.ad_type) }}</td>
+                        <td>
+                          @if (ad.status === 'ENABLED') {
+                            <span class="badge bg-success">Activo</span>
+                          } @else if (ad.status === 'PAUSED') {
+                            <span class="badge bg-warning text-dark">Pausado</span>
+                          } @else {
+                            <span class="badge badge-outline">{{ ad.status || 'N/A' }}</span>
+                          }
+                        </td>
+                        <td class="text-right">{{ ad.total_clicks | number }}</td>
+                        <td class="text-right">{{ ad.total_impressions | number }}</td>
+                        <td class="text-right">{{ ad.ctr }}%</td>
+                        <td class="text-right">{{ formatCurrency(ad.total_cost) }}</td>
+                        <td class="text-right">{{ formatCurrency(ad.cpc) }}</td>
+                        <td class="text-right">{{ ad.total_conversions | number:'1.0-1' }}</td>
+                        <td class="text-right">{{ ad.cpa > 0 ? formatCurrency(ad.cpa) : '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        }
+        @if (!loadingAdComparison && adComparisonData.length === 0) {
+          <div class="empty-state">Sin datos de comparacion de anuncios</div>
+        }
+
+        <!-- Ad Fatigue Detection -->
+        <h5 class="section-title mt-4">Deteccion de Fatiga de Anuncios</h5>
+        @if (loadingAdFatigue) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Detectando fatiga de anuncios...</span>
+          </div>
+        }
+        @if (!loadingAdFatigue && adFatigueData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Ad ID</th>
+                  <th>Grupo de Anuncios</th>
+                  <th>Campana</th>
+                  <th>Nivel de Fatiga</th>
+                  <th class="text-right">CTR Promedio</th>
+                  <th class="text-right">Tendencia CTR/dia</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">Costo</th>
+                  <th class="text-right">Dias</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of adFatigueData; track row.ad_id) {
+                  <tr>
+                    <td>{{ row.ad_id }}</td>
+                    <td>{{ row.ad_group_name }}</td>
+                    <td>{{ row.campaign_name }}</td>
+                    <td><span class="badge" [ngClass]="getFatigueClass(row.fatigue_level)">{{ formatFatigueLevel(row.fatigue_level) }}</span></td>
+                    <td class="text-right">{{ row.avg_ctr }}%</td>
+                    <td class="text-right text-danger">{{ row.ctr_slope_per_day | number:'1.0-4' }}%</td>
+                    <td class="text-right">{{ row.total_clicks | number }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                    <td class="text-right">{{ row.data_points }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingAdFatigue && adFatigueData.length === 0) {
+          <div class="empty-state">No se detecto fatiga de anuncios en el periodo</div>
+        }
+
+        <!-- Ad Type Performance -->
+        <h5 class="section-title mt-4">Rendimiento por Tipo de Anuncio</h5>
+        @if (loadingAdType) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando rendimiento por tipo...</span>
+          </div>
+        }
+        @if (adTypeData.length > 0) {
+          <div class="long-tail-grid">
+            <div class="chart-panel chart-container-doughnut">
+              @if (adTypeChartData) {
+                <canvas baseChart
+                  [data]="adTypeChartData"
+                  [options]="doughnutChartOptions"
+                  type="doughnut"
+                  height="260">
+                </canvas>
+              }
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tipo de Anuncio</th>
+                    <th class="text-right">Anuncios</th>
+                    <th class="text-right">Costo</th>
+                    <th class="text-right">Clicks</th>
+                    <th class="text-right">CTR</th>
+                    <th class="text-right">CPC</th>
+                    <th class="text-right">Conv.</th>
+                    <th class="text-right">CPA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of adTypeData; track row.ad_type) {
+                    <tr>
+                      <td class="fw-600">{{ formatAdType(row.ad_type) }}</td>
+                      <td class="text-right">{{ row.ad_count | number }}</td>
+                      <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                      <td class="text-right">{{ row.total_clicks | number }}</td>
+                      <td class="text-right">{{ row.ctr }}%</td>
+                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                      <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+        @if (!loadingAdType && adTypeData.length === 0) {
+          <div class="empty-state">Sin datos de tipos de anuncio</div>
+        }
+      </div>
+    }
+
+    <!-- Tab 15: Competencia (Auction Insights) -->
+    @if (activeTab === 14) {
+      <div class="tab-content">
+
+        <!-- Competitors Table -->
+        <h5 class="section-title">Top Competidores</h5>
+        @if (loadingAuctionInsights) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando competidores...</span>
+          </div>
+        }
+        @if (!loadingAuctionInsights && auctionInsightsData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Dominio</th>
+                  <th class="text-right">Overlap Rate</th>
+                  <th class="text-right">Position Above</th>
+                  <th class="text-right">Outranking Share</th>
+                  <th class="text-right">Impression Share</th>
+                  <th class="text-right">Datos</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of auctionInsightsData; track row.display_domain) {
+                  <tr>
+                    <td class="fw-600">{{ row.display_domain }}</td>
+                    <td class="text-right">{{ (row.avg_overlap_rate * 100) | number:'1.1-1' }}%</td>
+                    <td class="text-right">{{ (row.avg_position_above_rate * 100) | number:'1.1-1' }}%</td>
+                    <td class="text-right">{{ (row.avg_outranking_share * 100) | number:'1.1-1' }}%</td>
+                    <td class="text-right">{{ (row.avg_impression_share * 100) | number:'1.1-1' }}%</td>
+                    <td class="text-right">{{ row.data_points | number }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingAuctionInsights && auctionInsightsData.length === 0) {
+          <div class="empty-state">Sin datos de competidores</div>
+        }
+
+        <!-- Competitive Position Chart -->
+        <h5 class="section-title mt-4">Posicion Competitiva en el Tiempo</h5>
+        @if (loadingCompetitive) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando posicion competitiva...</span>
+          </div>
+        }
+        @if (competitiveChartData) {
+          <div class="chart-panel">
+            <div class="chart-container">
+              <canvas baseChart [data]="competitiveChartData" [options]="isLineChartOptions" type="line"></canvas>
+            </div>
+          </div>
+        }
+        @if (!loadingCompetitive && !competitiveChartData) {
+          <div class="empty-state">Sin datos de posicion competitiva</div>
+        }
+
+        <!-- Market Opportunities Table -->
+        <h5 class="section-title mt-4">Oportunidades de Mercado</h5>
+        <p class="section-subtitle">Campanas con bajo Impression Share pero buenas conversiones</p>
+        @if (loadingMarketOpp) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando oportunidades...</span>
+          </div>
+        }
+        @if (!loadingMarketOpp && marketOppData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Campana</th>
+                  <th>Cuenta</th>
+                  <th class="text-right">IS Actual</th>
+                  <th class="text-right">Oportunidad</th>
+                  <th class="text-right">Conv.</th>
+                  <th class="text-right">CPA</th>
+                  <th class="text-right">CTR</th>
+                  <th class="text-right">Competidores</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of marketOppData; track row.campaign_name) {
+                  <tr>
+                    <td class="fw-600">{{ row.campaign_name }}</td>
+                    <td>{{ row.customer_account_name }}</td>
+                    <td class="text-right">{{ (row.avg_impression_share * 100) | number:'1.1-1' }}%</td>
+                    <td class="text-right">
+                      <span class="badge bg-success">+{{ row.opportunity_pct }}%</span>
+                    </td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '—' }}</td>
+                    <td class="text-right">{{ row.ctr }}%</td>
+                    <td class="text-right">{{ row.competitor_count }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingMarketOpp && marketOppData.length === 0) {
+          <div class="empty-state">Sin oportunidades de mercado detectadas</div>
+        }
+      </div>
+    }
+
+    <!-- Tab 16: Audiencia (Demographics) -->
+    @if (activeTab === 15) {
+      <div class="tab-content">
+
+        <!-- Age Breakdown Bar Chart -->
+        <h5 class="section-title">Rendimiento por Rango de Edad</h5>
+        @if (loadingAge) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando datos de edad...</span>
+          </div>
+        }
+        @if (ageChartData) {
+          <div class="chart-panel">
+            <div class="chart-container">
+              <canvas baseChart [data]="ageChartData" [options]="performanceBarOptions" type="bar"></canvas>
+            </div>
+          </div>
+        }
+        @if (!loadingAge && !ageChartData) {
+          <div class="empty-state">Sin datos de rango de edad</div>
+        }
+
+        <!-- Gender Breakdown Doughnut Chart -->
+        <h5 class="section-title mt-4">Distribucion por Genero</h5>
+        @if (loadingGender) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Cargando datos de genero...</span>
+          </div>
+        }
+        @if (genderChartData) {
+          <div class="chart-panel">
+            <div class="chart-container" style="max-width: 500px; margin: 0 auto;">
+              <canvas baseChart [data]="genderChartData" [options]="doughnutChartOptions" type="doughnut"></canvas>
+            </div>
+          </div>
+        }
+        @if (!loadingGender && !genderChartData) {
+          <div class="empty-state">Sin datos de genero</div>
+        }
+
+        <!-- Combined Demographics Table -->
+        <h5 class="section-title mt-4">Detalle Demografico</h5>
+        @if (!loadingAge && ageData.length > 0) {
+          <h6 class="mb-2">Por Edad</h6>
+          <div class="table-responsive mb-4">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Rango de Edad</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">Impresiones</th>
+                  <th class="text-right">Costo</th>
+                  <th class="text-right">Conversiones</th>
+                  <th class="text-right">CTR</th>
+                  <th class="text-right">CPC</th>
+                  <th class="text-right">CPA</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of ageData; track row.demographic_value) {
+                  <tr>
+                    <td class="fw-600">{{ row.demographic_value }}</td>
+                    <td class="text-right">{{ row.total_clicks | number }}</td>
+                    <td class="text-right">{{ row.total_impressions | number }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ row.ctr }}%</td>
+                    <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                    <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingGender && genderData.length > 0) {
+          <h6 class="mb-2">Por Genero</h6>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Genero</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">Impresiones</th>
+                  <th class="text-right">Costo</th>
+                  <th class="text-right">Conversiones</th>
+                  <th class="text-right">CTR</th>
+                  <th class="text-right">CPC</th>
+                  <th class="text-right">CPA</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of genderData; track row.demographic_value) {
+                  <tr>
+                    <td class="fw-600">{{ row.demographic_value }}</td>
+                    <td class="text-right">{{ row.total_clicks | number }}</td>
+                    <td class="text-right">{{ row.total_impressions | number }}</td>
+                    <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ row.ctr }}%</td>
+                    <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                    <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingAge && ageData.length === 0 && !loadingGender && genderData.length === 0) {
+          <div class="empty-state">Sin datos demograficos disponibles</div>
+        }
+      </div>
+    }
+
+<!-- Tab 16: Dashboard Ejecutivo -->
+@if (activeTab === 16) {
+  <div class="tab-content">
+    <!-- Health Scores -->
+    <h5 class="section-title">Semaforo de Salud por Cuenta</h5>
+    @if (loadingHealthScores) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Calculando salud de cuentas...</span>
+      </div>
+    }
+    @if (!loadingHealthScores && healthScoresData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Cuenta</th>
+              <th>Pais</th>
+              <th class="text-right">Score</th>
+              <th>Estado</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">Conv. Rate</th>
+              <th class="text-right">IS</th>
+              <th class="text-right">% Desperdicio</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of healthScoresData; track row.customer_account_id) {
+              <tr>
+                <td class="fw-600">{{ row.customer_account_name }}</td>
+                <td>{{ row.country_name }}</td>
+                <td class="text-right fw-600">{{ row.health_score }}</td>
+                <td><span class="badge" [ngClass]="getHealthBadgeClass(row.status)">{{ getHealthLabel(row.status) }}</span></td>
+                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.cpa ? formatCurrency(row.cpa) : '---' }}</td>
+                <td class="text-right">{{ row.conversion_rate }}%</td>
+                <td class="text-right">{{ row.avg_impression_share }}%</td>
+                <td class="text-right" [class]="row.waste_pct > 30 ? 'text-danger fw-600' : ''">{{ row.waste_pct || 0 }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingHealthScores && healthScoresData.length === 0) {
+      <div class="empty-state">Sin datos para semaforo de salud</div>
+    }
+
+    <!-- Executive Summary -->
+    <h5 class="section-title mt-4">Resumen Ejecutivo</h5>
+    @if (loadingExecSummary) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Generando resumen...</span>
+      </div>
+    }
+    @if (!loadingExecSummary && execSummaryData?.summary) {
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Gasto Total</div>
+          <div class="kpi-value">{{ formatCurrency(execSummaryData.summary.total_cost) }}</div>
+          @if (execSummaryData.summary.cost_delta_pct !== null) {
+            <div class="kpi-delta" [class]="execSummaryData.summary.cost_delta_pct <= 0 ? 'text-success' : 'text-danger'">
+              {{ execSummaryData.summary.cost_delta_pct > 0 ? '+' : '' }}{{ execSummaryData.summary.cost_delta_pct }}% vs periodo anterior
+            </div>
+          }
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Conversiones</div>
+          <div class="kpi-value">{{ execSummaryData.summary.total_conversions | number:'1.0-1' }}</div>
+          @if (execSummaryData.summary.conv_delta_pct !== null) {
+            <div class="kpi-delta" [class]="execSummaryData.summary.conv_delta_pct >= 0 ? 'text-success' : 'text-danger'">
+              {{ execSummaryData.summary.conv_delta_pct > 0 ? '+' : '' }}{{ execSummaryData.summary.conv_delta_pct }}% vs periodo anterior
+            </div>
+          }
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">CPA Promedio</div>
+          <div class="kpi-value">{{ formatCurrency(execSummaryData.summary.avg_cpa) }}</div>
+          @if (execSummaryData.summary.cpa_delta_pct !== null) {
+            <div class="kpi-delta" [class]="execSummaryData.summary.cpa_delta_pct <= 0 ? 'text-success' : 'text-danger'">
+              {{ execSummaryData.summary.cpa_delta_pct > 0 ? '+' : '' }}{{ execSummaryData.summary.cpa_delta_pct }}% vs periodo anterior
+            </div>
+          }
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">CTR Promedio</div>
+          <div class="kpi-value">{{ execSummaryData.summary.avg_ctr }}%</div>
+        </div>
+      </div>
+
+      @if (execSummaryData.wins?.length > 0) {
+        <h5 class="section-title mt-4">Top Cuentas (Wins)</h5>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>Cuenta</th><th class="text-right">Conversiones</th><th class="text-right">CPA</th></tr></thead>
+            <tbody>
+              @for (w of execSummaryData.wins; track w.account) {
+                <tr>
+                  <td class="fw-600">{{ w.account }}</td>
+                  <td class="text-right text-success fw-600">{{ w.conversions | number:'1.0-1' }}</td>
+                  <td class="text-right">{{ w.cpa ? formatCurrency(w.cpa) : '---' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (execSummaryData.problems?.length > 0) {
+        <h5 class="section-title mt-4">Cuentas Problematicas</h5>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>Cuenta</th><th class="text-right">Gasto</th><th class="text-right">Conversiones</th></tr></thead>
+            <tbody>
+              @for (p of execSummaryData.problems; track p.account) {
+                <tr class="waste-row">
+                  <td class="fw-600">{{ p.account }}</td>
+                  <td class="text-right text-danger fw-600">{{ formatCurrency(p.cost) }}</td>
+                  <td class="text-right">{{ p.conversions | number:'1.0-1' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+    @if (!loadingExecSummary && !execSummaryData?.summary) {
+      <div class="empty-state">Sin datos para resumen ejecutivo</div>
+    }
+
+    <!-- Top Recommendations -->
+    <h5 class="section-title mt-4">Top 5 Recomendaciones</h5>
+    @if (loadingRecommendations) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Generando recomendaciones...</span>
+      </div>
+    }
+    @if (!loadingRecommendations && recommendationsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Accion</th>
+              <th>Objetivo</th>
+              <th>Descripcion</th>
+              <th class="text-right">Ahorro Estimado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of recommendationsData; track row.target_name; let i = $index) {
+              <tr>
+                <td><span class="rank-badge">{{ i + 1 }}</span></td>
+                <td>
+                  <app-icon [name]="getRecActionIcon(row.action_type)" size="sm"></app-icon>
+                  {{ row.action_type === 'PAUSE_CAMPAIGN' ? 'Pausar Campana' : row.action_type === 'EXCLUDE_DEVICE' ? 'Excluir Dispositivo' : row.action_type === 'ADD_NEGATIVE' ? 'Agregar Negativa' : 'Reducir Presupuesto' }}
+                </td>
+                <td class="fw-600">{{ row.target_name }}</td>
+                <td class="text-muted">{{ row.description }}</td>
+                <td class="text-right fw-600 text-danger">{{ formatCurrency(row.estimated_savings) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingRecommendations && recommendationsData.length === 0) {
+      <div class="empty-state">Sin recomendaciones disponibles</div>
+    }
+  </div>
+}
+
+<!-- Tab 17: Auditoria Financiera -->
+@if (activeTab === 17) {
+  <div class="tab-content">
+    <!-- Zombie Keywords -->
+    <h5 class="section-title">Keywords Zombie (Gasto sin Conversiones)</h5>
+    @if (loadingZombieKeywords) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Buscando keywords zombie...</span>
+      </div>
+    }
+    @if (!loadingZombieKeywords && zombieKeywordsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Match</th>
+              <th>Cuentas</th>
+              <th class="text-right">Dias Activa</th>
+              <th class="text-right">Gasto Total</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">CTR</th>
+              <th class="text-right">QS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of zombieKeywordsData; track row.keyword_text) {
+              <tr class="waste-row">
+                <td class="fw-600">{{ row.keyword_text }}</td>
+                <td><span class="badge badge-outline">{{ row.match_type || '---' }}</span></td>
+                <td>{{ row.account_names }}</td>
+                <td class="text-right">{{ row.days_active }} dias</td>
+                <td class="text-right fw-600 text-danger">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_clicks | number }}</td>
+                <td class="text-right">{{ row.ctr }}%</td>
+                <td class="text-right">{{ row.avg_qs || '---' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingZombieKeywords && zombieKeywordsData.length === 0) {
+      <div class="empty-state">No se encontraron keywords zombie</div>
+    }
+
+    <!-- Vampire Campaigns -->
+    <h5 class="section-title mt-4">Campanas Vampiro (Acaparan Presupuesto)</h5>
+    @if (loadingVampireCampaigns) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Detectando campanas vampiro...</span>
+      </div>
+    }
+    @if (!loadingVampireCampaigns && vampireCampaignsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Campana</th>
+              <th>Cuenta</th>
+              <th class="text-right">Gasto</th>
+              <th class="text-right">% Presupuesto</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">% Conversiones</th>
+              <th class="text-right">Score Vampiro</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of vampireCampaignsData; track row.campaign_id) {
+              <tr class="waste-row">
+                <td class="fw-600">{{ row.campaign_name }}</td>
+                <td>{{ row.customer_account_name }}</td>
+                <td class="text-right fw-600">{{ formatCurrency(row.campaign_cost) }}</td>
+                <td class="text-right text-danger fw-600">{{ row.budget_share_pct }}%</td>
+                <td class="text-right">{{ row.campaign_conversions | number:'1.0-1' }}</td>
+                <td class="text-right text-muted">{{ row.conversion_share_pct }}%</td>
+                <td class="text-right"><span class="badge badge-red">{{ row.vampire_score }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingVampireCampaigns && vampireCampaignsData.length === 0) {
+      <div class="empty-state">No se detectaron campanas vampiro</div>
+    }
+
+    <!-- Consolidated Action Plan -->
+    <h5 class="section-title mt-4">Plan de Accion Consolidado</h5>
+    @if (loadingActionPlan) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Generando plan de accion...</span>
+      </div>
+    }
+    @if (!loadingActionPlan && actionPlanData.length > 0) {
+      <div class="kpi-row" style="margin-bottom: 1rem;">
+        <div class="kpi-card">
+          <div class="kpi-label">Ahorro Mensual Estimado Total</div>
+          <div class="kpi-value text-success">{{ formatCurrency(getTotalEstimatedSavings()) }}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Acciones Recomendadas</div>
+          <div class="kpi-value">{{ actionPlanData.length }}</div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tipo de Accion</th>
+              <th>Objetivo</th>
+              <th>Cuenta</th>
+              <th class="text-right">Gasto Actual</th>
+              <th class="text-right">Ahorro Estimado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of actionPlanData; track row.target_name; let i = $index) {
+              <tr>
+                <td><span class="rank-badge">{{ i + 1 }}</span></td>
+                <td>
+                  <span class="badge" [ngClass]="{
+                    'badge-red': row.action_type === 'PAUSAR_CAMPANA',
+                    'bg-warning': row.action_type === 'AGREGAR_NEGATIVA',
+                    'badge-yellow': row.action_type === 'EXCLUIR_DISPOSITIVO',
+                    'badge-outline': !['PAUSAR_CAMPANA','AGREGAR_NEGATIVA','EXCLUIR_DISPOSITIVO'].includes(row.action_type)
+                  }">
+                    {{ row.action_type === 'PAUSAR_CAMPANA' ? 'Pausar Campana' : row.action_type === 'AGREGAR_NEGATIVA' ? 'Agregar Negativa' : row.action_type === 'EXCLUIR_DISPOSITIVO' ? 'Excluir Dispositivo' : row.action_type }}
+                  </span>
+                </td>
+                <td class="fw-600">{{ row.target_name }}</td>
+                <td>{{ row.account_name }}</td>
+                <td class="text-right">{{ formatCurrency(row.current_cost) }}</td>
+                <td class="text-right fw-600 text-danger">{{ formatCurrency(row.estimated_monthly_savings) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingActionPlan && actionPlanData.length === 0) {
+      <div class="empty-state">Sin acciones recomendadas</div>
+    }
+  </div>
+}
+<!-- Tab 18: Benchmark Cross-Account -->
+@if (activeTab === 18) {
+  <div class="tab-content">
+    <!-- Account Benchmark -->
+    <h5 class="section-title">Benchmark de Cuentas</h5>
+    @if (loadingBenchmark) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Generando benchmark...</span>
+      </div>
+    }
+    @if (!loadingBenchmark && benchmarkData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cuenta</th>
+              <th>Pais</th>
+              <th>Tier</th>
+              <th class="text-right">Campanas</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conv.</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">Conv. Rate</th>
+              <th class="text-right">IS</th>
+              <th class="text-right">Uso Presup.</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of benchmarkData; track row.customer_account_id; let i = $index) {
+              <tr>
+                <td><span class="rank-badge">{{ row.rank }}</span></td>
+                <td class="fw-600">{{ row.customer_account_name }}</td>
+                <td>{{ row.country_name }}</td>
+                <td><span class="badge" [ngClass]="getBenchmarkTierClass(row.tier)">{{ row.tier }}</span></td>
+                <td class="text-right">{{ row.campaign_count }}</td>
+                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.cpa ? formatCurrency(row.cpa) : '---' }}</td>
+                <td class="text-right">{{ row.conversion_rate }}%</td>
+                <td class="text-right">{{ row.avg_is }}%</td>
+                <td class="text-right">{{ row.budget_utilization }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingBenchmark && benchmarkData.length === 0) {
+      <div class="empty-state">Sin datos para benchmark</div>
+    }
+
+    <!-- Portfolio Recommendation -->
+    <h5 class="section-title mt-4">Recomendacion de Portafolio</h5>
+    @if (loadingPortfolio) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Analizando portafolio...</span>
+      </div>
+    }
+    @if (!loadingPortfolio && portfolioData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Cuenta</th>
+              <th>Pais</th>
+              <th>Recomendacion</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conv.</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">% Acumulado Conv.</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of portfolioData; track row.customer_account_id) {
+              <tr [class]="row.recommendation === 'STOP' ? 'waste-row' : ''">
+                <td class="fw-600">{{ row.customer_account_name }}</td>
+                <td>{{ row.country_name }}</td>
+                <td><span class="badge" [ngClass]="getRecClass(row.recommendation)">{{ getRecLabel(row.recommendation) }}</span></td>
+                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.cpa ? formatCurrency(row.cpa) : '---' }}</td>
+                <td class="text-right fw-600">{{ row.cumsum_conv_pct }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingPortfolio && portfolioData.length === 0) {
+      <div class="empty-state">Sin datos para recomendacion de portafolio</div>
+    }
+
+    <!-- Account Patterns -->
+    <h5 class="section-title mt-4">Patrones por Tier de Rendimiento</h5>
+    @if (loadingPatterns) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Identificando patrones...</span>
+      </div>
+    }
+    @if (!loadingPatterns && patternsData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tier</th>
+              <th class="text-right">Cuentas</th>
+              <th class="text-right">Costo Prom.</th>
+              <th class="text-right">Conv. Prom.</th>
+              <th class="text-right">CPA Prom.</th>
+              <th class="text-right">Campanas Prom.</th>
+              <th class="text-right">Conv. Rate</th>
+              <th class="text-right">IS Prom.</th>
+              <th>Canal Comun</th>
+              <th>Bidding Comun</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of patternsData; track row.tier) {
+              <tr>
+                <td><span class="badge" [ngClass]="getBenchmarkTierClass(row.tier === 'TOP_25' ? 'TOP' : row.tier === 'BOTTOM_25' ? 'BOTTOM' : 'MID')">{{ row.tier }}</span></td>
+                <td class="text-right">{{ row.account_count }}</td>
+                <td class="text-right">{{ formatCurrency(row.avg_cost) }}</td>
+                <td class="text-right">{{ row.avg_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.avg_cpa ? formatCurrency(row.avg_cpa) : '---' }}</td>
+                <td class="text-right">{{ row.avg_campaigns }}</td>
+                <td class="text-right">{{ row.avg_conv_rate }}%</td>
+                <td class="text-right">{{ row.avg_impression_share }}%</td>
+                <td>{{ row.common_channel || '---' }}</td>
+                <td>{{ row.common_bidding_strategy || '---' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingPatterns && patternsData.length === 0) {
+      <div class="empty-state">Sin datos de patrones</div>
+    }
+  </div>
+}
   </div>
 </div>

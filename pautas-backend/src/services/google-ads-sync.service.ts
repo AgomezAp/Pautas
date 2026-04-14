@@ -110,7 +110,7 @@ export class GoogleAdsSyncService {
   private async runWithConcurrency<T>(
     items: T[],
     fn: (item: T) => Promise<void>,
-    limit: number,
+    limit: number = 3,
   ): Promise<void> {
     this.rateLimitHit = false;
     let index = 0;
@@ -178,6 +178,8 @@ export class GoogleAdsSyncService {
               campaign.id,
               campaign.name,
               campaign.status,
+              campaign.advertising_channel_type,
+              campaign.bidding_strategy_type,
               campaign_budget.amount_micros
             FROM campaign
             WHERE campaign.status != 'REMOVED'
@@ -195,7 +197,12 @@ export class GoogleAdsSyncService {
                 metrics.cost_micros,
                 metrics.clicks,
                 metrics.impressions,
-                metrics.ctr
+                metrics.ctr,
+                metrics.search_impression_share,
+                metrics.search_top_impression_rate,
+                metrics.search_absolute_top_impression_rate,
+                metrics.search_budget_lost_impression_share,
+                metrics.search_rank_lost_impression_share
               FROM campaign
               WHERE segments.date = '${today}'
             `);
@@ -219,6 +226,8 @@ export class GoogleAdsSyncService {
             const campaignName = row.campaign?.name || `Campaign ${adsCampaignId}`;
             const statusCode = row.campaign?.status;
             const statusStr = STATUS_MAP[statusCode] || String(statusCode);
+            const channelType = row.campaign?.advertising_channel_type || null;
+            const biddingStrategyType = row.campaign?.bidding_strategy_type || null;
             const todayMetrics = metricsMap.get(adsCampaignId);
             const costMicros = todayMetrics?.cost_micros || 0;
 
@@ -230,8 +239,8 @@ export class GoogleAdsSyncService {
 
             if (!localCampaignId) {
               const insertResult = await query(
-                `INSERT INTO campaigns (name, google_ads_campaign_id, country_id, campaign_url, ads_status, daily_budget, customer_account_id, customer_account_name, is_active, last_synced_at, created_at, updated_at)
-                 VALUES ($1, $2, $3, '', $4, $5, $6, $7, TRUE, NOW(), NOW(), NOW())
+                `INSERT INTO campaigns (name, google_ads_campaign_id, country_id, campaign_url, ads_status, daily_budget, customer_account_id, customer_account_name, channel_type, bidding_strategy_type, is_active, last_synced_at, created_at, updated_at)
+                 VALUES ($1, $2, $3, '', $4, $5, $6, $7, $8, $9, TRUE, NOW(), NOW(), NOW())
                  RETURNING id`,
                 [
                   campaignName,
@@ -241,6 +250,8 @@ export class GoogleAdsSyncService {
                   dailyBudget,
                   account.id,
                   account.name,
+                  channelType,
+                  biddingStrategyType,
                 ]
               );
               localCampaignId = insertResult.rows[0].id;
@@ -255,9 +266,11 @@ export class GoogleAdsSyncService {
                   country_id = $4,
                   customer_account_id = $5,
                   customer_account_name = $6,
+                  channel_type = $7,
+                  bidding_strategy_type = $8,
                   last_synced_at = NOW(),
                   updated_at = NOW()
-                WHERE id = $7`,
+                WHERE id = $9`,
                 [
                   campaignName,
                   statusStr,
@@ -265,6 +278,8 @@ export class GoogleAdsSyncService {
                   finalCountryId,
                   account.id,
                   account.name,
+                  channelType,
+                  biddingStrategyType,
                   localCampaignId,
                 ]
               );
@@ -273,8 +288,9 @@ export class GoogleAdsSyncService {
             if (todayMetrics) {
               await query(
                 `INSERT INTO google_ads_snapshots
-                  (campaign_id, snapshot_date, conversions, status, remaining_budget, cost, clicks, impressions, ctr, daily_budget, fetched_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                  (campaign_id, snapshot_date, conversions, status, remaining_budget, cost, clicks, impressions, ctr, daily_budget,
+                   search_impression_share, search_top_impression_rate, search_abs_top_impression_rate, search_budget_lost_is, search_rank_lost_is, fetched_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
                  ON CONFLICT (campaign_id, snapshot_date)
                  DO UPDATE SET
                   conversions = EXCLUDED.conversions,
@@ -285,6 +301,11 @@ export class GoogleAdsSyncService {
                   impressions = EXCLUDED.impressions,
                   ctr = EXCLUDED.ctr,
                   daily_budget = EXCLUDED.daily_budget,
+                  search_impression_share = EXCLUDED.search_impression_share,
+                  search_top_impression_rate = EXCLUDED.search_top_impression_rate,
+                  search_abs_top_impression_rate = EXCLUDED.search_abs_top_impression_rate,
+                  search_budget_lost_is = EXCLUDED.search_budget_lost_is,
+                  search_rank_lost_is = EXCLUDED.search_rank_lost_is,
                   fetched_at = NOW()`,
                 [
                   localCampaignId,
@@ -297,6 +318,11 @@ export class GoogleAdsSyncService {
                   todayMetrics?.impressions || 0,
                   todayMetrics?.ctr || 0,
                   dailyBudget,
+                  todayMetrics?.search_impression_share || null,
+                  todayMetrics?.search_top_impression_rate || null,
+                  todayMetrics?.search_absolute_top_impression_rate || null,
+                  todayMetrics?.search_budget_lost_impression_share || null,
+                  todayMetrics?.search_rank_lost_impression_share || null,
                 ]
               );
             }
@@ -738,6 +764,7 @@ export class GoogleAdsSyncService {
     await this.syncAccountCharges();
     await this.syncRecharges();
     await this.syncBillingHistory();
+    await this.syncEnhancedAnalytics();
   }
 
   // ========================================================
@@ -1260,6 +1287,759 @@ export class GoogleAdsSyncService {
       [limit, offset]
     );
     return { rows: result.rows, total };
+  }
+
+  // ========================================================
+  // Enhanced Analytics: Keywords, Devices, Geo, Hourly
+  // ========================================================
+
+  async syncKeywords(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads keywords...' + (backfill ? ' (backfill LAST_30_DAYS)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+
+    // Build campaign map: google_ads_campaign_id -> local id
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+    let errors = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+      try {
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            ad_group.name,
+            ad_group_criterion.keyword.text,
+            ad_group_criterion.keyword.match_type,
+            ad_group_criterion.quality_info.quality_score,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions,
+            metrics.ctr
+          FROM keyword_view
+          WHERE ${dateFilter}
+        `);
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const keywordText = row.ad_group_criterion?.keyword?.text;
+          if (!keywordText) continue;
+
+          const matchType = row.ad_group_criterion?.keyword?.match_type || null;
+          const qualityScore = row.ad_group_criterion?.quality_info?.quality_score || null;
+          const adGroupName = row.ad_group?.name || null;
+          const snapshotDate = row.segments?.date || today;
+
+          await query(
+            `INSERT INTO google_ads_keyword_snapshots
+              (campaign_id, ad_group_name, keyword_text, match_type, quality_score, clicks, impressions, cost, conversions, ctr, snapshot_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             ON CONFLICT (campaign_id, keyword_text, match_type, snapshot_date)
+             DO UPDATE SET
+              ad_group_name = EXCLUDED.ad_group_name,
+              quality_score = EXCLUDED.quality_score,
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions,
+              ctr = EXCLUDED.ctr`,
+            [
+              localCampaignId,
+              adGroupName,
+              keywordText,
+              matchType,
+              qualityScore,
+              row.metrics?.clicks || 0,
+              row.metrics?.impressions || 0,
+              (row.metrics?.cost_micros || 0) / 1_000_000,
+              row.metrics?.conversions || 0,
+              row.metrics?.ctr || 0,
+              snapshotDate,
+            ]
+          );
+          synced++;
+        }
+      } catch (err: any) {
+        const msg = err.errors?.[0]?.message || err.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED')) {
+          this.rateLimitHit = true;
+          logger.error('Rate limit hit during keyword sync');
+        } else {
+          errors++;
+        }
+      }
+    }, CONCURRENCY_LIMIT);
+
+    logger.info(`Keywords sync: ${synced} keywords synced, ${errors} errors`);
+  }
+
+  async syncDevicePerformance(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads device performance...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+      try {
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            segments.device,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions
+          FROM campaign
+          WHERE ${dateFilter}
+        `);
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const device = row.segments?.device || 'UNKNOWN';
+          const snapshotDate = row.segments?.date || today;
+
+          await query(
+            `INSERT INTO google_ads_device_snapshots
+              (campaign_id, device, clicks, impressions, cost, conversions, snapshot_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (campaign_id, device, snapshot_date)
+             DO UPDATE SET
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions`,
+            [
+              localCampaignId,
+              device,
+              row.metrics?.clicks || 0,
+              row.metrics?.impressions || 0,
+              (row.metrics?.cost_micros || 0) / 1_000_000,
+              row.metrics?.conversions || 0,
+              snapshotDate,
+            ]
+          );
+          synced++;
+        }
+      } catch (err: any) {
+        const msg = err.errors?.[0]?.message || err.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED')) {
+          this.rateLimitHit = true;
+        }
+      }
+    }, CONCURRENCY_LIMIT);
+
+    logger.info(`Device sync: ${synced} records synced`);
+  }
+
+  async syncGeoPerformance(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads geographic performance...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+      try {
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            geographic_view.country_criterion_id,
+            geographic_view.location_type,
+            campaign_criterion.location.geo_target_constant,
+            geo_target_constant.name,
+            geo_target_constant.canonical_name,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions
+          FROM geographic_view
+          WHERE ${dateFilter}
+        `);
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const geoName = row.geo_target_constant?.canonical_name
+            || row.geo_target_constant?.name
+            || (row.geographic_view?.country_criterion_id ? `Geo:${row.geographic_view.country_criterion_id}` : 'Unknown');
+          const geoType = row.geographic_view?.location_type || 'UNKNOWN';
+          const snapshotDate = row.segments?.date || today;
+
+          await query(
+            `INSERT INTO google_ads_geo_snapshots
+              (campaign_id, geo_target_name, geo_target_type, clicks, impressions, cost, conversions, snapshot_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (campaign_id, geo_target_name, snapshot_date)
+             DO UPDATE SET
+              geo_target_type = EXCLUDED.geo_target_type,
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions`,
+            [
+              localCampaignId,
+              geoName,
+              geoType,
+              row.metrics?.clicks || 0,
+              row.metrics?.impressions || 0,
+              (row.metrics?.cost_micros || 0) / 1_000_000,
+              row.metrics?.conversions || 0,
+              snapshotDate,
+            ]
+          );
+          synced++;
+        }
+      } catch (err: any) {
+        const msg = err.errors?.[0]?.message || err.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED')) {
+          this.rateLimitHit = true;
+        }
+      }
+    }, CONCURRENCY_LIMIT);
+
+    logger.info(`Geographic sync: ${synced} records synced`);
+  }
+
+  async syncHourlyPerformance(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads hourly performance...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+      try {
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            segments.hour,
+            segments.day_of_week,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions
+          FROM campaign
+          WHERE ${dateFilter}
+        `);
+
+        // Map Google Ads day_of_week enum to integer (0=Mon..6=Sun)
+        const dayMap: Record<string, number> = {
+          MONDAY: 0, TUESDAY: 1, WEDNESDAY: 2, THURSDAY: 3,
+          FRIDAY: 4, SATURDAY: 5, SUNDAY: 6,
+        };
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const hour = row.segments?.hour ?? 0;
+          const dayOfWeekStr = row.segments?.day_of_week || 'MONDAY';
+          const dayOfWeek = dayMap[dayOfWeekStr] ?? 0;
+          const snapshotDate = row.segments?.date || today;
+
+          await query(
+            `INSERT INTO google_ads_hourly_snapshots
+              (campaign_id, hour_of_day, day_of_week, clicks, impressions, cost, conversions, snapshot_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (campaign_id, hour_of_day, day_of_week, snapshot_date)
+             DO UPDATE SET
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions`,
+            [
+              localCampaignId,
+              hour,
+              dayOfWeek,
+              row.metrics?.clicks || 0,
+              row.metrics?.impressions || 0,
+              (row.metrics?.cost_micros || 0) / 1_000_000,
+              row.metrics?.conversions || 0,
+              snapshotDate,
+            ]
+          );
+          synced++;
+        }
+      } catch (err: any) {
+        const msg = err.errors?.[0]?.message || err.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED')) {
+          this.rateLimitHit = true;
+        }
+      }
+    }, CONCURRENCY_LIMIT);
+
+    logger.info(`Hourly sync: ${synced} records synced`);
+  }
+
+  async syncEnhancedAnalytics(backfill = false): Promise<void> {
+    logger.info('Starting enhanced analytics sync...' + (backfill ? ' (BACKFILL MODE - LAST_30_DAYS)' : ''));
+
+    try { await this.syncKeywords(backfill); } catch (e: any) {
+      logger.error('Keywords sync failed: ' + e.message);
+    }
+    try { await this.syncDevicePerformance(backfill); } catch (e: any) {
+      logger.error('Device sync failed: ' + e.message);
+    }
+    try { await this.syncGeoPerformance(backfill); } catch (e: any) {
+      logger.error('Geo sync failed: ' + e.message);
+    }
+    try { await this.syncHourlyPerformance(backfill); } catch (e: any) {
+      logger.error('Hourly sync failed: ' + e.message);
+    }
+    try { await this.syncSearchTerms(backfill); } catch (e: any) {
+      logger.error('Search terms sync failed: ' + e.message);
+    }
+    try { await this.syncAdPerformance(backfill); } catch (e: any) {
+      logger.error('Ad performance sync failed: ' + e.message);
+    }
+    try { await this.syncDemographics(backfill); } catch (e: any) {
+      logger.error('Demographics sync failed: ' + e.message);
+    }
+
+    logger.info('Enhanced analytics sync completed');
+  }
+
+  async syncSearchTerms(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads search terms...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+    let errors = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+      try {
+        const results = await customer.query(`
+          SELECT
+            search_term_view.search_term,
+            search_term_view.status,
+            campaign.id,
+            ad_group.name,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions,
+            metrics.ctr
+          FROM search_term_view
+          WHERE ${dateFilter}
+        `);
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const searchTerm = row.search_term_view?.search_term;
+          if (!searchTerm) continue;
+
+          const status = row.search_term_view?.status || null;
+          const adGroupName = row.ad_group?.name || null;
+          const clicks = Number(row.metrics?.clicks) || 0;
+          const impressions = Number(row.metrics?.impressions) || 0;
+          const costMicros = Number(row.metrics?.cost_micros) || 0;
+          const cost = costMicros / 1_000_000;
+          const conversions = Number(row.metrics?.conversions) || 0;
+          const ctr = Number(row.metrics?.ctr) || 0;
+
+          await query(`
+            INSERT INTO google_ads_search_term_snapshots
+              (campaign_id, ad_group_name, search_term, status, clicks, impressions, cost, conversions, ctr, snapshot_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (campaign_id, search_term, snapshot_date) DO UPDATE SET
+              ad_group_name = EXCLUDED.ad_group_name,
+              status = EXCLUDED.status,
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions,
+              ctr = EXCLUDED.ctr
+          `, [localCampaignId, adGroupName, searchTerm, status, clicks, impressions, cost, conversions, ctr, row.segments?.date || today]);
+
+          synced++;
+        }
+      } catch (e: any) {
+        errors++;
+        logger.error(`Search terms sync error for account ${account.id}: ${e.message}`);
+      }
+    });
+
+    logger.info(`Search terms sync completed: ${synced} synced, ${errors} errors`);
+  }
+
+  async syncAdPerformance(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads ad performance...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+    let errors = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+      try {
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            ad_group.id,
+            ad_group.name,
+            ad_group_ad.ad.id,
+            ad_group_ad.ad.type,
+            ad_group_ad.ad.responsive_search_ad.headlines,
+            ad_group_ad.ad.responsive_search_ad.descriptions,
+            ad_group_ad.ad.final_urls,
+            ad_group_ad.status,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions,
+            metrics.ctr
+          FROM ad_group_ad
+          WHERE ${dateFilter}
+            AND ad_group_ad.status != 'REMOVED'
+        `);
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const adGroupId = String(row.ad_group?.id || '');
+          const adGroupName = row.ad_group?.name || null;
+          const adId = String(row.ad_group_ad?.ad?.id || '');
+          if (!adId) continue;
+
+          const adType = row.ad_group_ad?.ad?.type || null;
+
+          // Extract headlines and descriptions from responsive search ads
+          const headlines = row.ad_group_ad?.ad?.responsive_search_ad?.headlines;
+          const headlinesStr = headlines ? JSON.stringify(headlines) : null;
+          const descriptions = row.ad_group_ad?.ad?.responsive_search_ad?.descriptions;
+          const descriptionsStr = descriptions ? JSON.stringify(descriptions) : null;
+
+          const finalUrls = row.ad_group_ad?.ad?.final_urls;
+          const finalUrl = Array.isArray(finalUrls) && finalUrls.length > 0 ? finalUrls[0] : null;
+
+          const status = row.ad_group_ad?.status || null;
+          const clicks = Number(row.metrics?.clicks) || 0;
+          const impressions = Number(row.metrics?.impressions) || 0;
+          const costMicros = Number(row.metrics?.cost_micros) || 0;
+          const cost = costMicros / 1_000_000;
+          const conversions = Number(row.metrics?.conversions) || 0;
+          const ctr = Number(row.metrics?.ctr) || 0;
+
+          await query(`
+            INSERT INTO google_ads_ad_snapshots
+              (campaign_id, ad_group_id, ad_group_name, ad_id, ad_type, headlines, descriptions, final_url, status, clicks, impressions, cost, conversions, ctr, snapshot_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ON CONFLICT (campaign_id, ad_id, snapshot_date) DO UPDATE SET
+              ad_group_id = EXCLUDED.ad_group_id,
+              ad_group_name = EXCLUDED.ad_group_name,
+              ad_type = EXCLUDED.ad_type,
+              headlines = EXCLUDED.headlines,
+              descriptions = EXCLUDED.descriptions,
+              final_url = EXCLUDED.final_url,
+              status = EXCLUDED.status,
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions,
+              ctr = EXCLUDED.ctr
+          `, [localCampaignId, adGroupId, adGroupName, adId, adType, headlinesStr, descriptionsStr, finalUrl, status, clicks, impressions, cost, conversions, ctr, row.segments?.date || today]);
+
+          synced++;
+        }
+      } catch (e: any) {
+        errors++;
+        logger.error(`Ad performance sync error for account ${account.id}: ${e.message}`);
+      }
+    });
+
+    logger.info(`Ad performance sync completed: ${synced} synced, ${errors} errors`);
+  }
+
+  // ========================================================
+  // Auction Insights sync (weekly)
+  // ========================================================
+  async syncAuctionInsights(): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads auction insights...');
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+    let errors = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+      try {
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            campaign.name,
+            metrics.search_impression_share,
+            metrics.search_rank_lost_impression_share,
+            metrics.search_budget_lost_impression_share
+          FROM campaign
+          WHERE campaign.advertising_channel_type = 'SEARCH'
+            AND campaign.status = 'ENABLED'
+            AND segments.date DURING LAST_7_DAYS
+        `);
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const impressionShare = Number(row.metrics?.search_impression_share) || 0;
+          const rankLostIS = Number(row.metrics?.search_rank_lost_impression_share) || 0;
+          const budgetLostIS = Number(row.metrics?.search_budget_lost_impression_share) || 0;
+
+          await query(`
+            INSERT INTO google_ads_auction_insights
+              (campaign_id, display_domain, impression_share, overlap_rate, position_above_rate, outranking_share, snapshot_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (campaign_id, display_domain, snapshot_date) DO UPDATE SET
+              impression_share = EXCLUDED.impression_share,
+              overlap_rate = EXCLUDED.overlap_rate,
+              position_above_rate = EXCLUDED.position_above_rate,
+              outranking_share = EXCLUDED.outranking_share
+          `, [localCampaignId, row.campaign?.name || 'self', impressionShare, rankLostIS, budgetLostIS, 0, today]);
+
+          synced++;
+        }
+      } catch (e: any) {
+        errors++;
+        logger.error(`Auction insights sync error for account ${account.id}: ${e.message}`);
+      }
+    }, CONCURRENCY_LIMIT);
+
+    logger.info(`Auction insights sync completed: ${synced} synced, ${errors} errors`);
+  }
+
+  async syncDemographics(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads demographics...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+    let errors = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+
+      // Age Range query
+      try {
+        const ageResults = await customer.query(`
+          SELECT
+            campaign.id,
+            ad_group_criterion.age_range.type,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions,
+            metrics.ctr
+          FROM age_range_view
+          WHERE ${dateFilter}
+        `);
+
+        for (const row of ageResults) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const demographicValue = row.ad_group_criterion?.age_range?.type || 'UNKNOWN';
+          const clicks = Number(row.metrics?.clicks) || 0;
+          const impressions = Number(row.metrics?.impressions) || 0;
+          const costMicros = Number(row.metrics?.cost_micros) || 0;
+          const cost = costMicros / 1_000_000;
+          const conversions = Number(row.metrics?.conversions) || 0;
+          const ctr = Number(row.metrics?.ctr) || 0;
+
+          await query(`
+            INSERT INTO google_ads_demographics_snapshots
+              (campaign_id, demographic_type, demographic_value, clicks, impressions, cost, conversions, ctr, snapshot_date)
+            VALUES ($1, 'AGE', $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (campaign_id, demographic_type, demographic_value, snapshot_date) DO UPDATE SET
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions,
+              ctr = EXCLUDED.ctr
+          `, [localCampaignId, demographicValue, clicks, impressions, cost, conversions, ctr, row.segments?.date || today]);
+
+          synced++;
+        }
+      } catch (e: any) {
+        errors++;
+        logger.error(`Demographics age sync error for account ${account.id}: ${e.message}`);
+      }
+
+      // Gender query
+      try {
+        const genderResults = await customer.query(`
+          SELECT
+            campaign.id,
+            ad_group_criterion.gender.type,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions,
+            metrics.ctr
+          FROM gender_view
+          WHERE ${dateFilter}
+        `);
+
+        for (const row of genderResults) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const demographicValue = row.ad_group_criterion?.gender?.type || 'UNKNOWN';
+          const clicks = Number(row.metrics?.clicks) || 0;
+          const impressions = Number(row.metrics?.impressions) || 0;
+          const costMicros = Number(row.metrics?.cost_micros) || 0;
+          const cost = costMicros / 1_000_000;
+          const conversions = Number(row.metrics?.conversions) || 0;
+          const ctr = Number(row.metrics?.ctr) || 0;
+
+          await query(`
+            INSERT INTO google_ads_demographics_snapshots
+              (campaign_id, demographic_type, demographic_value, clicks, impressions, cost, conversions, ctr, snapshot_date)
+            VALUES ($1, 'GENDER', $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (campaign_id, demographic_type, demographic_value, snapshot_date) DO UPDATE SET
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions,
+              ctr = EXCLUDED.ctr
+          `, [localCampaignId, demographicValue, clicks, impressions, cost, conversions, ctr, row.segments?.date || today]);
+
+          synced++;
+        }
+      } catch (e: any) {
+        errors++;
+        logger.error(`Demographics gender sync error for account ${account.id}: ${e.message}`);
+      }
+    }, CONCURRENCY_LIMIT);
+
+    logger.info(`Demographics sync completed: ${synced} synced, ${errors} errors`);
   }
 }
 

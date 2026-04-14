@@ -247,6 +247,217 @@ export class GoogleAdsAnalysisComponent implements OnInit {
 
   activeTab = 0;
 
+  // Tab 5 - Impression Share
+  isGranularity = 'daily';
+  loadingImpressionShare = false;
+  impressionShareData: any[] = [];
+  isLineChartData: ChartConfiguration<'line'>['data'] | null = null;
+  isLineChartOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16 } },
+      tooltip: {
+        enabled: true,
+        mode: 'index',
+        intersect: false,
+        backgroundColor: 'rgba(20,20,20,0.92)',
+        cornerRadius: 8,
+        padding: { top: 10, bottom: 10, left: 14, right: 14 },
+        titleFont: { size: 13, weight: 'bold' },
+        bodyFont: { size: 12 },
+        bodySpacing: 6,
+        usePointStyle: true,
+        callbacks: {
+          label: (ctx) => {
+            const val = Number(ctx.parsed.y) || 0;
+            return ` ${ctx.dataset.label}: ${val.toFixed(1)}%`;
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true, max: 100,
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: { callback: (value) => value + '%' },
+        title: { display: true, text: 'Porcentaje', font: { size: 11 }, color: '#888' },
+      },
+      x: { grid: { display: false } },
+    },
+  };
+
+  // Tab 6 - Campaign Types & Bidding Strategies
+  loadingCampaignTypes = false;
+  campaignTypesData: any[] = [];
+  campaignTypesChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
+  loadingBiddingStrategies = false;
+  biddingStrategiesData: any[] = [];
+
+  // Tab 7 - Keywords
+  loadingKeywords = false;
+  keywordsData: any[] = [];
+  keywordMetric = 'clicks';
+  keywordMatchFilter = '';
+
+  // Tab 8 - Devices
+  loadingDevices = false;
+  devicesData: any[] = [];
+  devicesChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
+
+  // Tab 9 - Geography
+  loadingGeo = false;
+  geoData: any[] = [];
+
+  // Tab 10 - Hourly Heatmap
+  loadingHeatmap = false;
+  heatmapData: { hour_of_day: number; day_of_week: number; value: number }[] = [];
+  heatmapGrid: number[][] = [];
+  heatmapMax = 0;
+  heatmapMetric = 'clicks';
+
+  // Tab 11 - Budget Intelligence
+  loadingPacing = false;
+  pacingData: any[] = [];
+  loadingWaste = false;
+  wasteData: any[] = [];
+  loadingOptimalSchedule = false;
+  optimalScheduleData: any[] = [];
+  optimalScheduleGrid: number[][] = [];
+  optimalScheduleMax = 0;
+  loadingForecast = false;
+  forecastData: any = null;
+  forecastChartData: ChartConfiguration<'line'>['data'] | null = null;
+  loadingRedistribution = false;
+  redistributionData: any[] = [];
+
+  // Tab 12 - Comparaciones & Tendencias
+  comparisonMode = 'week'; // week | month | custom
+  comparisonData: any = null;
+  loadingComparison = false;
+  cpaData: any[] = [];
+  loadingCPA = false;
+  qsTrendData: any[] = [];
+  qsTrendChartData: ChartConfiguration<'line'>['data'] | null = null;
+  loadingQSTrend = false;
+  cpcTrendData: any = null;
+  cpcTrendChartData: ChartConfiguration<'line'>['data'] | null = null;
+  loadingCPCTrend = false;
+  seasonalityData: any = null;
+  seasonalityChartData: ChartConfiguration<'bar'>['data'] | null = null;
+  loadingSeasonality = false;
+
+  barChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16 } },
+    },
+    scales: {
+      y: { beginAtZero: true },
+    },
+  };
+
+  // Tab 13 - Search Terms & Keyword Strategy
+  searchTermsData: any[] = [];
+  loadingSearchTerms = false;
+  negativeKeywordsData: any[] = [];
+  loadingNegativeKeywords = false;
+  longTailData: any[] = [];
+  longTailChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
+  loadingLongTail = false;
+  cannibalizationData: any[] = [];
+  loadingCannibalization = false;
+
+  // Tab 14 - Ad Performance & Fatigue Detection
+  adComparisonData: any[] = [];
+  loadingAdComparison = false;
+  adFatigueData: any[] = [];
+  loadingAdFatigue = false;
+  adTypeData: any[] = [];
+  adTypeChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
+  loadingAdType = false;
+
+  // Tab 15 - Competencia (Auction Insights)
+  auctionInsightsData: any[] = [];
+  loadingAuctionInsights = false;
+  competitiveData: any[] = [];
+  competitiveChartData: ChartConfiguration<'line'>['data'] | null = null;
+  loadingCompetitive = false;
+  marketOppData: any[] = [];
+  loadingMarketOpp = false;
+
+  // Tab 16 - Audiencia (Demographics)
+  ageData: any[] = [];
+  loadingAge = false;
+  ageChartData: ChartConfiguration<'bar'>['data'] | null = null;
+  genderData: any[] = [];
+  loadingGender = false;
+  genderChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
+
+  // Phase 10: Dashboard Ejecutivo
+  loadingHealthScores = false;
+  healthScoresData: any[] = [];
+  loadingExecSummary = false;
+  execSummaryData: any = null;
+  loadingRecommendations = false;
+  recommendationsData: any[] = [];
+
+  // Phase 11: Auditoria Financiera
+  loadingZombieKeywords = false;
+  zombieKeywordsData: any[] = [];
+  loadingVampireCampaigns = false;
+  vampireCampaignsData: any[] = [];
+  loadingActionPlan = false;
+  actionPlanData: any[] = [];
+
+  // Phase 12: Benchmark Cross-Account
+  loadingBenchmark = false;
+  benchmarkData: any[] = [];
+  loadingPortfolio = false;
+  portfolioData: any[] = [];
+  loadingPatterns = false;
+  patternsData: any[] = [];
+
+  // Phase 9: Enhanced Tabs
+  // Devices enhancements
+  loadingDeviceBidRecs = false;
+  deviceBidRecsData: any[] = [];
+  loadingDeviceExclusions = false;
+  deviceExclusionsData: any[] = [];
+
+  // Geo enhancements
+  loadingGeoTier = false;
+  geoTierData: any[] = [];
+  loadingRegionalPatterns = false;
+  regionalPatternsData: any[] = [];
+
+  // Keywords enhancements
+  loadingKeywordActionPlan = false;
+  keywordActionPlanData: any[] = [];
+  loadingMatchTypeRecs = false;
+  matchTypeRecsData: any[] = [];
+  loadingCrossAccountKws = false;
+  crossAccountKwsData: any[] = [];
+
+  // Predictions enhancements
+  loadingFullForecast = false;
+  fullForecastData: any = null;
+  loadingScalingHealth = false;
+  scalingHealthData: any[] = [];
+  loadingCompMarketTrend = false;
+  compMarketTrendData: any[] = [];
+  compMarketTrendChartData: ChartConfiguration<'line'>['data'] | null = null;
+
+  /* doughnutChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'right', labels: { usePointStyle: true, padding: 12 } },
+    },
+  }; */
+
   constructor(
     private analysisService: GoogleAdsAnalysisService,
     private countryService: CountryService,
@@ -311,6 +522,73 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     this.rankingsBarData = null;
     this.budgetData = [];
     this.doughnutChartData = null;
+    this.impressionShareData = [];
+    this.isLineChartData = null;
+    this.campaignTypesData = [];
+    this.campaignTypesChartData = null;
+    this.biddingStrategiesData = [];
+    this.keywordsData = [];
+    this.devicesData = [];
+    this.devicesChartData = null;
+    this.geoData = [];
+    this.heatmapData = [];
+    this.heatmapGrid = [];
+    this.pacingData = [];
+    this.wasteData = [];
+    this.optimalScheduleData = [];
+    this.optimalScheduleGrid = [];
+    this.forecastData = null;
+    this.forecastChartData = null;
+    this.redistributionData = [];
+    this.comparisonData = null;
+    this.cpaData = [];
+    this.qsTrendData = [];
+    this.qsTrendChartData = null;
+    this.cpcTrendData = null;
+    this.cpcTrendChartData = null;
+    this.seasonalityData = null;
+    this.seasonalityChartData = null;
+    this.searchTermsData = [];
+    this.negativeKeywordsData = [];
+    this.longTailData = [];
+    this.longTailChartData = null;
+    this.cannibalizationData = [];
+    this.adComparisonData = [];
+    this.adFatigueData = [];
+    this.adTypeData = [];
+    this.adTypeChartData = null;
+    this.auctionInsightsData = [];
+    this.competitiveData = [];
+    this.competitiveChartData = null;
+    this.marketOppData = [];
+    this.ageData = [];
+    this.ageChartData = null;
+    this.genderData = [];
+    this.genderChartData = null;
+    // Phase 9 resets
+    this.deviceBidRecsData = [];
+    this.deviceExclusionsData = [];
+    this.geoTierData = [];
+    this.regionalPatternsData = [];
+    this.keywordActionPlanData = [];
+    this.matchTypeRecsData = [];
+    this.crossAccountKwsData = [];
+    this.fullForecastData = null;
+    this.scalingHealthData = [];
+    this.compMarketTrendData = [];
+    this.compMarketTrendChartData = null;
+    // Phase 10 resets
+    this.healthScoresData = [];
+    this.execSummaryData = null;
+    this.recommendationsData = [];
+    // Phase 11 resets
+    this.zombieKeywordsData = [];
+    this.vampireCampaignsData = [];
+    this.actionPlanData = [];
+    // Phase 12 resets
+    this.benchmarkData = [];
+    this.portfolioData = [];
+    this.patternsData = [];
 
     // Reload current tab
     switch (this.activeTab) {
@@ -318,6 +596,21 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       case 1: this.loadPerformance(); break;
       case 2: this.loadRankings(); break;
       case 3: this.loadBudgetDistribution(); break;
+      case 4: this.loadImpressionShare(); break;
+      case 5: this.loadCampaignTypesAndStrategies(); break;
+      case 6: this.loadKeywords(); break;
+      case 7: this.loadDevices(); break;
+      case 8: this.loadGeo(); break;
+      case 9: this.loadHeatmap(); break;
+      case 10: this.loadBudgetIntelligence(); break;
+      case 11: this.loadComparisons(); break;
+      case 12: this.loadSearchTermStrategy(); break;
+      case 13: this.loadAdPerformance(); break;
+      case 14: this.loadCompetitiveIntelligence(); break;
+      case 15: this.loadDemographics(); break;
+      case 16: this.loadExecutiveDashboard(); break;
+      case 17: this.loadFinancialAudit(); break;
+      case 18: this.loadBenchmark(); break;
     }
   }
 
@@ -338,6 +631,73 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     this.rankingsBarData = null;
     this.budgetData = [];
     this.doughnutChartData = null;
+    this.impressionShareData = [];
+    this.isLineChartData = null;
+    this.campaignTypesData = [];
+    this.campaignTypesChartData = null;
+    this.biddingStrategiesData = [];
+    this.keywordsData = [];
+    this.devicesData = [];
+    this.devicesChartData = null;
+    this.geoData = [];
+    this.heatmapData = [];
+    this.heatmapGrid = [];
+    this.pacingData = [];
+    this.wasteData = [];
+    this.optimalScheduleData = [];
+    this.optimalScheduleGrid = [];
+    this.forecastData = null;
+    this.forecastChartData = null;
+    this.redistributionData = [];
+    this.comparisonData = null;
+    this.cpaData = [];
+    this.qsTrendData = [];
+    this.qsTrendChartData = null;
+    this.cpcTrendData = null;
+    this.cpcTrendChartData = null;
+    this.seasonalityData = null;
+    this.seasonalityChartData = null;
+    this.searchTermsData = [];
+    this.negativeKeywordsData = [];
+    this.longTailData = [];
+    this.longTailChartData = null;
+    this.cannibalizationData = [];
+    this.adComparisonData = [];
+    this.adFatigueData = [];
+    this.adTypeData = [];
+    this.adTypeChartData = null;
+    this.auctionInsightsData = [];
+    this.competitiveData = [];
+    this.competitiveChartData = null;
+    this.marketOppData = [];
+    this.ageData = [];
+    this.ageChartData = null;
+    this.genderData = [];
+    this.genderChartData = null;
+    // Phase 9 resets
+    this.deviceBidRecsData = [];
+    this.deviceExclusionsData = [];
+    this.geoTierData = [];
+    this.regionalPatternsData = [];
+    this.keywordActionPlanData = [];
+    this.matchTypeRecsData = [];
+    this.crossAccountKwsData = [];
+    this.fullForecastData = null;
+    this.scalingHealthData = [];
+    this.compMarketTrendData = [];
+    this.compMarketTrendChartData = null;
+    // Phase 10 resets
+    this.healthScoresData = [];
+    this.execSummaryData = null;
+    this.recommendationsData = [];
+    // Phase 11 resets
+    this.zombieKeywordsData = [];
+    this.vampireCampaignsData = [];
+    this.actionPlanData = [];
+    // Phase 12 resets
+    this.benchmarkData = [];
+    this.portfolioData = [];
+    this.patternsData = [];
 
     // Reload current tab
     switch (this.activeTab) {
@@ -345,6 +705,21 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       case 1: this.loadPerformance(); break;
       case 2: this.loadRankings(); break;
       case 3: this.loadBudgetDistribution(); break;
+      case 4: this.loadImpressionShare(); break;
+      case 5: this.loadCampaignTypesAndStrategies(); break;
+      case 6: this.loadKeywords(); break;
+      case 7: this.loadDevices(); break;
+      case 8: this.loadGeo(); break;
+      case 9: this.loadHeatmap(); break;
+      case 10: this.loadBudgetIntelligence(); break;
+      case 11: this.loadComparisons(); break;
+      case 12: this.loadSearchTermStrategy(); break;
+      case 13: this.loadAdPerformance(); break;
+      case 14: this.loadCompetitiveIntelligence(); break;
+      case 15: this.loadDemographics(); break;
+      case 16: this.loadExecutiveDashboard(); break;
+      case 17: this.loadFinancialAudit(); break;
+      case 18: this.loadBenchmark(); break;
     }
   }
 
@@ -362,6 +737,51 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         break;
       case 3:
         if (this.budgetData.length === 0) this.loadBudgetDistribution();
+        break;
+      case 4:
+        if (this.impressionShareData.length === 0) this.loadImpressionShare();
+        break;
+      case 5:
+        if (this.campaignTypesData.length === 0) this.loadCampaignTypesAndStrategies();
+        break;
+      case 6:
+        if (this.keywordsData.length === 0) this.loadKeywords();
+        break;
+      case 7:
+        if (this.devicesData.length === 0) this.loadDevices();
+        break;
+      case 8:
+        if (this.geoData.length === 0) this.loadGeo();
+        break;
+      case 9:
+        if (this.heatmapData.length === 0) this.loadHeatmap();
+        break;
+      case 10:
+        if (this.pacingData.length === 0) this.loadBudgetIntelligence();
+        break;
+      case 11:
+        if (!this.comparisonData && this.cpaData.length === 0) this.loadComparisons();
+        break;
+      case 12:
+        if (this.searchTermsData.length === 0) this.loadSearchTermStrategy();
+        break;
+      case 13:
+        if (this.adComparisonData.length === 0) this.loadAdPerformance();
+        break;
+      case 14:
+        if (this.auctionInsightsData.length === 0) this.loadCompetitiveIntelligence();
+        break;
+      case 15:
+        if (this.ageData.length === 0 && this.genderData.length === 0) this.loadDemographics();
+        break;
+      case 16:
+        if (this.healthScoresData.length === 0) this.loadExecutiveDashboard();
+        break;
+      case 17:
+        if (this.zombieKeywordsData.length === 0) this.loadFinancialAudit();
+        break;
+      case 18:
+        if (this.benchmarkData.length === 0) this.loadBenchmark();
         break;
     }
   }
@@ -577,6 +997,1002 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     });
   }
 
+  // ---- Tab 5: Impression Share ----
+
+  loadImpressionShare(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingImpressionShare = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getImpressionShare({
+      granularity: this.isGranularity,
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.impressionShareData = res.data || [];
+        this.buildImpressionShareChart();
+        this.loadingImpressionShare = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingImpressionShare = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private buildImpressionShareChart(): void {
+    const data = this.impressionShareData;
+    if (!data.length) { this.isLineChartData = null; return; }
+
+    const pointRadius = data.length <= 10 ? 5 : 3;
+
+    const chartData: ChartConfiguration<'line'>['data'] = {
+      labels: data.map(d => this.formatPeriod(d.period)),
+      datasets: [
+        {
+          label: 'Impression Share',
+          data: data.map(d => Number(d.avg_impression_share) || 0),
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59,130,246,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointRadius,
+          borderWidth: 2,
+        },
+        {
+          label: 'Top IS',
+          data: data.map(d => Number(d.avg_top_impression_rate) || 0),
+          borderColor: '#10B981',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.4,
+          pointRadius,
+          borderWidth: 2,
+        },
+        {
+          label: 'Perdido (Presupuesto)',
+          data: data.map(d => Number(d.avg_budget_lost_is) || 0),
+          borderColor: '#EF4444',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.4,
+          pointRadius,
+          borderWidth: 2,
+          borderDash: [5, 5],
+        },
+        {
+          label: 'Perdido (Ranking)',
+          data: data.map(d => Number(d.avg_rank_lost_is) || 0),
+          borderColor: '#F59E0B',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.4,
+          pointRadius,
+          borderWidth: 2,
+          borderDash: [5, 5],
+        },
+      ],
+    };
+
+    setTimeout(() => {
+      this.isLineChartData = chartData;
+      this.cdr.detectChanges();
+    });
+  }
+
+  // ---- Tab 6: Campaign Types & Bidding Strategies ----
+
+  loadCampaignTypesAndStrategies(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingCampaignTypes = true;
+    this.loadingBiddingStrategies = true;
+    this.cdr.detectChanges();
+
+    const commonParams = {
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    };
+
+    this.analysisService.getCampaignTypes(commonParams).subscribe({
+      next: (res) => {
+        this.campaignTypesData = res.data || [];
+        this.buildCampaignTypesChart();
+        this.loadingCampaignTypes = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingCampaignTypes = false;
+        this.cdr.detectChanges();
+      },
+    });
+
+    this.analysisService.getBiddingStrategies(commonParams).subscribe({
+      next: (res) => {
+        this.biddingStrategiesData = res.data || [];
+        this.loadingBiddingStrategies = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingBiddingStrategies = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private buildCampaignTypesChart(): void {
+    if (!this.campaignTypesData.length) { this.campaignTypesChartData = null; return; }
+
+    const chartData: ChartConfiguration<'doughnut'>['data'] = {
+      labels: this.campaignTypesData.map(d => this.formatChannelType(d.channel_type)),
+      datasets: [{
+        data: this.campaignTypesData.map(d => Number(d.total_cost)),
+        backgroundColor: this.campaignTypesData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+        borderWidth: 2,
+        borderColor: '#fff',
+      }],
+    };
+
+    setTimeout(() => {
+      this.campaignTypesChartData = chartData;
+      this.cdr.detectChanges();
+    });
+  }
+
+  formatChannelType(type: string): string {
+    const map: Record<string, string> = {
+      SEARCH: 'Busqueda',
+      DISPLAY: 'Display',
+      VIDEO: 'Video',
+      SHOPPING: 'Shopping',
+      PERFORMANCE_MAX: 'Performance Max',
+      DISCOVERY: 'Discovery',
+      SMART: 'Smart',
+      UNKNOWN: 'Desconocido',
+    };
+    return map[type] || type || 'Desconocido';
+  }
+
+  formatBiddingStrategy(type: string): string {
+    const map: Record<string, string> = {
+      TARGET_CPA: 'CPA Objetivo',
+      TARGET_ROAS: 'ROAS Objetivo',
+      MAXIMIZE_CONVERSIONS: 'Max Conversiones',
+      MAXIMIZE_CONVERSION_VALUE: 'Max Valor Conv.',
+      ENHANCED_CPC: 'CPC Mejorado',
+      MANUAL_CPC: 'CPC Manual',
+      MANUAL_CPM: 'CPM Manual',
+      TARGET_IMPRESSION_SHARE: 'IS Objetivo',
+      MAXIMIZE_CLICKS: 'Max Clicks',
+      UNKNOWN: 'Desconocido',
+    };
+    return map[type] || type || 'Desconocido';
+  }
+
+  // ---- Tab 7: Keywords ----
+
+  loadKeywords(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingKeywords = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getKeywords({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      metric: this.keywordMetric,
+      match_type: this.keywordMatchFilter || undefined,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.keywordsData = res.data || [];
+        this.loadingKeywords = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingKeywords = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  getQualityScoreClass(score: number | null): string {
+    if (score == null) return '';
+    if (score >= 7) return 'badge-green';
+    if (score >= 4) return 'badge-yellow';
+    return 'badge-red';
+  }
+
+  // ---- Tab 8: Devices ----
+
+  loadDevices(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingDevices = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getDevices({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.devicesData = res.data || [];
+        this.buildDevicesChart();
+        this.loadingDevices = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingDevices = false;
+        this.cdr.detectChanges();
+      },
+    });
+    this.loadDeviceBidRecommendations();
+    this.loadDeviceExclusions();
+  }
+
+  private buildDevicesChart(): void {
+    if (!this.devicesData.length) { this.devicesChartData = null; return; }
+
+    const chartData: ChartConfiguration<'doughnut'>['data'] = {
+      labels: this.devicesData.map(d => this.formatDevice(d.device)),
+      datasets: [{
+        data: this.devicesData.map(d => Number(d.total_cost)),
+        backgroundColor: this.devicesData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+        borderWidth: 2,
+        borderColor: '#fff',
+      }],
+    };
+
+    setTimeout(() => {
+      this.devicesChartData = chartData;
+      this.cdr.detectChanges();
+    });
+  }
+
+  formatDevice(device: string): string {
+    const map: Record<string, string> = {
+      MOBILE: 'Movil',
+      DESKTOP: 'Escritorio',
+      TABLET: 'Tablet',
+      CONNECTED_TV: 'TV Conectada',
+      UNKNOWN: 'Desconocido',
+    };
+    return map[device] || device;
+  }
+
+  // ---- Tab 9: Geography ----
+
+  loadGeo(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingGeo = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getGeo({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.geoData = res.data || [];
+        this.loadingGeo = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingGeo = false;
+        this.cdr.detectChanges();
+      },
+    });
+    this.loadGeoTierClassification();
+    this.loadRegionalPatterns();
+  }
+
+  // ---- Tab 10: Hourly Heatmap ----
+
+  loadHeatmap(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingHeatmap = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getHourlyHeatmap({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      metric: this.heatmapMetric,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.heatmapData = res.data || [];
+        this.buildHeatmapGrid();
+        this.loadingHeatmap = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingHeatmap = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private buildHeatmapGrid(): void {
+    // 7 days x 24 hours
+    const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
+    let max = 0;
+    for (const row of this.heatmapData) {
+      const day = Number(row.day_of_week);
+      const hour = Number(row.hour_of_day);
+      const val = Number(row.value) || 0;
+      if (day >= 0 && day < 7 && hour >= 0 && hour < 24) {
+        grid[day][hour] = val;
+        if (val > max) max = val;
+      }
+    }
+    this.heatmapGrid = grid;
+    this.heatmapMax = max;
+  }
+
+  getHeatmapColor(value: number): string {
+    if (this.heatmapMax === 0 || value === 0) return 'rgba(0,0,0,0.03)';
+    const intensity = value / this.heatmapMax;
+    const r = Math.round(59 + (239 - 59) * intensity);
+    const g = Math.round(130 + (68 - 130) * intensity);
+    const b = Math.round(246 + (68 - 246) * intensity);
+    return `rgba(${r},${g},${b},${0.15 + intensity * 0.85})`;
+  }
+
+  getDayName(index: number): string {
+    const days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    return days[index] || '';
+  }
+
+  formatHeatmapCell(val: number): string {
+    if (val >= 1000) return (val / 1000).toFixed(0) + 'k';
+    return Math.round(val).toString();
+  }
+
+  formatHeatmapValue(value: number): string {
+    if (this.heatmapMetric === 'cost' || this.heatmapMetric === 'cpc') {
+      return this.formatCurrency(value);
+    }
+    return Math.round(value).toLocaleString('es-CO');
+  }
+
+  // ---- Tab 11: Budget Intelligence ----
+
+  loadBudgetIntelligence(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadPacing();
+    this.loadWaste();
+    this.loadOptimalSchedule();
+    this.loadForecast();
+    this.loadRedistribution();
+    this.loadFullForecast();
+    this.loadScalingHealth();
+    this.loadCompetitiveMarketTrend();
+  }
+
+  private loadPacing(): void {
+    this.loadingPacing = true;
+    this.cdr.detectChanges();
+    this.analysisService.getBudgetPacing({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.pacingData = res.data || [];
+        this.loadingPacing = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingPacing = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadWaste(): void {
+    this.loadingWaste = true;
+    this.cdr.detectChanges();
+    this.analysisService.getWasteDetection({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.wasteData = res.data || [];
+        this.loadingWaste = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingWaste = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadOptimalSchedule(): void {
+    this.loadingOptimalSchedule = true;
+    this.cdr.detectChanges();
+    this.analysisService.getOptimalSchedule({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.optimalScheduleData = res.data || [];
+        this.buildOptimalScheduleGrid();
+        this.loadingOptimalSchedule = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingOptimalSchedule = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private buildOptimalScheduleGrid(): void {
+    const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
+    let max = 0;
+    for (const row of this.optimalScheduleData) {
+      const day = Number(row.day_of_week);
+      const hour = Number(row.hour_of_day);
+      const val = row.cpa != null ? Number(row.cpa) : 0;
+      if (day >= 0 && day < 7 && hour >= 0 && hour < 24) {
+        grid[day][hour] = val;
+        if (val > max) max = val;
+      }
+    }
+    this.optimalScheduleGrid = grid;
+    this.optimalScheduleMax = max;
+  }
+
+  getScheduleColor(value: number): string {
+    if (this.optimalScheduleMax === 0 || value === 0) return 'rgba(0,0,0,0.03)';
+    const intensity = value / this.optimalScheduleMax;
+    // Green (low CPA = good) to Red (high CPA = bad)
+    const r = Math.round(16 + (239 - 16) * intensity);
+    const g = Math.round(185 + (68 - 185) * intensity);
+    const b = Math.round(129 + (68 - 129) * intensity);
+    return `rgba(${r},${g},${b},${0.15 + intensity * 0.85})`;
+  }
+
+  private loadForecast(): void {
+    this.loadingForecast = true;
+    this.cdr.detectChanges();
+    this.analysisService.getBudgetForecast({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.forecastData = res.data || null;
+        this.buildForecastChart();
+        this.loadingForecast = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingForecast = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private buildForecastChart(): void {
+    if (!this.forecastData?.trend?.length) { this.forecastChartData = null; return; }
+    const trend = this.forecastData.trend;
+    const forecast = this.forecastData.forecast;
+
+    const labels = trend.map((d: any) => {
+      const dt = new Date(d.date);
+      return dt.getDate() + '/' + (dt.getMonth() + 1);
+    });
+    const costData = trend.map((d: any) => Number(d.daily_cost));
+    const budgetData = trend.map((d: any) => Number(d.daily_budget));
+
+    // Add forecast points if available
+    if (forecast) {
+      const lastDate = new Date(trend[trend.length - 1].date);
+      for (let i = 1; i <= 7; i++) {
+        const projDate = new Date(lastDate);
+        projDate.setDate(projDate.getDate() + i);
+        labels.push(projDate.getDate() + '/' + (projDate.getMonth() + 1));
+        const projValue = Math.max(0, forecast.avg_daily_cost + forecast.slope * i);
+        costData.push(null); // Real data ends
+        budgetData.push(null);
+      }
+    }
+
+    // Forecast line (projected from last real point)
+    const forecastLine: (number | null)[] = new Array(trend.length).fill(null);
+    if (forecast) {
+      forecastLine[trend.length - 1] = Number(trend[trend.length - 1].daily_cost);
+      for (let i = 1; i <= 7; i++) {
+        forecastLine.push(Math.max(0, forecast.avg_daily_cost + forecast.slope * i));
+      }
+    }
+
+    const chartData: ChartConfiguration<'line'>['data'] = {
+      labels,
+      datasets: [
+        {
+          label: 'Costo Real',
+          data: costData,
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59,130,246,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: trend.length <= 14 ? 4 : 2,
+          borderWidth: 2,
+          spanGaps: false,
+        },
+        {
+          label: 'Presupuesto',
+          data: budgetData,
+          borderColor: '#10B981',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 2,
+          borderDash: [5, 5],
+          spanGaps: false,
+        },
+        {
+          label: 'Proyeccion',
+          data: forecastLine,
+          borderColor: '#F59E0B',
+          backgroundColor: 'rgba(245,158,11,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          borderWidth: 2,
+          borderDash: [8, 4],
+          spanGaps: true,
+        },
+      ],
+    };
+
+    setTimeout(() => {
+      this.forecastChartData = chartData;
+      this.cdr.detectChanges();
+    });
+  }
+
+  private loadRedistribution(): void {
+    this.loadingRedistribution = true;
+    this.cdr.detectChanges();
+    this.analysisService.getBudgetRedistribution({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.redistributionData = res.data || [];
+        this.loadingRedistribution = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingRedistribution = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  getTierClass(tier: string): string {
+    switch (tier) {
+      case 'high_performer': return 'badge-green';
+      case 'low_performer': return 'badge-red';
+      default: return 'badge-yellow';
+    }
+  }
+
+  formatTier(tier: string): string {
+    switch (tier) {
+      case 'high_performer': return 'Alto';
+      case 'low_performer': return 'Bajo';
+      default: return 'Medio';
+    }
+  }
+
+  getPacingClass(pct: number): string {
+    if (pct >= 90 && pct <= 110) return 'text-success';
+    if (pct > 110) return 'text-danger';
+    return 'text-warning';
+  }
+
+  formatScheduleCell(val: number): string {
+    if (val === 0) return '';
+    return '$' + Math.round(val).toLocaleString('es-CO');
+  }
+
+  // ---- Tab 12: Comparaciones & Tendencias ----
+
+  loadComparisons(): void {
+    this.loadTemporalComparison();
+    this.loadCPA();
+    this.loadQSTrend();
+    this.loadCPCTrend();
+    this.loadSeasonality();
+  }
+
+  getComparisonDates(): { from1: string; to1: string; from2: string; to2: string } {
+    const to2 = new Date(this.filterDateTo);
+    const from2 = new Date(this.filterDateFrom);
+    const diffMs = to2.getTime() - from2.getTime();
+
+    const to1 = new Date(from2.getTime() - 86400000); // day before from2
+    const from1 = new Date(to1.getTime() - diffMs);
+
+    return {
+      from1: this.formatDate(from1),
+      to1: this.formatDate(to1),
+      from2: this.filterDateFrom,
+      to2: this.filterDateTo,
+    };
+  }
+
+  loadTemporalComparison(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    const dates = this.getComparisonDates();
+    this.loadingComparison = true;
+    this.analysisService.getTemporalComparison({
+      date_from_1: dates.from1,
+      date_to_1: dates.to1,
+      date_from_2: dates.from2,
+      date_to_2: dates.to2,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.comparisonData = res.data;
+        this.loadingComparison = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingComparison = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  loadCPA(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingCPA = true;
+    this.analysisService.getCPAAnalysis({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.cpaData = res.data || [];
+        this.loadingCPA = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingCPA = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  loadQSTrend(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingQSTrend = true;
+    this.analysisService.getQualityScoreTrend({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.qsTrendData = res.data || [];
+        this.buildQSTrendChart();
+        this.loadingQSTrend = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingQSTrend = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  buildQSTrendChart(): void {
+    if (!this.qsTrendData.length) { this.qsTrendChartData = null; return; }
+    this.qsTrendChartData = {
+      labels: this.qsTrendData.map((r: any) => r.snapshot_date),
+      datasets: [{
+        label: 'Quality Score Promedio',
+        data: this.qsTrendData.map((r: any) => parseFloat(r.avg_quality_score)),
+        borderColor: '#8B5CF6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+      }],
+    };
+  }
+
+  loadCPCTrend(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingCPCTrend = true;
+    this.analysisService.getCPCTrend({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.cpcTrendData = res.data || null;
+        this.buildCPCTrendChart();
+        this.loadingCPCTrend = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingCPCTrend = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  buildCPCTrendChart(): void {
+    if (!this.cpcTrendData?.trend?.length) { this.cpcTrendChartData = null; return; }
+    const trend = this.cpcTrendData.trend;
+    this.cpcTrendChartData = {
+      labels: trend.map((r: any) => r.snapshot_date),
+      datasets: [{
+        label: 'CPC',
+        data: trend.map((r: any) => parseFloat(r.cpc)),
+        borderColor: '#3B82F6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+      }],
+    };
+  }
+
+  loadSeasonality(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingSeasonality = true;
+    this.analysisService.getSeasonality({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.seasonalityData = res.data || null;
+        this.buildSeasonalityChart();
+        this.loadingSeasonality = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingSeasonality = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  buildSeasonalityChart(): void {
+    if (!this.seasonalityData?.by_day_of_week?.length) { this.seasonalityChartData = null; return; }
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+    const data = this.seasonalityData.by_day_of_week;
+    this.seasonalityChartData = {
+      labels: data.map((r: any) => dayNames[r.day_of_week] || '?'),
+      datasets: [
+        {
+          label: 'Costo Promedio',
+          data: data.map((r: any) => parseFloat(r.avg_cost)),
+          backgroundColor: 'rgba(255, 214, 0, 0.6)',
+          borderColor: '#ffd600',
+          borderWidth: 1,
+        },
+        {
+          label: 'Conversiones Promedio',
+          data: data.map((r: any) => parseFloat(r.avg_conversions)),
+          backgroundColor: 'rgba(16, 185, 129, 0.6)',
+          borderColor: '#10B981',
+          borderWidth: 1,
+        },
+      ],
+    };
+  }
+
+  getComparisonArrowClass(pct: number, inverse = false): string {
+    if (pct === 0) return '';
+    const positive = inverse ? pct < 0 : pct > 0;
+    return positive ? 'text-success' : 'text-danger';
+  }
+
+  getComparisonArrow(pct: number): string {
+    if (pct > 0) return '+';
+    return '';
+  }
+
+  // ---- Tab 13: Search Terms & Keyword Strategy ----
+
+  loadSearchTermStrategy(): void {
+    this.loadSearchTerms();
+    this.loadNegativeKeywords();
+    this.loadLongTail();
+    this.loadCannibalization();
+    this.loadKeywordActionPlan();
+    this.loadMatchTypeRecommendations();
+    this.loadCrossAccountKeywords();
+  }
+
+  loadSearchTerms(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingSearchTerms = true;
+    this.analysisService.getSearchTerms({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      limit: 50,
+    }).subscribe({
+      next: (res) => {
+        this.searchTermsData = res.data || [];
+        this.loadingSearchTerms = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingSearchTerms = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  loadNegativeKeywords(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingNegativeKeywords = true;
+    this.analysisService.getNegativeKeywordCandidates({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.negativeKeywordsData = res.data || [];
+        this.loadingNegativeKeywords = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingNegativeKeywords = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  loadLongTail(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingLongTail = true;
+    this.analysisService.getLongTailAnalysis({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.longTailData = res.data || [];
+        this.buildLongTailChart();
+        this.loadingLongTail = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingLongTail = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  buildLongTailChart(): void {
+    if (!this.longTailData.length) { this.longTailChartData = null; return; }
+    const colors = ['#3B82F6', '#F59E0B', '#10B981'];
+    this.longTailChartData = {
+      labels: this.longTailData.map((r: any) => r.category),
+      datasets: [{
+        data: this.longTailData.map((r: any) => parseFloat(r.total_cost)),
+        backgroundColor: colors.slice(0, this.longTailData.length),
+        borderWidth: 0,
+      }],
+    };
+  }
+
+  loadCannibalization(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingCannibalization = true;
+    this.analysisService.getKeywordCannibalization({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.cannibalizationData = res.data || [];
+        this.loadingCannibalization = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingCannibalization = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  // ---- Tab 14: Ad Performance & Fatigue Detection ----
+
+  loadAdPerformance(): void {
+    this.loadAdComparison();
+    this.loadAdFatigue();
+    this.loadAdType();
+  }
+
+  loadAdComparison(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingAdComparison = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAdPerformanceComparison({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.adComparisonData = res.data || [];
+        this.loadingAdComparison = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingAdComparison = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  loadAdFatigue(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingAdFatigue = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAdFatigueDetection({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.adFatigueData = res.data || [];
+        this.loadingAdFatigue = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingAdFatigue = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  loadAdType(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingAdType = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAdTypePerformance({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.adTypeData = res.data || [];
+        this.buildAdTypeChart();
+        this.loadingAdType = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingAdType = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  buildAdTypeChart(): void {
+    if (!this.adTypeData.length) { this.adTypeChartData = null; return; }
+    this.adTypeChartData = {
+      labels: this.adTypeData.map((r: any) => this.formatAdType(r.ad_type)),
+      datasets: [{
+        data: this.adTypeData.map((r: any) => parseFloat(r.total_cost)),
+        backgroundColor: this.adTypeData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+        borderWidth: 2,
+        borderColor: '#fff',
+      }],
+    };
+  }
+
+  formatAdType(type: string): string {
+    const map: Record<string, string> = {
+      RESPONSIVE_SEARCH_AD: 'Busqueda Responsiva',
+      EXPANDED_TEXT_AD: 'Texto Expandido',
+      RESPONSIVE_DISPLAY_AD: 'Display Responsivo',
+      IMAGE_AD: 'Imagen',
+      VIDEO_AD: 'Video',
+      APP_AD: 'App',
+      SHOPPING_PRODUCT_AD: 'Shopping',
+      CALL_AD: 'Llamada',
+      SMART_CAMPAIGN_AD: 'Smart',
+      UNKNOWN: 'Desconocido',
+    };
+    return map[type] || type || 'Desconocido';
+  }
+
+  getFatigueClass(level: string): string {
+    switch (level) {
+      case 'high_fatigue': return 'badge-red';
+      case 'moderate_fatigue': return 'badge-yellow';
+      case 'slight_decline': return 'badge-blue';
+      default: return 'badge-green';
+    }
+  }
+
+  formatFatigueLevel(level: string): string {
+    switch (level) {
+      case 'high_fatigue': return 'Alta Fatiga';
+      case 'moderate_fatigue': return 'Fatiga Moderada';
+      case 'slight_decline': return 'Declive Leve';
+      default: return 'Estable';
+    }
+  }
+
+  getAdGroupGroups(): { adGroupName: string; ads: any[] }[] {
+    const map = new Map<string, any[]>();
+    for (const row of this.adComparisonData) {
+      const key = row.ad_group_name || row.ad_group_id;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(row);
+    }
+    return Array.from(map.entries()).map(([adGroupName, ads]) => ({ adGroupName, ads }));
+  }
+
   // ---- Helpers ----
 
   formatCurrency(value: any): string {
@@ -636,5 +2052,713 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return y + '-' + m + '-' + d;
+  }
+
+  // ---- Tab 15: Competencia (Auction Insights) ----
+
+  loadCompetitiveIntelligence(): void {
+    this.loadAuctionInsights();
+    this.loadCompetitivePosition();
+    this.loadMarketOpportunities();
+  }
+
+  loadAuctionInsights(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingAuctionInsights = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getAuctionInsights({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.auctionInsightsData = res.data || [];
+        this.loadingAuctionInsights = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingAuctionInsights = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  loadCompetitivePosition(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingCompetitive = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getCompetitivePosition({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.competitiveData = res.data || [];
+        this.buildCompetitiveChart();
+        this.loadingCompetitive = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingCompetitive = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private buildCompetitiveChart(): void {
+    const data = this.competitiveData;
+    if (!data.length) { this.competitiveChartData = null; return; }
+
+    this.competitiveChartData = {
+      labels: data.map(d => {
+        const dt = new Date(d.snapshot_date);
+        return dt.getDate() + '/' + (dt.getMonth() + 1);
+      }),
+      datasets: [
+        {
+          label: 'Tu Impression Share',
+          data: data.map(d => Number(d.your_impression_share) * 100),
+          borderColor: CHART_COLORS[0],
+          backgroundColor: CHART_COLORS[0] + '33',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+        },
+        {
+          label: 'Overlap Competidores',
+          data: data.map(d => Number(d.avg_competitor_overlap) * 100),
+          borderColor: CHART_COLORS[3],
+          backgroundColor: 'transparent',
+          borderDash: [5, 5],
+          tension: 0.3,
+          pointRadius: 3,
+        },
+        {
+          label: 'Outranking Share',
+          data: data.map(d => Number(d.avg_outranking) * 100),
+          borderColor: CHART_COLORS[1],
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          pointRadius: 3,
+        },
+      ],
+    };
+  }
+
+  loadMarketOpportunities(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingMarketOpp = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getMarketOpportunities({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.marketOppData = res.data || [];
+        this.loadingMarketOpp = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingMarketOpp = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  // ---- Tab 16: Audiencia (Demographics) ----
+
+  loadDemographics(): void {
+    this.loadAge();
+    this.loadGender();
+  }
+
+  loadAge(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingAge = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getAgeBreakdown({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.ageData = res.data || [];
+        this.buildAgeChart();
+        this.loadingAge = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingAge = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private buildAgeChart(): void {
+    const data = this.ageData;
+    if (!data.length) { this.ageChartData = null; return; }
+
+    this.ageChartData = {
+      labels: data.map(d => d.demographic_value),
+      datasets: [
+        {
+          label: 'Costo',
+          data: data.map(d => Number(d.total_cost) || 0),
+          backgroundColor: CHART_COLORS[0] + 'CC',
+          borderColor: CHART_COLORS[0],
+          borderWidth: 1,
+        },
+        {
+          label: 'Clicks',
+          data: data.map(d => Number(d.total_clicks) || 0),
+          backgroundColor: CHART_COLORS[1] + 'CC',
+          borderColor: CHART_COLORS[1],
+          borderWidth: 1,
+        },
+        {
+          label: 'Conversiones',
+          data: data.map(d => Number(d.total_conversions) || 0),
+          backgroundColor: CHART_COLORS[2] + 'CC',
+          borderColor: CHART_COLORS[2],
+          borderWidth: 1,
+        },
+      ],
+    };
+  }
+
+  loadGender(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingGender = true;
+    this.cdr.detectChanges();
+
+    this.analysisService.getGenderBreakdown({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.genderData = res.data || [];
+        this.buildGenderChart();
+        this.loadingGender = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingGender = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private buildGenderChart(): void {
+    const data = this.genderData;
+    if (!data.length) { this.genderChartData = null; return; }
+
+    this.genderChartData = {
+      labels: data.map(d => d.demographic_value),
+      datasets: [
+        {
+          data: data.map(d => Number(d.total_cost) || 0),
+          backgroundColor: CHART_COLORS.slice(0, data.length),
+          borderWidth: 1,
+        },
+      ],
+    };
+  }
+
+  // ============ Phase 9: Enhanced Tab Methods ============
+
+  private loadDeviceBidRecommendations(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingDeviceBidRecs = true;
+    this.cdr.detectChanges();
+    this.analysisService.getDeviceBidRecommendations({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.deviceBidRecsData = res.data || [];
+        this.loadingDeviceBidRecs = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingDeviceBidRecs = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadDeviceExclusions(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingDeviceExclusions = true;
+    this.cdr.detectChanges();
+    this.analysisService.getDeviceExclusions({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.deviceExclusionsData = res.data || [];
+        this.loadingDeviceExclusions = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingDeviceExclusions = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadGeoTierClassification(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingGeoTier = true;
+    this.cdr.detectChanges();
+    this.analysisService.getGeoTierClassification({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.geoTierData = res.data || [];
+        this.loadingGeoTier = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingGeoTier = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadRegionalPatterns(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingRegionalPatterns = true;
+    this.cdr.detectChanges();
+    this.analysisService.getRegionalPatterns({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.regionalPatternsData = res.data || [];
+        this.loadingRegionalPatterns = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingRegionalPatterns = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadKeywordActionPlan(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingKeywordActionPlan = true;
+    this.cdr.detectChanges();
+    this.analysisService.getKeywordActionPlan({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.keywordActionPlanData = res.data || [];
+        this.loadingKeywordActionPlan = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingKeywordActionPlan = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadMatchTypeRecommendations(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingMatchTypeRecs = true;
+    this.cdr.detectChanges();
+    this.analysisService.getMatchTypeRecommendations({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.matchTypeRecsData = res.data || [];
+        this.loadingMatchTypeRecs = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingMatchTypeRecs = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadCrossAccountKeywords(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingCrossAccountKws = true;
+    this.cdr.detectChanges();
+    this.analysisService.getCrossAccountKeywords({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.crossAccountKwsData = res.data || [];
+        this.loadingCrossAccountKws = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingCrossAccountKws = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadFullForecast(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingFullForecast = true;
+    this.cdr.detectChanges();
+    this.analysisService.getFullForecast({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.fullForecastData = res.data || null;
+        this.loadingFullForecast = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingFullForecast = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadScalingHealth(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingScalingHealth = true;
+    this.cdr.detectChanges();
+    this.analysisService.getScalingHealth({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.scalingHealthData = res.data || [];
+        this.loadingScalingHealth = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingScalingHealth = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadCompetitiveMarketTrend(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingCompMarketTrend = true;
+    this.cdr.detectChanges();
+    this.analysisService.getCompetitiveMarketTrend({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.compMarketTrendData = res.data || [];
+        this.buildCompMarketTrendChart();
+        this.loadingCompMarketTrend = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingCompMarketTrend = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private buildCompMarketTrendChart(): void {
+    if (!this.compMarketTrendData.length) { this.compMarketTrendChartData = null; return; }
+    const labels = this.compMarketTrendData.map((d: any) => d.snapshot_date);
+    const chartData: ChartConfiguration<'line'>['data'] = {
+      labels,
+      datasets: [
+        {
+          label: 'Impression Share %',
+          data: this.compMarketTrendData.map((d: any) => Number(d.avg_impression_share) || 0),
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          fill: true,
+          tension: 0.3,
+          yAxisID: 'y',
+        },
+        {
+          label: 'CPC Promedio',
+          data: this.compMarketTrendData.map((d: any) => Number(d.avg_cpc) || 0),
+          borderColor: '#EF4444',
+          backgroundColor: 'transparent',
+          borderDash: [5, 5],
+          tension: 0.3,
+          yAxisID: 'y1',
+        },
+      ],
+    };
+    setTimeout(() => {
+      this.compMarketTrendChartData = chartData;
+      this.cdr.detectChanges();
+    });
+  }
+
+  getActionBadgeClass(action: string): string {
+    switch (action) {
+      case 'SUBIR': return 'badge-green';
+      case 'MANTENER': return 'badge-yellow';
+      case 'BAJAR': return 'bg-warning';
+      case 'PAUSAR': return 'badge-red';
+      default: return 'badge-outline';
+    }
+  }
+
+  getActionLabel(action: string): string {
+    switch (action) {
+      case 'SUBIR': return 'Subir Puja';
+      case 'MANTENER': return 'Mantener';
+      case 'BAJAR': return 'Bajar Puja';
+      case 'PAUSAR': return 'Pausar';
+      default: return action;
+    }
+  }
+
+  getTierBadgeClass(tier: string): string {
+    switch (tier) {
+      case 'TIER_1': return 'badge-green';
+      case 'TIER_2': return 'badge-yellow';
+      case 'TIER_3': return 'badge-red';
+      default: return 'badge-outline';
+    }
+  }
+
+  getTierLabel(tier: string): string {
+    switch (tier) {
+      case 'TIER_1': return 'Tier 1 - Invertir';
+      case 'TIER_2': return 'Tier 2 - Mantener';
+      case 'TIER_3': return 'Tier 3 - Reducir';
+      default: return tier;
+    }
+  }
+
+  // ============ Phase 10: Dashboard Ejecutivo ============
+
+  loadExecutiveDashboard(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadHealthScores();
+    this.loadExecSummary();
+    this.loadTopRecommendations();
+  }
+
+  private loadHealthScores(): void {
+    this.loadingHealthScores = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAccountHealthScores({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.healthScoresData = res.data || [];
+        this.loadingHealthScores = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingHealthScores = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadExecSummary(): void {
+    this.loadingExecSummary = true;
+    this.cdr.detectChanges();
+    this.analysisService.getExecutiveSummary({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.execSummaryData = res.data || null;
+        this.loadingExecSummary = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingExecSummary = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadTopRecommendations(): void {
+    this.loadingRecommendations = true;
+    this.cdr.detectChanges();
+    this.analysisService.getTopRecommendations({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.recommendationsData = res.data || [];
+        this.loadingRecommendations = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingRecommendations = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  getHealthBadgeClass(status: string): string {
+    switch (status) {
+      case 'HEALTHY': return 'badge-green';
+      case 'ATTENTION': return 'badge-yellow';
+      case 'CRITICAL': return 'badge-red';
+      default: return 'badge-outline';
+    }
+  }
+
+  getHealthLabel(status: string): string {
+    switch (status) {
+      case 'HEALTHY': return 'Saludable';
+      case 'ATTENTION': return 'Atencion';
+      case 'CRITICAL': return 'Critica';
+      default: return status;
+    }
+  }
+
+  getRecActionIcon(type: string): string {
+    switch (type) {
+      case 'PAUSE_CAMPAIGN': return 'pause_circle';
+      case 'EXCLUDE_DEVICE': return 'devices';
+      case 'ADD_NEGATIVE': return 'block';
+      case 'REDUCE_BUDGET': return 'trending_down';
+      default: return 'lightbulb';
+    }
+  }
+
+  // ============ Phase 11: Auditoria Financiera ============
+
+  loadFinancialAudit(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadZombieKeywords();
+    this.loadVampireCampaigns();
+    this.loadConsolidatedActionPlan();
+  }
+
+  private loadZombieKeywords(): void {
+    this.loadingZombieKeywords = true;
+    this.cdr.detectChanges();
+    this.analysisService.getZombieKeywords({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.zombieKeywordsData = res.data || [];
+        this.loadingZombieKeywords = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingZombieKeywords = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadVampireCampaigns(): void {
+    this.loadingVampireCampaigns = true;
+    this.cdr.detectChanges();
+    this.analysisService.getVampireCampaigns({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.vampireCampaignsData = res.data || [];
+        this.loadingVampireCampaigns = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingVampireCampaigns = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadConsolidatedActionPlan(): void {
+    this.loadingActionPlan = true;
+    this.cdr.detectChanges();
+    this.analysisService.getConsolidatedActionPlan({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.actionPlanData = res.data || [];
+        this.loadingActionPlan = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingActionPlan = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  getTotalEstimatedSavings(): number {
+    return this.actionPlanData.reduce((sum: number, row: any) => sum + (Number(row.estimated_monthly_savings) || 0), 0);
+  }
+
+  // ============ Phase 12: Benchmark Cross-Account ============
+
+  loadBenchmark(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadAccountBenchmark();
+    this.loadPortfolioRecommendation();
+    this.loadAccountPatterns();
+  }
+
+  private loadAccountBenchmark(): void {
+    this.loadingBenchmark = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAccountBenchmark({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.benchmarkData = res.data || [];
+        this.loadingBenchmark = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingBenchmark = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadPortfolioRecommendation(): void {
+    this.loadingPortfolio = true;
+    this.cdr.detectChanges();
+    this.analysisService.getPortfolioRecommendation({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.portfolioData = res.data || [];
+        this.loadingPortfolio = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingPortfolio = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadAccountPatterns(): void {
+    this.loadingPatterns = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAccountPatterns({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.patternsData = res.data || [];
+        this.loadingPatterns = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingPatterns = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  getBenchmarkTierClass(tier: string): string {
+    switch (tier) {
+      case 'TOP': return 'badge-green';
+      case 'MID': return 'badge-yellow';
+      case 'BOTTOM': return 'badge-red';
+      default: return 'badge-outline';
+    }
+  }
+
+  getRecClass(rec: string): string {
+    switch (rec) {
+      case 'KEEP': return 'badge-green';
+      case 'REVIEW': return 'badge-yellow';
+      case 'STOP': return 'badge-red';
+      default: return 'badge-outline';
+    }
+  }
+
+  getRecLabel(rec: string): string {
+    switch (rec) {
+      case 'KEEP': return 'Mantener';
+      case 'REVIEW': return 'Revisar';
+      case 'STOP': return 'Detener';
+      default: return rec;
+    }
   }
 }
