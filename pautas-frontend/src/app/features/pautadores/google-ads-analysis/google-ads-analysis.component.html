@@ -979,6 +979,8 @@
                   <th class="text-right">Pacing</th>
                   <th class="text-right">Run Rate Diario</th>
                   <th class="text-right">Proyeccion Mensual</th>
+                  <th class="text-right">Presupuesto Sugerido</th>
+                  <th>Recomendacion</th>
                 </tr>
               </thead>
               <tbody>
@@ -992,6 +994,19 @@
                     </td>
                     <td class="text-right">{{ formatCurrency(row.daily_run_rate) }}</td>
                     <td class="text-right">{{ formatCurrency(row.projected_monthly_spend) }}</td>
+                    <td class="text-right">
+                      <strong>{{ formatCurrency(row.recommended_daily_budget) }}</strong>
+                      @if (row.budget_adjustment > 0) {
+                        <span class="badge badge-success">+{{ formatCurrency(row.budget_adjustment) }}</span>
+                      } @else if (row.budget_adjustment < 0) {
+                        <span class="badge badge-danger">{{ formatCurrency(row.budget_adjustment) }}</span>
+                      }
+                    </td>
+                    <td>
+                      <span class="badge" [class.badge-warning]="row.budget_status?.includes('Increase')" [class.badge-danger]="row.budget_status?.includes('Reduce')" [class.badge-success]="row.budget_status?.includes('On-track')">
+                        {{ row.budget_status }}
+                      </span>
+                    </td>
                   </tr>
                 }
               </tbody>

@@ -671,7 +671,7 @@ export class GoogleAdsAnalysisService {
       ),
       account_metrics AS (
         SELECT
-          cd.customer_account_id,
+          c.customer_account_id,
           c.customer_account_name,
           co.name AS country_name,
           SUM(gs.cost) AS total_cost,
@@ -681,16 +681,15 @@ export class GoogleAdsAnalysisService {
           COUNT(DISTINCT c.id) AS campaigns_count,
           MIN(gs.snapshot_date) AS first_date,
           MAX(gs.snapshot_date) AS last_date,
-          COALESCE(ab.total_daily_budget, 0) AS total_distinct_daily_budget,
+          COALESCE(ab.total_daily_budget, 0) AS total_daily_budget,
           COALESCE(ab.avg_cpa, 0) AS account_avg_cpa,
           COALESCE(ab.avg_cpc, 0) AS account_avg_cpc
         FROM google_ads_snapshots gs
         JOIN campaigns c ON c.id = gs.campaign_id
         LEFT JOIN countries co ON co.id = c.country_id
-        LEFT JOIN campaign_data cd ON cd.id = c.id
         LEFT JOIN account_budgets ab ON ab.customer_account_id = c.customer_account_id
         WHERE ${conditions.join(' AND ')}
-        GROUP BY cd.customer_account_id, c.customer_account_name, co.name, ab.total_daily_budget, ab.avg_cpa, ab.avg_cpc
+        GROUP BY c.customer_account_id, c.customer_account_name, co.name, ab.total_daily_budget, ab.avg_cpa, ab.avg_cpc
       ),
       with_recommendations AS (
         SELECT
@@ -698,7 +697,7 @@ export class GoogleAdsAnalysisService {
           customer_account_name,
           country_name,
           total_cost,
-          total_distinct_daily_budget,
+          total_daily_budget,
           days_with_data,
           campaigns_count,
           first_date,
@@ -707,8 +706,8 @@ export class GoogleAdsAnalysisService {
           total_conversions,
           account_avg_cpa,
           account_avg_cpc,
-          CASE WHEN total_distinct_daily_budget > 0 AND days_with_data > 0
-            THEN ROUND((total_cost / (total_distinct_daily_budget * days_with_data)) * 100, 2)
+          CASE WHEN total_daily_budget > 0 AND days_with_data > 0
+            THEN ROUND((total_cost / (total_daily_budget * days_with_data)) * 100, 2)
             ELSE 0
           END AS pacing_pct,
           CASE WHEN days_with_data > 0
@@ -723,16 +722,16 @@ export class GoogleAdsAnalysisService {
           CASE
             WHEN total_conversions = 0 AND total_cost > 0 THEN
               -- No conversions: reduce by 50%
-              ROUND((total_distinct_daily_budget * 0.5)::numeric, 2)
+              ROUND((total_daily_budget * 0.5)::numeric, 2)
             WHEN total_conversions > 0 AND total_cost > 0 THEN
               -- Has conversions: calculate optimal based on target (10 conversions/month)
               ROUND(((total_conversions / days_with_data) * 30 * (total_cost / NULLIF(total_conversions, 0)) / 10)::numeric, 2)
             WHEN total_clicks > 0 AND total_cost > 0 THEN
               -- Has clicks but no conversions: assess for optimization
-              ROUND((total_distinct_daily_budget * 0.7)::numeric, 2)
+              ROUND((total_daily_budget * 0.7)::numeric, 2)
             ELSE
               -- No data: maintain current
-              total_distinct_daily_budget
+              total_daily_budget
           END AS recommended_daily_budget
         FROM account_metrics
       )
@@ -741,7 +740,7 @@ export class GoogleAdsAnalysisService {
         customer_account_name,
         country_name,
         total_cost,
-        total_distinct_daily_budget,
+        total_daily_budget,
         days_with_data,
         campaigns_count,
         first_date,
@@ -751,17 +750,17 @@ export class GoogleAdsAnalysisService {
         projected_monthly_spend,
         recommended_daily_budget,
         CASE
-          WHEN pacing_pct <= 80 AND recommended_daily_budget > total_distinct_daily_budget
+          WHEN pacing_pct <= 80 AND recommended_daily_budget > total_daily_budget
             THEN 'Increase budget - under-pacing'
-          WHEN pacing_pct >= 120 AND recommended_daily_budget < total_distinct_daily_budget
+          WHEN pacing_pct >= 120 AND recommended_daily_budget < total_daily_budget
             THEN 'Reduce budget - over-pacing'
-          WHEN recommended_daily_budget > total_distinct_daily_budget
+          WHEN recommended_daily_budget > total_daily_budget
             THEN 'Increase budget for better ROI'
-          WHEN recommended_daily_budget < total_distinct_daily_budget
+          WHEN recommended_daily_budget < total_daily_budget
             THEN 'Reduce budget - low conversion rate'
           ELSE 'On-track - maintain budget'
         END AS budget_status,
-        ROUND((recommended_daily_budget - total_distinct_daily_budget)::numeric, 2) AS budget_adjustment
+        ROUND((recommended_daily_budget - total_daily_budget)::numeric, 2) AS budget_adjustment
       FROM with_recommendations
       ORDER BY total_cost DESC
     `;
