@@ -4,10 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
+import { HttpClient } from '@angular/common/http';
 import { GoogleAdsAnalysisService } from './google-ads-analysis.service';
 import { CountryService } from '../../../core/services/country.service';
 import { Country } from '../../../core/models/country.model';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
+import { AuthService } from '../../../core/services/auth.service';
+import { API_URLS } from '../../../core/constants/api-urls';
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#F97316'];
 
@@ -25,6 +28,13 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   filterDateFrom = '';
   filterDateTo = '';
   filterCountryId: number | null = null;
+
+  // Sync & Auth
+  syncing = false;
+  isPautador = false;
+  isAdmin = false;
+  showOnlyMine = true;
+  myAccountIds: string[] = [];
 
   // Tab 1 - Spending Trend
   granularity = 'daily';
@@ -247,77 +257,34 @@ export class GoogleAdsAnalysisComponent implements OnInit {
 
   activeTab = 0;
 
-  // Tab 5 - Impression Share
-  isGranularity = 'daily';
-  loadingImpressionShare = false;
-  impressionShareData: any[] = [];
-  isLineChartData: ChartConfiguration<'line'>['data'] | null = null;
-  isLineChartOptions: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16 } },
-      tooltip: {
-        enabled: true,
-        mode: 'index',
-        intersect: false,
-        backgroundColor: 'rgba(20,20,20,0.92)',
-        cornerRadius: 8,
-        padding: { top: 10, bottom: 10, left: 14, right: 14 },
-        titleFont: { size: 13, weight: 'bold' },
-        bodyFont: { size: 12 },
-        bodySpacing: 6,
-        usePointStyle: true,
-        callbacks: {
-          label: (ctx) => {
-            const val = Number(ctx.parsed.y) || 0;
-            return ` ${ctx.dataset.label}: ${val.toFixed(1)}%`;
-          },
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true, max: 100,
-        grid: { color: 'rgba(0,0,0,0.04)' },
-        ticks: { callback: (value) => value + '%' },
-        title: { display: true, text: 'Porcentaje', font: { size: 11 }, color: '#888' },
-      },
-      x: { grid: { display: false } },
-    },
-  };
-
-  // Tab 6 - Campaign Types & Bidding Strategies
+  // Tab 4 - Campaign Types & Bidding Strategies
   loadingCampaignTypes = false;
   campaignTypesData: any[] = [];
   campaignTypesChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
   loadingBiddingStrategies = false;
   biddingStrategiesData: any[] = [];
 
-  // Tab 7 - Keywords
+  // Tab 5 - Keywords
   loadingKeywords = false;
   keywordsData: any[] = [];
   keywordMetric = 'clicks';
   keywordMatchFilter = '';
+  keywordGroupBy = 'flat'; // flat | account | campaign
+  keywordsGrouped: { label: string; rows: any[] }[] = [];
 
-  // Tab 8 - Devices
+  // Tab 6 - Devices
   loadingDevices = false;
   devicesData: any[] = [];
   devicesChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
 
-  // Tab 9 - Geography
-  loadingGeo = false;
-  geoData: any[] = [];
-
-  // Tab 10 - Hourly Heatmap
+  // Tab 7 - Hourly Heatmap
   loadingHeatmap = false;
   heatmapData: { hour_of_day: number; day_of_week: number; value: number }[] = [];
   heatmapGrid: number[][] = [];
   heatmapMax = 0;
   heatmapMetric = 'clicks';
 
-  // Tab 11 - Budget Intelligence
+  // Tab 8 - Budget Intelligence
   loadingPacing = false;
   pacingData: any[] = [];
   loadingWaste = false;
@@ -332,7 +299,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   loadingRedistribution = false;
   redistributionData: any[] = [];
 
-  // Tab 12 - Comparaciones & Tendencias
+  // Tab 9 - Comparaciones & Tendencias
   comparisonMode = 'week'; // week | month | custom
   comparisonData: any = null;
   loadingComparison = false;
@@ -359,7 +326,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     },
   };
 
-  // Tab 13 - Search Terms & Keyword Strategy
+  // Tab 10 - Search Terms & Keyword Strategy
   searchTermsData: any[] = [];
   loadingSearchTerms = false;
   negativeKeywordsData: any[] = [];
@@ -370,16 +337,19 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   cannibalizationData: any[] = [];
   loadingCannibalization = false;
 
-  // Tab 14 - Ad Performance & Fatigue Detection
+  // Tab 11 - Ad Performance & Fatigue Detection
   adComparisonData: any[] = [];
   loadingAdComparison = false;
   adFatigueData: any[] = [];
   loadingAdFatigue = false;
   adTypeData: any[] = [];
   adTypeChartData: ChartConfiguration<'doughnut'>['data'] | null = null;
+  // Landing page analysis
+  landingPageData: any[] = [];
+  loadingLandingPages = false;
   loadingAdType = false;
 
-  // Tab 15 - Competencia (Auction Insights)
+  // Tab 12 - Competencia (Auction Insights)
   auctionInsightsData: any[] = [];
   loadingAuctionInsights = false;
   competitiveData: any[] = [];
@@ -388,7 +358,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   marketOppData: any[] = [];
   loadingMarketOpp = false;
 
-  // Tab 16 - Audiencia (Demographics)
+  // Tab 13 - Audiencia (Demographics)
   ageData: any[] = [];
   loadingAge = false;
   ageChartData: ChartConfiguration<'bar'>['data'] | null = null;
@@ -403,6 +373,12 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   execSummaryData: any = null;
   loadingRecommendations = false;
   recommendationsData: any[] = [];
+  // Conversion Funnel
+  conversionFunnelData: any[] = [];
+  loadingConversionFunnel = false;
+  // Month-over-Month Comparison
+  monthComparisonData: any = null;
+  loadingMonthComparison = false;
 
   // Phase 11: Auditoria Financiera
   loadingZombieKeywords = false;
@@ -420,18 +396,28 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   loadingPatterns = false;
   patternsData: any[] = [];
 
+  // Tab 17 - Recursos (Assets)
+  assetSummaryData: any[] = [];
+  loadingAssetSummary = false;
+  headlineData: any[] = [];
+  loadingHeadlines = false;
+  descriptionData: any[] = [];
+  loadingDescriptions = false;
+  sitelinkData: any[] = [];
+  loadingSitelinks = false;
+
+  // Geography
+  geoData: any[] = [];
+  loadingGeo = false;
+  countryEfficiencyData: any[] = [];
+  loadingCountryEfficiency = false;
+
   // Phase 9: Enhanced Tabs
   // Devices enhancements
   loadingDeviceBidRecs = false;
   deviceBidRecsData: any[] = [];
   loadingDeviceExclusions = false;
   deviceExclusionsData: any[] = [];
-
-  // Geo enhancements
-  loadingGeoTier = false;
-  geoTierData: any[] = [];
-  loadingRegionalPatterns = false;
-  regionalPatternsData: any[] = [];
 
   // Keywords enhancements
   loadingKeywordActionPlan = false;
@@ -462,9 +448,28 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     private analysisService: GoogleAdsAnalysisService,
     private countryService: CountryService,
     private cdr: ChangeDetectorRef,
+    private http: HttpClient,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
+    // Set role flags
+    const role = this.authService.userRole();
+    this.isPautador = role === 'pautador';
+    this.isAdmin = role === 'admin';
+    if (!this.isPautador) this.showOnlyMine = false;
+
+    // If pautador, fetch their assigned accounts
+    if (this.isPautador) {
+      this.http.get<any>(API_URLS.googleAds.myAccounts).subscribe({
+        next: (res) => {
+          this.myAccountIds = res.data || [];
+          this.cdr.detectChanges();
+        },
+        error: () => {},
+      });
+    }
+
     this.countryService.getAll().subscribe(res => {
       this.countries = res.data;
       this.cdr.detectChanges();
@@ -512,6 +517,28 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     });
   }
 
+  triggerSync(): void {
+    if (this.syncing) return;
+    this.syncing = true;
+    this.cdr.detectChanges();
+    this.http.post<any>(API_URLS.googleAds.sync, {}).subscribe({
+      next: () => {
+        this.syncing = false;
+        this.applyFilters();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.syncing = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  // Helper: should filter by pautador's accounts
+  get myAccountsFilter(): boolean {
+    return this.isPautador && this.showOnlyMine && this.myAccountIds.length > 0;
+  }
+
   applyFilters(): void {
     // Invalidate cached data for all tabs so they reload with new filters
     this.spendingTrendData = [];
@@ -522,15 +549,12 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     this.rankingsBarData = null;
     this.budgetData = [];
     this.doughnutChartData = null;
-    this.impressionShareData = [];
-    this.isLineChartData = null;
     this.campaignTypesData = [];
     this.campaignTypesChartData = null;
     this.biddingStrategiesData = [];
     this.keywordsData = [];
     this.devicesData = [];
     this.devicesChartData = null;
-    this.geoData = [];
     this.heatmapData = [];
     this.heatmapGrid = [];
     this.pacingData = [];
@@ -568,8 +592,6 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     // Phase 9 resets
     this.deviceBidRecsData = [];
     this.deviceExclusionsData = [];
-    this.geoTierData = [];
-    this.regionalPatternsData = [];
     this.keywordActionPlanData = [];
     this.matchTypeRecsData = [];
     this.crossAccountKwsData = [];
@@ -596,21 +618,21 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       case 1: this.loadPerformance(); break;
       case 2: this.loadRankings(); break;
       case 3: this.loadBudgetDistribution(); break;
-      case 4: this.loadImpressionShare(); break;
-      case 5: this.loadCampaignTypesAndStrategies(); break;
-      case 6: this.loadKeywords(); break;
-      case 7: this.loadDevices(); break;
-      case 8: this.loadGeo(); break;
-      case 9: this.loadHeatmap(); break;
-      case 10: this.loadBudgetIntelligence(); break;
-      case 11: this.loadComparisons(); break;
-      case 12: this.loadSearchTermStrategy(); break;
-      case 13: this.loadAdPerformance(); break;
-      case 14: this.loadCompetitiveIntelligence(); break;
-      case 15: this.loadDemographics(); break;
-      case 16: this.loadExecutiveDashboard(); break;
-      case 17: this.loadFinancialAudit(); break;
-      case 18: this.loadBenchmark(); break;
+      case 4: this.loadCampaignTypesAndStrategies(); break;
+      case 5: this.loadKeywords(); break;
+      case 6: this.loadDevices(); break;
+      case 7: this.loadHeatmap(); break;
+      case 8: this.loadBudgetIntelligence(); break;
+      case 9: this.loadComparisons(); break;
+      case 10: this.loadSearchTermStrategy(); break;
+      case 11: this.loadAdPerformance(); break;
+      case 12: this.loadCompetitiveIntelligence(); break;
+      case 13: this.loadDemographics(); break;
+      case 14: this.loadExecutiveDashboard(); break;
+      case 15: this.loadFinancialAudit(); break;
+      case 16: this.loadBenchmark(); break;
+      case 17: this.loadAssets(); break;
+      case 18: this.loadGeo(); break;
     }
   }
 
@@ -631,15 +653,12 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     this.rankingsBarData = null;
     this.budgetData = [];
     this.doughnutChartData = null;
-    this.impressionShareData = [];
-    this.isLineChartData = null;
     this.campaignTypesData = [];
     this.campaignTypesChartData = null;
     this.biddingStrategiesData = [];
     this.keywordsData = [];
     this.devicesData = [];
     this.devicesChartData = null;
-    this.geoData = [];
     this.heatmapData = [];
     this.heatmapGrid = [];
     this.pacingData = [];
@@ -677,8 +696,6 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     // Phase 9 resets
     this.deviceBidRecsData = [];
     this.deviceExclusionsData = [];
-    this.geoTierData = [];
-    this.regionalPatternsData = [];
     this.keywordActionPlanData = [];
     this.matchTypeRecsData = [];
     this.crossAccountKwsData = [];
@@ -705,21 +722,21 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       case 1: this.loadPerformance(); break;
       case 2: this.loadRankings(); break;
       case 3: this.loadBudgetDistribution(); break;
-      case 4: this.loadImpressionShare(); break;
-      case 5: this.loadCampaignTypesAndStrategies(); break;
-      case 6: this.loadKeywords(); break;
-      case 7: this.loadDevices(); break;
-      case 8: this.loadGeo(); break;
-      case 9: this.loadHeatmap(); break;
-      case 10: this.loadBudgetIntelligence(); break;
-      case 11: this.loadComparisons(); break;
-      case 12: this.loadSearchTermStrategy(); break;
-      case 13: this.loadAdPerformance(); break;
-      case 14: this.loadCompetitiveIntelligence(); break;
-      case 15: this.loadDemographics(); break;
-      case 16: this.loadExecutiveDashboard(); break;
-      case 17: this.loadFinancialAudit(); break;
-      case 18: this.loadBenchmark(); break;
+      case 4: this.loadCampaignTypesAndStrategies(); break;
+      case 5: this.loadKeywords(); break;
+      case 6: this.loadDevices(); break;
+      case 7: this.loadHeatmap(); break;
+      case 8: this.loadBudgetIntelligence(); break;
+      case 9: this.loadComparisons(); break;
+      case 10: this.loadSearchTermStrategy(); break;
+      case 11: this.loadAdPerformance(); break;
+      case 12: this.loadCompetitiveIntelligence(); break;
+      case 13: this.loadDemographics(); break;
+      case 14: this.loadExecutiveDashboard(); break;
+      case 15: this.loadFinancialAudit(); break;
+      case 16: this.loadBenchmark(); break;
+      case 17: this.loadAssets(); break;
+      case 18: this.loadGeo(); break;
     }
   }
 
@@ -739,49 +756,49 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         if (this.budgetData.length === 0) this.loadBudgetDistribution();
         break;
       case 4:
-        if (this.impressionShareData.length === 0) this.loadImpressionShare();
-        break;
-      case 5:
         if (this.campaignTypesData.length === 0) this.loadCampaignTypesAndStrategies();
         break;
-      case 6:
+      case 5:
         if (this.keywordsData.length === 0) this.loadKeywords();
         break;
-      case 7:
+      case 6:
         if (this.devicesData.length === 0) this.loadDevices();
         break;
-      case 8:
-        if (this.geoData.length === 0) this.loadGeo();
-        break;
-      case 9:
+      case 7:
         if (this.heatmapData.length === 0) this.loadHeatmap();
         break;
-      case 10:
+      case 8:
         if (this.pacingData.length === 0) this.loadBudgetIntelligence();
         break;
-      case 11:
+      case 9:
         if (!this.comparisonData && this.cpaData.length === 0) this.loadComparisons();
         break;
-      case 12:
+      case 10:
         if (this.searchTermsData.length === 0) this.loadSearchTermStrategy();
         break;
-      case 13:
+      case 11:
         if (this.adComparisonData.length === 0) this.loadAdPerformance();
         break;
-      case 14:
+      case 12:
         if (this.auctionInsightsData.length === 0) this.loadCompetitiveIntelligence();
         break;
-      case 15:
+      case 13:
         if (this.ageData.length === 0 && this.genderData.length === 0) this.loadDemographics();
         break;
-      case 16:
+      case 14:
         if (this.healthScoresData.length === 0) this.loadExecutiveDashboard();
         break;
-      case 17:
+      case 15:
         if (this.zombieKeywordsData.length === 0) this.loadFinancialAudit();
         break;
-      case 18:
+      case 16:
         if (this.benchmarkData.length === 0) this.loadBenchmark();
+        break;
+      case 17:
+        if (this.assetSummaryData.length === 0) this.loadAssets();
+        break;
+      case 18:
+        if (this.geoData.length === 0) this.loadGeo();
         break;
     }
   }
@@ -798,6 +815,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.spendingTrendData = res.data || [];
@@ -870,6 +888,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.performanceData = res.data || [];
@@ -997,93 +1016,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     });
   }
 
-  // ---- Tab 5: Impression Share ----
-
-  loadImpressionShare(): void {
-    if (!this.filterDateFrom || !this.filterDateTo) return;
-    this.loadingImpressionShare = true;
-    this.cdr.detectChanges();
-
-    this.analysisService.getImpressionShare({
-      granularity: this.isGranularity,
-      date_from: this.filterDateFrom,
-      date_to: this.filterDateTo,
-      country_id: this.filterCountryId || undefined,
-    }).subscribe({
-      next: (res) => {
-        this.impressionShareData = res.data || [];
-        this.buildImpressionShareChart();
-        this.loadingImpressionShare = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.loadingImpressionShare = false;
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  private buildImpressionShareChart(): void {
-    const data = this.impressionShareData;
-    if (!data.length) { this.isLineChartData = null; return; }
-
-    const pointRadius = data.length <= 10 ? 5 : 3;
-
-    const chartData: ChartConfiguration<'line'>['data'] = {
-      labels: data.map(d => this.formatPeriod(d.period)),
-      datasets: [
-        {
-          label: 'Impression Share',
-          data: data.map(d => Number(d.avg_impression_share) || 0),
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59,130,246,0.08)',
-          fill: true,
-          tension: 0.4,
-          pointRadius,
-          borderWidth: 2,
-        },
-        {
-          label: 'Top IS',
-          data: data.map(d => Number(d.avg_top_impression_rate) || 0),
-          borderColor: '#10B981',
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.4,
-          pointRadius,
-          borderWidth: 2,
-        },
-        {
-          label: 'Perdido (Presupuesto)',
-          data: data.map(d => Number(d.avg_budget_lost_is) || 0),
-          borderColor: '#EF4444',
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.4,
-          pointRadius,
-          borderWidth: 2,
-          borderDash: [5, 5],
-        },
-        {
-          label: 'Perdido (Ranking)',
-          data: data.map(d => Number(d.avg_rank_lost_is) || 0),
-          borderColor: '#F59E0B',
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.4,
-          pointRadius,
-          borderWidth: 2,
-          borderDash: [5, 5],
-        },
-      ],
-    };
-
-    setTimeout(() => {
-      this.isLineChartData = chartData;
-      this.cdr.detectChanges();
-    });
-  }
-
-  // ---- Tab 6: Campaign Types & Bidding Strategies ----
+  // ---- Tab 4: Campaign Types & Bidding Strategies ----
 
   loadCampaignTypesAndStrategies(): void {
     if (!this.filterDateFrom || !this.filterDateTo) return;
@@ -1095,6 +1028,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     };
 
     this.analysisService.getCampaignTypes(commonParams).subscribe({
@@ -1172,7 +1106,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     return map[type] || type || 'Desconocido';
   }
 
-  // ---- Tab 7: Keywords ----
+  // ---- Tab 5: Keywords ----
 
   loadKeywords(): void {
     if (!this.filterDateFrom || !this.filterDateTo) return;
@@ -1185,9 +1119,12 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       metric: this.keywordMetric,
       match_type: this.keywordMatchFilter || undefined,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+      group_by: this.keywordGroupBy !== 'flat' ? this.keywordGroupBy : undefined,
     }).subscribe({
       next: (res) => {
         this.keywordsData = res.data || [];
+        this.buildKeywordGroups();
         this.loadingKeywords = false;
         this.cdr.detectChanges();
       },
@@ -1198,6 +1135,26 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     });
   }
 
+  onKeywordGroupByChange(mode: string): void {
+    this.keywordGroupBy = mode;
+    this.loadKeywords();
+  }
+
+  private buildKeywordGroups(): void {
+    if (this.keywordGroupBy === 'flat' || !this.keywordsData.length) {
+      this.keywordsGrouped = [];
+      return;
+    }
+    const groupKey = this.keywordGroupBy === 'account' ? 'customer_account_name' : 'campaign_name';
+    const map = new Map<string, any[]>();
+    for (const row of this.keywordsData) {
+      const key = row[groupKey] || 'Sin asignar';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(row);
+    }
+    this.keywordsGrouped = Array.from(map.entries()).map(([label, rows]) => ({ label, rows }));
+  }
+
   getQualityScoreClass(score: number | null): string {
     if (score == null) return '';
     if (score >= 7) return 'badge-green';
@@ -1205,7 +1162,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     return 'badge-red';
   }
 
-  // ---- Tab 8: Devices ----
+  // ---- Tab 6: Devices ----
 
   loadDevices(): void {
     if (!this.filterDateFrom || !this.filterDateTo) return;
@@ -1216,6 +1173,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.devicesData = res.data || [];
@@ -1262,33 +1220,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     return map[device] || device;
   }
 
-  // ---- Tab 9: Geography ----
-
-  loadGeo(): void {
-    if (!this.filterDateFrom || !this.filterDateTo) return;
-    this.loadingGeo = true;
-    this.cdr.detectChanges();
-
-    this.analysisService.getGeo({
-      date_from: this.filterDateFrom,
-      date_to: this.filterDateTo,
-      country_id: this.filterCountryId || undefined,
-    }).subscribe({
-      next: (res) => {
-        this.geoData = res.data || [];
-        this.loadingGeo = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.loadingGeo = false;
-        this.cdr.detectChanges();
-      },
-    });
-    this.loadGeoTierClassification();
-    this.loadRegionalPatterns();
-  }
-
-  // ---- Tab 10: Hourly Heatmap ----
+  // ---- Tab 7: Hourly Heatmap ----
 
   loadHeatmap(): void {
     if (!this.filterDateFrom || !this.filterDateTo) return;
@@ -1300,6 +1232,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_to: this.filterDateTo,
       metric: this.heatmapMetric,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.heatmapData = res.data || [];
@@ -1315,16 +1248,17 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   }
 
   private buildHeatmapGrid(): void {
-    // 7 days x 24 hours
+    // 7 days x 24 hours (ISODOW: 1=Mon..7=Sun -> index 0..6)
     const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
     let max = 0;
     for (const row of this.heatmapData) {
-      const day = Number(row.day_of_week);
+      const isodow = Number(row.day_of_week); // 1=Mon, 7=Sun
+      const day = isodow - 1; // 0=Mon, 6=Sun
       const hour = Number(row.hour_of_day);
       const val = Number(row.value) || 0;
       if (day >= 0 && day < 7 && hour >= 0 && hour < 24) {
-        grid[day][hour] = val;
-        if (val > max) max = val;
+        grid[day][hour] += val;
+        if (grid[day][hour] > max) max = grid[day][hour];
       }
     }
     this.heatmapGrid = grid;
@@ -1378,6 +1312,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.pacingData = res.data || [];
@@ -1395,6 +1330,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.wasteData = res.data || [];
@@ -1412,6 +1348,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.optimalScheduleData = res.data || [];
@@ -1427,7 +1364,8 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
     let max = 0;
     for (const row of this.optimalScheduleData) {
-      const day = Number(row.day_of_week);
+      const isodow = Number(row.day_of_week); // 1=Mon, 7=Sun
+      const day = isodow - 1; // 0=Mon, 6=Sun
       const hour = Number(row.hour_of_day);
       const val = row.cpa != null ? Number(row.cpa) : 0;
       if (day >= 0 && day < 7 && hour >= 0 && hour < 24) {
@@ -1456,6 +1394,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.forecastData = res.data || null;
@@ -1555,6 +1494,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.redistributionData = res.data || [];
@@ -1628,6 +1568,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from_2: dates.from2,
       date_to_2: dates.to2,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.comparisonData = res.data;
@@ -1645,6 +1586,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.cpaData = res.data || [];
@@ -1662,6 +1604,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.qsTrendData = res.data || [];
@@ -1696,6 +1639,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.cpcTrendData = res.data || null;
@@ -1731,6 +1675,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.seasonalityData = res.data || null;
@@ -1797,6 +1742,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
       limit: 50,
     }).subscribe({
       next: (res) => {
@@ -1815,6 +1761,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.negativeKeywordsData = res.data || [];
@@ -1832,6 +1779,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.longTailData = res.data || [];
@@ -1863,6 +1811,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.cannibalizationData = res.data || [];
@@ -1879,6 +1828,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     this.loadAdComparison();
     this.loadAdFatigue();
     this.loadAdType();
+    this.loadLandingPages();
   }
 
   loadAdComparison(): void {
@@ -1889,6 +1839,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.adComparisonData = res.data || [];
@@ -1907,6 +1858,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.adFatigueData = res.data || [];
@@ -1925,6 +1877,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.adTypeData = res.data || [];
@@ -2071,6 +2024,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.auctionInsightsData = res.data || [];
@@ -2093,6 +2047,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.competitiveData = res.data || [];
@@ -2156,6 +2111,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.marketOppData = res.data || [];
@@ -2166,6 +2122,25 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         this.loadingMarketOpp = false;
         this.cdr.detectChanges();
       },
+    });
+  }
+
+  private loadLandingPages(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingLandingPages = true;
+    this.cdr.detectChanges();
+    this.analysisService.getLandingPages({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res) => {
+        this.landingPageData = res.data || [];
+        this.loadingLandingPages = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingLandingPages = false; this.cdr.detectChanges(); },
     });
   }
 
@@ -2185,6 +2160,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.ageData = res.data || [];
@@ -2240,6 +2216,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.genderData = res.data || [];
@@ -2280,6 +2257,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.deviceBidRecsData = res.data || [];
@@ -2298,6 +2276,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.deviceExclusionsData = res.data || [];
@@ -2305,42 +2284,6 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => { this.loadingDeviceExclusions = false; this.cdr.detectChanges(); },
-    });
-  }
-
-  private loadGeoTierClassification(): void {
-    if (!this.filterDateFrom || !this.filterDateTo) return;
-    this.loadingGeoTier = true;
-    this.cdr.detectChanges();
-    this.analysisService.getGeoTierClassification({
-      date_from: this.filterDateFrom,
-      date_to: this.filterDateTo,
-      country_id: this.filterCountryId || undefined,
-    }).subscribe({
-      next: (res) => {
-        this.geoTierData = res.data || [];
-        this.loadingGeoTier = false;
-        this.cdr.detectChanges();
-      },
-      error: () => { this.loadingGeoTier = false; this.cdr.detectChanges(); },
-    });
-  }
-
-  private loadRegionalPatterns(): void {
-    if (!this.filterDateFrom || !this.filterDateTo) return;
-    this.loadingRegionalPatterns = true;
-    this.cdr.detectChanges();
-    this.analysisService.getRegionalPatterns({
-      date_from: this.filterDateFrom,
-      date_to: this.filterDateTo,
-      country_id: this.filterCountryId || undefined,
-    }).subscribe({
-      next: (res) => {
-        this.regionalPatternsData = res.data || [];
-        this.loadingRegionalPatterns = false;
-        this.cdr.detectChanges();
-      },
-      error: () => { this.loadingRegionalPatterns = false; this.cdr.detectChanges(); },
     });
   }
 
@@ -2352,6 +2295,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.keywordActionPlanData = res.data || [];
@@ -2370,6 +2314,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.matchTypeRecsData = res.data || [];
@@ -2388,6 +2333,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.crossAccountKwsData = res.data || [];
@@ -2406,6 +2352,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.fullForecastData = res.data || null;
@@ -2424,6 +2371,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.scalingHealthData = res.data || [];
@@ -2442,6 +2390,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.compMarketTrendData = res.data || [];
@@ -2505,24 +2454,6 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     }
   }
 
-  getTierBadgeClass(tier: string): string {
-    switch (tier) {
-      case 'TIER_1': return 'badge-green';
-      case 'TIER_2': return 'badge-yellow';
-      case 'TIER_3': return 'badge-red';
-      default: return 'badge-outline';
-    }
-  }
-
-  getTierLabel(tier: string): string {
-    switch (tier) {
-      case 'TIER_1': return 'Tier 1 - Invertir';
-      case 'TIER_2': return 'Tier 2 - Mantener';
-      case 'TIER_3': return 'Tier 3 - Reducir';
-      default: return tier;
-    }
-  }
-
   // ============ Phase 10: Dashboard Ejecutivo ============
 
   loadExecutiveDashboard(): void {
@@ -2530,6 +2461,8 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     this.loadHealthScores();
     this.loadExecSummary();
     this.loadTopRecommendations();
+    this.loadConversionFunnel();
+    this.loadMonthComparison();
   }
 
   private loadHealthScores(): void {
@@ -2539,6 +2472,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.healthScoresData = res.data || [];
@@ -2556,6 +2490,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.execSummaryData = res.data || null;
@@ -2573,6 +2508,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.recommendationsData = res.data || [];
@@ -2581,6 +2517,47 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       },
       error: () => { this.loadingRecommendations = false; this.cdr.detectChanges(); },
     });
+  }
+
+  private loadConversionFunnel(): void {
+    this.loadingConversionFunnel = true;
+    this.cdr.detectChanges();
+    this.analysisService.getConversionFunnel({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res) => {
+        this.conversionFunnelData = res.data || [];
+        this.loadingConversionFunnel = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingConversionFunnel = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadMonthComparison(): void {
+    this.loadingMonthComparison = true;
+    this.cdr.detectChanges();
+    this.analysisService.getMonthComparison({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res) => {
+        this.monthComparisonData = res.data || null;
+        this.loadingMonthComparison = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingMonthComparison = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  getFunnelWidth(impressions: number, value: number): number {
+    if (!impressions || impressions === 0) return 0;
+    return Math.max(5, (value / impressions) * 100);
   }
 
   getHealthBadgeClass(status: string): string {
@@ -2627,6 +2604,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.zombieKeywordsData = res.data || [];
@@ -2644,6 +2622,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.vampireCampaignsData = res.data || [];
@@ -2661,6 +2640,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.actionPlanData = res.data || [];
@@ -2691,6 +2671,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.benchmarkData = res.data || [];
@@ -2708,6 +2689,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.portfolioData = res.data || [];
@@ -2725,6 +2707,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       date_from: this.filterDateFrom,
       date_to: this.filterDateTo,
       country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
     }).subscribe({
       next: (res) => {
         this.patternsData = res.data || [];
@@ -2760,5 +2743,131 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       case 'STOP': return 'Detener';
       default: return rec;
     }
+  }
+
+  // ========== Tab 19: Assets (Recursos) ==========
+
+  loadAssets(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadAssetSummary();
+    this.loadHeadlines();
+    this.loadDescriptions();
+    this.loadSitelinks();
+  }
+
+  private loadAssetSummary(): void {
+    this.loadingAssetSummary = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAssetSummary({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res) => {
+        this.assetSummaryData = res.data || [];
+        this.loadingAssetSummary = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingAssetSummary = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadHeadlines(): void {
+    this.loadingHeadlines = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAssetHeadlines({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res) => {
+        this.headlineData = res.data || [];
+        this.loadingHeadlines = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingHeadlines = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadDescriptions(): void {
+    this.loadingDescriptions = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAssetDescriptions({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res) => {
+        this.descriptionData = res.data || [];
+        this.loadingDescriptions = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingDescriptions = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  private loadSitelinks(): void {
+    this.loadingSitelinks = true;
+    this.cdr.detectChanges();
+    this.analysisService.getAssetSitelinks({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res) => {
+        this.sitelinkData = res.data || [];
+        this.loadingSitelinks = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingSitelinks = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  getAssetTypeLabel(type: string): string {
+    switch (type) {
+      case 'HEADLINE': return 'Titulos';
+      case 'DESCRIPTION': return 'Descripciones';
+      case 'SITELINK': return 'Enlaces de Sitio';
+      case 'CALLOUT': return 'Textos Destacados';
+      case 'STRUCTURED_SNIPPET': return 'Fragmentos';
+      default: return type;
+    }
+  }
+
+  // ---- Tab 18: Geography ----
+
+  loadGeo(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingGeo = true;
+    this.loadingCountryEfficiency = true;
+    this.cdr.detectChanges();
+    const params = {
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    };
+
+    this.analysisService.getGeoPerformance(params).subscribe({
+      next: (res: any) => {
+        this.geoData = res.data || [];
+        this.loadingGeo = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingGeo = false; this.cdr.detectChanges(); },
+    });
+
+    this.analysisService.getCountryEfficiency(params).subscribe({
+      next: (res: any) => {
+        this.countryEfficiencyData = res.data || [];
+        this.loadingCountryEfficiency = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingCountryEfficiency = false; this.cdr.detectChanges(); },
+    });
   }
 }

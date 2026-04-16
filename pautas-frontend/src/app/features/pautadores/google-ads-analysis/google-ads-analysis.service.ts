@@ -18,6 +18,7 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('granularity', params.granularity)
@@ -25,6 +26,7 @@ export class GoogleAdsAnalysisService {
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisSpendingTrend, { params: httpParams });
   }
 
@@ -33,12 +35,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisPerformance, { params: httpParams });
   }
 
@@ -64,33 +68,19 @@ export class GoogleAdsAnalysisService {
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisBudgetDistribution, { params: httpParams });
   }
 
-  getImpressionShare(params: {
-    granularity: string;
-    date_from: string;
-    date_to: string;
-    account_id?: string;
-    country_id?: number;
-  }): Observable<ApiResponse<any[]>> {
-    let httpParams = new HttpParams()
-      .set('granularity', params.granularity)
-      .set('date_from', params.date_from)
-      .set('date_to', params.date_to);
-    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
-    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
-    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisImpressionShare, { params: httpParams });
-  }
-
   getCampaignTypes(params: {
     date_from: string;
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCampaignTypes, { params: httpParams });
   }
 
@@ -99,12 +89,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisBiddingStrategies, { params: httpParams });
   }
 
@@ -115,7 +107,9 @@ export class GoogleAdsAnalysisService {
     match_type?: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
     limit?: number;
+    group_by?: string;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
@@ -124,7 +118,9 @@ export class GoogleAdsAnalysisService {
     if (params.match_type) httpParams = httpParams.set('match_type', params.match_type);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     if (params.limit) httpParams = httpParams.set('limit', params.limit);
+    if (params.group_by) httpParams = httpParams.set('group_by', params.group_by);
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisKeywords, { params: httpParams });
   }
 
@@ -133,12 +129,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisKeywordQuality, { params: httpParams });
   }
 
@@ -147,29 +145,15 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisDevices, { params: httpParams });
-  }
-
-  getGeo(params: {
-    date_from: string;
-    date_to: string;
-    account_id?: string;
-    country_id?: number;
-    limit?: number;
-  }): Observable<ApiResponse<any[]>> {
-    let httpParams = new HttpParams()
-      .set('date_from', params.date_from)
-      .set('date_to', params.date_to);
-    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
-    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
-    if (params.limit) httpParams = httpParams.set('limit', params.limit);
-    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisGeo, { params: httpParams });
   }
 
   getHourlyHeatmap(params: {
@@ -178,6 +162,7 @@ export class GoogleAdsAnalysisService {
     metric?: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
@@ -185,6 +170,7 @@ export class GoogleAdsAnalysisService {
     if (params.metric) httpParams = httpParams.set('metric', params.metric);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisHourlyHeatmap, { params: httpParams });
   }
 
@@ -195,12 +181,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisBudgetPacing, { params: httpParams });
   }
 
@@ -209,12 +197,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisWasteDetection, { params: httpParams });
   }
 
@@ -223,12 +213,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisOptimalSchedule, { params: httpParams });
   }
 
@@ -237,12 +229,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any>>(API_URLS.googleAds.analysisBudgetForecast, { params: httpParams });
   }
 
@@ -251,12 +245,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisBudgetRedistribution, { params: httpParams });
   }
 
@@ -269,6 +265,7 @@ export class GoogleAdsAnalysisService {
     date_to_2: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any>> {
     let httpParams = new HttpParams()
       .set('date_from_1', params.date_from_1)
@@ -277,6 +274,7 @@ export class GoogleAdsAnalysisService {
       .set('date_to_2', params.date_to_2);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any>>(API_URLS.googleAds.analysisTemporalComparison, { params: httpParams });
   }
 
@@ -285,12 +283,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCPAAnalysis, { params: httpParams });
   }
 
@@ -299,12 +299,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisQualityScoreTrend, { params: httpParams });
   }
 
@@ -313,12 +315,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCPCTrend, { params: httpParams });
   }
 
@@ -327,12 +331,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any>>(API_URLS.googleAds.analysisSeasonality, { params: httpParams });
   }
 
@@ -343,6 +349,7 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
     limit?: number;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
@@ -350,6 +357,7 @@ export class GoogleAdsAnalysisService {
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     if (params.limit) httpParams = httpParams.set('limit', params.limit);
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisSearchTerms, { params: httpParams });
   }
@@ -359,12 +367,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisNegativeKeywordCandidates, { params: httpParams });
   }
 
@@ -373,12 +383,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisLongTail, { params: httpParams });
   }
 
@@ -387,12 +399,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisKeywordCannibalization, { params: httpParams });
   }
 
@@ -403,12 +417,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAdPerformanceComparison, { params: httpParams });
   }
 
@@ -417,12 +433,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAdFatigue, { params: httpParams });
   }
 
@@ -431,12 +449,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAdTypePerformance, { params: httpParams });
   }
 
@@ -447,12 +467,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAuctionInsights, { params: httpParams });
   }
 
@@ -461,12 +483,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCompetitivePosition, { params: httpParams });
   }
 
@@ -475,12 +499,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisMarketOpportunities, { params: httpParams });
   }
 
@@ -488,11 +514,13 @@ export class GoogleAdsAnalysisService {
     date_from: string;
     date_to: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.pautadores.conglomeradoContrast, { params: httpParams });
   }
 
@@ -503,12 +531,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAgeBreakdown, { params: httpParams });
   }
 
@@ -517,12 +547,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisGenderBreakdown, { params: httpParams });
   }
 
@@ -533,12 +565,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisDeviceBidRecommendations, { params: httpParams });
   }
 
@@ -547,41 +581,15 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisDeviceExclusions, { params: httpParams });
-  }
-
-  getGeoTierClassification(params: {
-    date_from: string;
-    date_to: string;
-    account_id?: string;
-    country_id?: number;
-  }): Observable<ApiResponse<any[]>> {
-    let httpParams = new HttpParams()
-      .set('date_from', params.date_from)
-      .set('date_to', params.date_to);
-    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
-    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
-    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisGeoTierClassification, { params: httpParams });
-  }
-
-  getRegionalPatterns(params: {
-    date_from: string;
-    date_to: string;
-    account_id?: string;
-    country_id?: number;
-  }): Observable<ApiResponse<any[]>> {
-    let httpParams = new HttpParams()
-      .set('date_from', params.date_from)
-      .set('date_to', params.date_to);
-    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
-    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
-    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisRegionalPatterns, { params: httpParams });
   }
 
   getKeywordActionPlan(params: {
@@ -589,12 +597,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisKeywordActionPlan, { params: httpParams });
   }
 
@@ -603,12 +613,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisMatchTypeRecommendations, { params: httpParams });
   }
 
@@ -617,12 +629,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCrossAccountKeywords, { params: httpParams });
   }
 
@@ -631,12 +645,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any>>(API_URLS.googleAds.analysisFullForecast, { params: httpParams });
   }
 
@@ -645,12 +661,14 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisScalingHealth, { params: httpParams });
   }
 
@@ -659,99 +677,206 @@ export class GoogleAdsAnalysisService {
     date_to: string;
     account_id?: string;
     country_id?: number;
+    my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams()
       .set('date_from', params.date_from)
       .set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCompetitiveMarketTrend, { params: httpParams });
   }
 
   // ========== Phase 10: Dashboard Ejecutivo ==========
 
   getAccountHealthScores(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAccountHealthScores, { params: httpParams });
   }
 
   getExecutiveSummary(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any>>(API_URLS.googleAds.analysisExecutiveSummary, { params: httpParams });
   }
 
   getTopRecommendations(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisTopRecommendations, { params: httpParams });
   }
 
   // ========== Phase 11: Auditoria Financiera ==========
 
   getZombieKeywords(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisZombieKeywords, { params: httpParams });
   }
 
   getVampireCampaigns(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisVampireCampaigns, { params: httpParams });
   }
 
   getConsolidatedActionPlan(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisConsolidatedActionPlan, { params: httpParams });
   }
 
   // ========== Phase 12: Benchmark Cross-Account ==========
 
   getAccountBenchmark(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAccountBenchmark, { params: httpParams });
   }
 
   getPortfolioRecommendation(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisPortfolioRecommendation, { params: httpParams });
   }
 
   getAccountPatterns(params: {
-    date_from: string; date_to: string; account_id?: string; country_id?: number;
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
   }): Observable<ApiResponse<any[]>> {
     let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
     if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
     if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAccountPatterns, { params: httpParams });
+  }
+
+  // ========== Wave 4: Landing Pages, Funnel, Month Comparison ==========
+
+  getLandingPages(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisLandingPages, { params: httpParams });
+  }
+
+  getConversionFunnel(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisConversionFunnel, { params: httpParams });
+  }
+
+  getMonthComparison(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any>>(API_URLS.googleAds.analysisMonthComparison, { params: httpParams });
+  }
+
+  // ========== Wave 5A: Asset Analysis ==========
+
+  getAssetSummary(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAssetSummary, { params: httpParams });
+  }
+
+  getAssetHeadlines(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAssetHeadlines, { params: httpParams });
+  }
+
+  getAssetDescriptions(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAssetDescriptions, { params: httpParams });
+  }
+
+  getAssetSitelinks(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisAssetSitelinks, { params: httpParams });
+  }
+
+  // ========== Geography ==========
+
+  getGeoPerformance(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisGeo, { params: httpParams });
+  }
+
+  getCountryEfficiency(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCountryEfficiency, { params: httpParams });
   }
 }

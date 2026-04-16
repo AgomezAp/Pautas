@@ -75,13 +75,11 @@ export const API_URLS = {
     analysisPerformance: `${BASE}/pautadores/google-ads/analysis/performance`,
     analysisRankings: `${BASE}/pautadores/google-ads/analysis/rankings`,
     analysisBudgetDistribution: `${BASE}/pautadores/google-ads/analysis/budget-distribution`,
-    analysisImpressionShare: `${BASE}/pautadores/google-ads/analysis/impression-share`,
     analysisCampaignTypes: `${BASE}/pautadores/google-ads/analysis/campaign-types`,
     analysisBiddingStrategies: `${BASE}/pautadores/google-ads/analysis/bidding-strategies`,
     analysisKeywords: `${BASE}/pautadores/google-ads/analysis/keywords`,
     analysisKeywordQuality: `${BASE}/pautadores/google-ads/analysis/keyword-quality`,
     analysisDevices: `${BASE}/pautadores/google-ads/analysis/devices`,
-    analysisGeo: `${BASE}/pautadores/google-ads/analysis/geo`,
     analysisHourlyHeatmap: `${BASE}/pautadores/google-ads/analysis/hourly-heatmap`,
     analysisBudgetPacing: `${BASE}/pautadores/google-ads/analysis/budget-pacing`,
     analysisWasteDetection: `${BASE}/pautadores/google-ads/analysis/waste-detection`,
@@ -108,8 +106,6 @@ export const API_URLS = {
     // Phase 9: Enhanced Tabs
     analysisDeviceBidRecommendations: `${BASE}/pautadores/google-ads/analysis/device-bid-recommendations`,
     analysisDeviceExclusions: `${BASE}/pautadores/google-ads/analysis/device-exclusions`,
-    analysisGeoTierClassification: `${BASE}/pautadores/google-ads/analysis/geo-tier-classification`,
-    analysisRegionalPatterns: `${BASE}/pautadores/google-ads/analysis/regional-patterns`,
     analysisKeywordActionPlan: `${BASE}/pautadores/google-ads/analysis/keyword-action-plan`,
     analysisMatchTypeRecommendations: `${BASE}/pautadores/google-ads/analysis/match-type-recommendations`,
     analysisCrossAccountKeywords: `${BASE}/pautadores/google-ads/analysis/cross-account-keywords`,
@@ -128,6 +124,19 @@ export const API_URLS = {
     analysisAccountBenchmark: `${BASE}/pautadores/google-ads/analysis/account-benchmark`,
     analysisPortfolioRecommendation: `${BASE}/pautadores/google-ads/analysis/portfolio-recommendation`,
     analysisAccountPatterns: `${BASE}/pautadores/google-ads/analysis/account-patterns`,
+    // Wave 4: Landing Pages, Funnel, Month Comparison
+    analysisLandingPages: `${BASE}/pautadores/google-ads/analysis/landing-pages`,
+    analysisConversionFunnel: `${BASE}/pautadores/google-ads/analysis/conversion-funnel`,
+    analysisMonthComparison: `${BASE}/pautadores/google-ads/analysis/month-comparison`,
+    // Wave 5A: Asset Analysis
+    analysisAssetSummary: `${BASE}/pautadores/google-ads/analysis/asset-summary`,
+    analysisAssetHeadlines: `${BASE}/pautadores/google-ads/analysis/asset-headlines`,
+    analysisAssetDescriptions: `${BASE}/pautadores/google-ads/analysis/asset-descriptions`,
+    analysisAssetSitelinks: `${BASE}/pautadores/google-ads/analysis/asset-sitelinks`,
+    // Geography
+    analysisGeo: `${BASE}/pautadores/google-ads/analysis/geo`,
+    analysisGeoMap: `${BASE}/pautadores/google-ads/analysis/geo-map`,
+    analysisCountryEfficiency: `${BASE}/pautadores/google-ads/analysis/country-efficiency`,
     myAccounts: `${BASE}/pautadores/google-ads/my-accounts`,
   },
   alerts: {

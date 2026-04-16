@@ -68,14 +68,14 @@ export class EnumMappingService {
    */
   static mapMatchType(value: string | number): string {
     const matchTypeMapping: { [key: string]: string } = {
-      '1': 'Exact',
-      '2': 'Phrase',
-      '3': 'Broad',
-      '4': 'Broad Match Modifier',
-      'EXACT': 'Exact',
-      'PHRASE': 'Phrase',
-      'BROAD': 'Broad',
-      'BROAD_MATCH_MODIFIER': 'Broad Match Modifier',
+      '1': 'Exacta',
+      '2': 'Frase',
+      '3': 'Amplia',
+      '4': 'Amplia Modificada',
+      'EXACT': 'Exacta',
+      'PHRASE': 'Frase',
+      'BROAD': 'Amplia',
+      'BROAD_MATCH_MODIFIER': 'Amplia Modificada',
     };
     return matchTypeMapping[String(value)] || String(value);
   }
@@ -156,10 +156,10 @@ export class EnumMappingService {
   static getMatchTypeCaseSQL(fieldName: string = 'match_type'): string {
     return `
       CASE
-        WHEN ${fieldName}::text = '1' OR ${fieldName} = 'EXACT' THEN 'Exact'
-        WHEN ${fieldName}::text = '2' OR ${fieldName} = 'PHRASE' THEN 'Phrase'
-        WHEN ${fieldName}::text = '3' OR ${fieldName} = 'BROAD' THEN 'Broad'
-        WHEN ${fieldName}::text = '4' OR ${fieldName} = 'BROAD_MATCH_MODIFIER' THEN 'Broad Match Modifier'
+        WHEN ${fieldName}::text = '1' OR ${fieldName} = 'EXACT' THEN 'Exacta'
+        WHEN ${fieldName}::text = '2' OR ${fieldName} = 'PHRASE' THEN 'Frase'
+        WHEN ${fieldName}::text = '3' OR ${fieldName} = 'BROAD' THEN 'Amplia'
+        WHEN ${fieldName}::text = '4' OR ${fieldName} = 'BROAD_MATCH_MODIFIER' THEN 'Amplia Modificada'
         ELSE ${fieldName}::text
       END`;
   }

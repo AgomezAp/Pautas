@@ -36,13 +36,11 @@ router.get('/google-ads/analysis/spending-trend', (req, res, next) => pautadores
 router.get('/google-ads/analysis/performance', (req, res, next) => pautadoresController.getAnalysisPerformance(req, res, next));
 router.get('/google-ads/analysis/rankings', (req, res, next) => pautadoresController.getAnalysisRankings(req, res, next));
 router.get('/google-ads/analysis/budget-distribution', (req, res, next) => pautadoresController.getAnalysisBudgetDistribution(req, res, next));
-router.get('/google-ads/analysis/impression-share', (req, res, next) => pautadoresController.getAnalysisImpressionShare(req, res, next));
 router.get('/google-ads/analysis/campaign-types', (req, res, next) => pautadoresController.getAnalysisCampaignTypes(req, res, next));
 router.get('/google-ads/analysis/bidding-strategies', (req, res, next) => pautadoresController.getAnalysisBiddingStrategies(req, res, next));
 router.get('/google-ads/analysis/keywords', (req, res, next) => pautadoresController.getAnalysisKeywords(req, res, next));
 router.get('/google-ads/analysis/keyword-quality', (req, res, next) => pautadoresController.getAnalysisKeywordQuality(req, res, next));
 router.get('/google-ads/analysis/devices', (req, res, next) => pautadoresController.getAnalysisDevices(req, res, next));
-router.get('/google-ads/analysis/geo', (req, res, next) => pautadoresController.getAnalysisGeo(req, res, next));
 router.get('/google-ads/analysis/hourly-heatmap', (req, res, next) => pautadoresController.getAnalysisHourlyHeatmap(req, res, next));
 
 // Google Ads Budget Intelligence endpoints
@@ -83,8 +81,6 @@ router.get('/google-ads/analysis/gender-breakdown', (req, res, next) => pautador
 // Phase 9: Enhanced Tabs
 router.get('/google-ads/analysis/device-bid-recommendations', (req, res, next) => pautadoresController.getAnalysisDeviceBidRecommendations(req, res, next));
 router.get('/google-ads/analysis/device-exclusions', (req, res, next) => pautadoresController.getAnalysisDeviceExclusions(req, res, next));
-router.get('/google-ads/analysis/geo-tier-classification', (req, res, next) => pautadoresController.getAnalysisGeoTierClassification(req, res, next));
-router.get('/google-ads/analysis/regional-patterns', (req, res, next) => pautadoresController.getAnalysisRegionalPatterns(req, res, next));
 router.get('/google-ads/analysis/keyword-action-plan', (req, res, next) => pautadoresController.getAnalysisKeywordActionPlan(req, res, next));
 router.get('/google-ads/analysis/match-type-recommendations', (req, res, next) => pautadoresController.getAnalysisMatchTypeRecommendations(req, res, next));
 router.get('/google-ads/analysis/cross-account-keywords', (req, res, next) => pautadoresController.getAnalysisCrossAccountKeywords(req, res, next));
@@ -109,6 +105,22 @@ router.get('/google-ads/analysis/account-patterns', (req, res, next) => pautador
 
 // ML Predictive Analytics
 router.get('/google-ads/analysis/predictive-budget', (req, res, next) => pautadoresController.getAnalysisPredictiveBudget(req, res, next));
+
+// Wave 4: Landing Pages, Funnel, Month Comparison
+router.get('/google-ads/analysis/landing-pages', (req, res, next) => pautadoresController.getAnalysisLandingPages(req, res, next));
+router.get('/google-ads/analysis/conversion-funnel', (req, res, next) => pautadoresController.getAnalysisConversionFunnel(req, res, next));
+router.get('/google-ads/analysis/month-comparison', (req, res, next) => pautadoresController.getAnalysisMonthComparison(req, res, next));
+
+// Wave 5A: Asset Analysis
+router.get('/google-ads/analysis/asset-summary', (req, res, next) => pautadoresController.getAnalysisAssetSummary(req, res, next));
+router.get('/google-ads/analysis/asset-headlines', (req, res, next) => pautadoresController.getAnalysisAssetHeadlines(req, res, next));
+router.get('/google-ads/analysis/asset-descriptions', (req, res, next) => pautadoresController.getAnalysisAssetDescriptions(req, res, next));
+router.get('/google-ads/analysis/asset-sitelinks', (req, res, next) => pautadoresController.getAnalysisAssetSitelinks(req, res, next));
+
+// Geography
+router.get('/google-ads/analysis/geo', (req, res, next) => pautadoresController.getAnalysisGeo(req, res, next));
+router.get('/google-ads/analysis/geo-map', (req, res, next) => pautadoresController.getAnalysisGeoMap(req, res, next));
+router.get('/google-ads/analysis/country-efficiency', (req, res, next) => pautadoresController.getAnalysisCountryEfficiency(req, res, next));
 
 // Conglomerado contrast endpoint
 router.get('/conglomerado-contrast', (req, res, next) => pautadoresController.getConglomeradoContrast(req, res, next));

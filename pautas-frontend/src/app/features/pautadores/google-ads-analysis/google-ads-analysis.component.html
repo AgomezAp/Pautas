@@ -37,6 +37,28 @@
     <app-icon name="restart_alt" size="sm"></app-icon>
     Limpiar
   </button>
+
+  @if (isPautador) {
+    <div class="filter-field">
+      <label class="form-label">Mis cuentas</label>
+      <div class="form-check form-switch mt-1">
+        <input type="checkbox" class="form-check-input" id="showOnlyMine"
+          [(ngModel)]="showOnlyMine" (change)="applyFilters()">
+        <label class="form-check-label" for="showOnlyMine">Solo mis cuentas</label>
+      </div>
+    </div>
+  }
+
+  <button class="btn btn-outline-primary ms-auto" (click)="triggerSync()" [disabled]="syncing"
+    ngbTooltip="Sincronizar datos desde Google Ads">
+    @if (syncing) {
+      <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+      Sincronizando...
+    } @else {
+      <app-icon name="sync" size="sm"></app-icon>
+      Sincronizar datos
+    }
+  </button>
 </div>
 
 <!-- Tabs -->
@@ -55,49 +77,49 @@
       <button class="nav-link" [class.active]="activeTab === 3" (click)="onTabChange(3)" type="button" role="tab">Distribucion Presupuestal</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 4" (click)="onTabChange(4)" type="button" role="tab">Impression Share</button>
+      <button class="nav-link" [class.active]="activeTab === 4" (click)="onTabChange(4)" type="button" role="tab">Tipos y Estrategias</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 5" (click)="onTabChange(5)" type="button" role="tab">Tipos y Estrategias</button>
+      <button class="nav-link" [class.active]="activeTab === 5" (click)="onTabChange(5)" type="button" role="tab">Palabras Clave</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 6" (click)="onTabChange(6)" type="button" role="tab">Palabras Clave</button>
+      <button class="nav-link" [class.active]="activeTab === 6" (click)="onTabChange(6)" type="button" role="tab">Dispositivos</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 7" (click)="onTabChange(7)" type="button" role="tab">Dispositivos</button>
+      <button class="nav-link" [class.active]="activeTab === 7" (click)="onTabChange(7)" type="button" role="tab">Horario</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 8" (click)="onTabChange(8)" type="button" role="tab">Geografia</button>
+      <button class="nav-link" [class.active]="activeTab === 8" (click)="onTabChange(8)" type="button" role="tab">Presupuesto Inteligente</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 9" (click)="onTabChange(9)" type="button" role="tab">Horario</button>
+      <button class="nav-link" [class.active]="activeTab === 9" (click)="onTabChange(9)" type="button" role="tab">Comparaciones</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 10" (click)="onTabChange(10)" type="button" role="tab">Presupuesto Inteligente</button>
+      <button class="nav-link" [class.active]="activeTab === 10" (click)="onTabChange(10)" type="button" role="tab">Estrategia Keywords</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 11" (click)="onTabChange(11)" type="button" role="tab">Comparaciones</button>
+      <button class="nav-link" [class.active]="activeTab === 11" (click)="onTabChange(11)" type="button" role="tab">Anuncios</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 12" (click)="onTabChange(12)" type="button" role="tab">Estrategia Keywords</button>
+      <button class="nav-link" [class.active]="activeTab === 12" (click)="onTabChange(12)" type="button" role="tab">Competencia</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 13" (click)="onTabChange(13)" type="button" role="tab">Anuncios</button>
+      <button class="nav-link" [class.active]="activeTab === 13" (click)="onTabChange(13)" type="button" role="tab">Audiencia</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 14" (click)="onTabChange(14)" type="button" role="tab">Competencia</button>
+      <button class="nav-link" [class.active]="activeTab === 14" (click)="onTabChange(14)" type="button" role="tab">Dashboard Ejecutivo</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 15" (click)="onTabChange(15)" type="button" role="tab">Audiencia</button>
+      <button class="nav-link" [class.active]="activeTab === 15" (click)="onTabChange(15)" type="button" role="tab">Auditoria Financiera</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 16" (click)="onTabChange(16)" type="button" role="tab">Dashboard Ejecutivo</button>
+      <button class="nav-link" [class.active]="activeTab === 16" (click)="onTabChange(16)" type="button" role="tab">Benchmark</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 17" (click)="onTabChange(17)" type="button" role="tab">Auditoria Financiera</button>
+      <button class="nav-link" [class.active]="activeTab === 17" (click)="onTabChange(17)" type="button" role="tab">Recursos</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" [class.active]="activeTab === 18" (click)="onTabChange(18)" type="button" role="tab">Benchmark</button>
+      <button class="nav-link" [class.active]="activeTab === 18" (click)="onTabChange(18)" type="button" role="tab">Geografia</button>
     </li>
   </ul>
 
@@ -366,73 +388,8 @@
       </div>
     }
 
-    <!-- Tab 5: Impression Share -->
+    <!-- Tab 5: Tipos y Estrategias -->
     @if (activeTab === 4) {
-      <div class="tab-content">
-        <div class="toggle-row">
-          <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-secondary" [class.active]="isGranularity === 'daily'" (click)="isGranularity = 'daily'; loadImpressionShare()">Diario</button>
-            <button type="button" class="btn btn-outline-secondary" [class.active]="isGranularity === 'weekly'" (click)="isGranularity = 'weekly'; loadImpressionShare()">Semanal</button>
-            <button type="button" class="btn btn-outline-secondary" [class.active]="isGranularity === 'monthly'" (click)="isGranularity = 'monthly'; loadImpressionShare()">Mensual</button>
-          </div>
-        </div>
-
-        @if (loadingImpressionShare) {
-          <div class="loading-state">
-            <div class="spinner-border spinner-border-sm" role="status"></div>
-            <span>Cargando impression share...</span>
-          </div>
-        }
-
-        @if (isLineChartData) {
-          <div class="chart-panel">
-            <div class="chart-container">
-              <canvas baseChart [data]="isLineChartData" [options]="isLineChartOptions" type="line"></canvas>
-            </div>
-          </div>
-        }
-
-        @if (impressionShareData.length > 0) {
-          <div class="table-panel">
-            <div class="table-header">
-              <app-icon name="visibility" size="md"></app-icon>
-              <span>Detalle Impression Share</span>
-            </div>
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Periodo</th>
-                    <th class="text-right">IS Promedio</th>
-                    <th class="text-right">Top IS</th>
-                    <th class="text-right">Abs Top IS</th>
-                    <th class="text-right">Perdido (Budget)</th>
-                    <th class="text-right">Perdido (Rank)</th>
-                    <th class="text-right">Campanas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of impressionShareData; track row.period) {
-                    <tr>
-                      <td>{{ formatPeriod(row.period) }}</td>
-                      <td class="text-right fw-600">{{ row.avg_impression_share || 0 }}%</td>
-                      <td class="text-right">{{ row.avg_top_impression_rate || 0 }}%</td>
-                      <td class="text-right">{{ row.avg_abs_top_impression_rate || 0 }}%</td>
-                      <td class="text-right text-danger">{{ row.avg_budget_lost_is || 0 }}%</td>
-                      <td class="text-right text-warning">{{ row.avg_rank_lost_is || 0 }}%</td>
-                      <td class="text-right">{{ row.campaigns_count }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        }
-      </div>
-    }
-
-    <!-- Tab 6: Tipos y Estrategias -->
-    @if (activeTab === 5) {
       <div class="tab-content">
         @if (loadingCampaignTypes) {
           <div class="loading-state">
@@ -544,8 +501,8 @@
       </div>
     }
 
-    <!-- Tab 7: Palabras Clave -->
-    @if (activeTab === 6) {
+    <!-- Tab 6: Palabras Clave -->
+    @if (activeTab === 5) {
       <div class="tab-content">
         <div class="toggle-row">
           <div class="btn-group" role="group">
@@ -559,6 +516,11 @@
             <option value="PHRASE">Frase</option>
             <option value="BROAD">Amplia</option>
           </select>
+          <div class="btn-group ms-2" role="group">
+            <button type="button" class="btn btn-sm" [class.btn-primary]="keywordGroupBy === 'flat'" [class.btn-outline-secondary]="keywordGroupBy !== 'flat'" (click)="onKeywordGroupByChange('flat')">Plano</button>
+            <button type="button" class="btn btn-sm" [class.btn-primary]="keywordGroupBy === 'account'" [class.btn-outline-secondary]="keywordGroupBy !== 'account'" (click)="onKeywordGroupByChange('account')">Por Cuenta</button>
+            <button type="button" class="btn btn-sm" [class.btn-primary]="keywordGroupBy === 'campaign'" [class.btn-outline-secondary]="keywordGroupBy !== 'campaign'" (click)="onKeywordGroupByChange('campaign')">Por Campana</button>
+          </div>
         </div>
 
         @if (loadingKeywords) {
@@ -568,7 +530,8 @@
           </div>
         }
 
-        @if (keywordsData.length > 0) {
+        <!-- Flat view -->
+        @if (keywordGroupBy === 'flat' && keywordsData.length > 0) {
           <div class="table-panel">
             <div class="table-header">
               <app-icon name="key" size="md"></app-icon>
@@ -614,11 +577,69 @@
             </div>
           </div>
         }
+
+        <!-- Grouped view (by account or campaign) -->
+        @if (keywordGroupBy !== 'flat' && keywordsGrouped.length > 0) {
+          @for (group of keywordsGrouped; track group.label) {
+            <div class="table-panel mb-3">
+              <div class="table-header">
+                <app-icon name="key" size="md"></app-icon>
+                <span>{{ group.label }} ({{ group.rows.length }})</span>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Palabra Clave</th>
+                      <th>Match</th>
+                      @if (keywordGroupBy === 'account') {
+                        <th>Campana</th>
+                      }
+                      <th class="text-center">QS</th>
+                      <th class="text-right">Clicks</th>
+                      <th class="text-right">Costo</th>
+                      <th class="text-right">Conversiones</th>
+                      <th class="text-right">CPC</th>
+                      <th class="text-right">CTR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of group.rows; track row.keyword_text + row.match_type) {
+                      <tr>
+                        <td class="fw-600">{{ row.keyword_text }}</td>
+                        <td><span class="badge badge-outline">{{ row.match_type || '—' }}</span></td>
+                        @if (keywordGroupBy === 'account') {
+                          <td class="text-muted" style="font-size: 0.78rem;">{{ row.campaign_name || '—' }}</td>
+                        }
+                        <td class="text-center">
+                          @if (row.avg_quality_score) {
+                            <span class="badge" [class]="getQualityScoreClass(row.avg_quality_score)">{{ row.avg_quality_score }}</span>
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
+                        </td>
+                        <td class="text-right">{{ row.total_clicks | number }}</td>
+                        <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                        <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                        <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                        <td class="text-right">{{ row.ctr }}%</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        }
+
+        @if (!loadingKeywords && keywordsData.length === 0) {
+          <div class="empty-state">Sin datos de palabras clave</div>
+        }
       </div>
     }
 
-    <!-- Tab 8: Dispositivos -->
-    @if (activeTab === 7) {
+    <!-- Tab 7: Dispositivos -->
+    @if (activeTab === 6) {
       <div class="tab-content">
         @if (loadingDevices) {
           <div class="loading-state">
@@ -769,148 +790,8 @@
       </div>
     }
 
-    <!-- Tab 9: Geografia -->
-    @if (activeTab === 8) {
-      <div class="tab-content">
-        @if (loadingGeo) {
-          <div class="loading-state">
-            <div class="spinner-border spinner-border-sm" role="status"></div>
-            <span>Cargando geografia...</span>
-          </div>
-        }
-
-        @if (geoData.length > 0) {
-          <div class="table-panel">
-            <div class="table-header">
-              <app-icon name="public" size="md"></app-icon>
-              <span>Rendimiento por Ubicacion ({{ geoData.length }})</span>
-            </div>
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Ubicacion</th>
-                    <th>Tipo</th>
-                    <th class="text-right">Costo</th>
-                    <th class="text-right">Clicks</th>
-                    <th class="text-right">Impresiones</th>
-                    <th class="text-right">Conversiones</th>
-                    <th class="text-right">CPC</th>
-                    <th class="text-right">CTR</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of geoData; track row.geo_target_name) {
-                    <tr>
-                      <td class="fw-600">{{ row.geo_target_name }}</td>
-                      <td><span class="badge badge-outline">{{ row.geo_target_type || '—' }}</span></td>
-                      <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
-                      <td class="text-right">{{ row.total_clicks | number }}</td>
-                      <td class="text-right">{{ row.total_impressions | number }}</td>
-                      <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
-                      <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
-                      <td class="text-right">{{ row.ctr }}%</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        }
-
-    <!-- Phase 9: Geo Tier Classification -->
-    <h5 class="section-title mt-4">Clasificacion por Tiers</h5>
-    @if (loadingGeoTier) {
-      <div class="loading-state">
-        <div class="spinner-border spinner-border-sm" role="status"></div>
-        <span>Clasificando ubicaciones...</span>
-      </div>
-    }
-    @if (!loadingGeoTier && geoTierData.length > 0) {
-      <div class="table-responsive">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Ubicacion</th>
-              <th>Tipo</th>
-              <th>Tier</th>
-              <th class="text-right">Costo</th>
-              <th class="text-right">Conversiones</th>
-              <th class="text-right">CPA</th>
-              <th class="text-right">CPA Promedio</th>
-              <th class="text-right">Ahorro Estimado</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of geoTierData; track row.geo_target_name) {
-              <tr>
-                <td class="fw-600">{{ row.geo_target_name }}</td>
-                <td><span class="badge badge-outline">{{ row.geo_target_type || '---' }}</span></td>
-                <td><span class="badge" [ngClass]="getTierBadgeClass(row.tier)">{{ getTierLabel(row.tier) }}</span></td>
-                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
-                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
-                <td class="text-right">{{ row.cpa ? formatCurrency(row.cpa) : '---' }}</td>
-                <td class="text-right">{{ row.avg_cpa ? formatCurrency(row.avg_cpa) : '---' }}</td>
-                <td class="text-right fw-600 text-danger">{{ formatCurrency(row.estimated_savings) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-    @if (!loadingGeoTier && geoTierData.length === 0) {
-      <div class="empty-state">Sin datos para clasificacion de tiers</div>
-    }
-
-    <!-- Phase 9: Regional Patterns -->
-    <h5 class="section-title mt-4">Patrones Regionales por Tipo</h5>
-    @if (loadingRegionalPatterns) {
-      <div class="loading-state">
-        <div class="spinner-border spinner-border-sm" role="status"></div>
-        <span>Analizando patrones regionales...</span>
-      </div>
-    }
-    @if (!loadingRegionalPatterns && regionalPatternsData.length > 0) {
-      <div class="table-responsive">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Tipo de Region</th>
-              <th class="text-right">Ubicaciones</th>
-              <th class="text-right">Costo</th>
-              <th class="text-right">Clicks</th>
-              <th class="text-right">Conversiones</th>
-              <th class="text-right">CPC</th>
-              <th class="text-right">CTR</th>
-              <th class="text-right">CPA</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of regionalPatternsData; track row.geo_type) {
-              <tr>
-                <td class="fw-600">{{ row.geo_type }}</td>
-                <td class="text-right">{{ row.locations_count }}</td>
-                <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
-                <td class="text-right">{{ row.total_clicks | number }}</td>
-                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
-                <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
-                <td class="text-right">{{ row.ctr }}%</td>
-                <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '---' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-    @if (!loadingRegionalPatterns && regionalPatternsData.length === 0) {
-      <div class="empty-state">Sin datos de patrones regionales</div>
-    }
-
-      </div>
-    }
-
-    <!-- Tab 10: Horario (Heatmap) -->
-    @if (activeTab === 9) {
+    <!-- Tab 8: Horario (Heatmap) -->
+    @if (activeTab === 7) {
       <div class="tab-content">
         <div class="toggle-row">
           <div class="btn-group" role="group">
@@ -957,8 +838,8 @@
       </div>
     }
 
-    <!-- Tab 11: Presupuesto Inteligente -->
-    @if (activeTab === 10) {
+    <!-- Tab 9: Presupuesto Inteligente -->
+    @if (activeTab === 8) {
       <div class="tab-content">
         <!-- Budget Pacing -->
         <h5 class="section-title">Pacing de Presupuesto</h5>
@@ -980,7 +861,8 @@
                   <th class="text-right">Run Rate Diario</th>
                   <th class="text-right">Proyeccion Mensual</th>
                   <th class="text-right">Presupuesto Sugerido</th>
-                  <th>Recomendacion</th>
+                  <th>Accion</th>
+                  <th>Recomendacion para 100% Pacing</th>
                 </tr>
               </thead>
               <tbody>
@@ -1003,9 +885,12 @@
                       }
                     </td>
                     <td>
-                      <span class="badge" [class.badge-warning]="row.budget_status?.includes('Increase')" [class.badge-danger]="row.budget_status?.includes('Reduce')" [class.badge-success]="row.budget_status?.includes('On-track')">
+                      <span class="badge" [class.badge-warning]="row.budget_status?.includes('Aumentar')" [class.badge-danger]="row.budget_status?.includes('Reducir')" [class.badge-success]="row.budget_status?.includes('Mantener')">
                         {{ row.budget_status }}
                       </span>
+                    </td>
+                    <td style="max-width: 300px; font-size: 0.82rem; line-height: 1.3;">
+                      {{ row.pacing_recommendation }}
                     </td>
                   </tr>
                 }
@@ -1064,7 +949,7 @@
         }
 
         <!-- Budget Forecast -->
-        <h5 class="section-title mt-4">Pronostico de Presupuesto</h5>
+        <h5 class="section-title mt-4">Pronostico de Presupuesto — {{ forecastData?.scope_label || 'todas las cuentas' }}</h5>
         @if (loadingForecast) {
           <div class="loading-state">
             <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -1308,8 +1193,8 @@
       </div>
     }
 
-    <!-- Tab 12: Comparaciones & Tendencias -->
-    @if (activeTab === 11) {
+    <!-- Tab 10: Comparaciones & Tendencias -->
+    @if (activeTab === 9) {
       <div class="tab-content">
         <!-- Temporal Comparison -->
         <h5 class="section-title">Comparacion Temporal</h5>
@@ -1487,8 +1372,8 @@
       </div>
     }
 
-    <!-- Tab 13: Estrategia de Keywords -->
-    @if (activeTab === 12) {
+    <!-- Tab 11: Estrategia de Keywords -->
+    @if (activeTab === 10) {
       <div class="tab-content">
         <!-- Negative Keyword Candidates -->
         <h5 class="section-title">Candidatos a Negativos (Gasto sin Conversiones)</h5>
@@ -1800,8 +1685,8 @@
       </div>
     }
 
-    <!-- Tab 14: Ad Performance & Fatigue Detection -->
-    @if (activeTab === 13) {
+    <!-- Tab 12: Ad Performance & Fatigue Detection -->
+    @if (activeTab === 11) {
       <div class="tab-content">
         <!-- Ad Performance Comparison by Ad Group -->
         <h5 class="section-title">Comparacion de Anuncios por Grupo</h5>
@@ -1823,14 +1708,13 @@
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Ad ID</th>
+                      <th>Anuncio</th>
+                      <th>Campana</th>
                       <th>Tipo</th>
                       <th>Status</th>
                       <th class="text-right">Clicks</th>
-                      <th class="text-right">Impresiones</th>
                       <th class="text-right">CTR</th>
                       <th class="text-right">Costo</th>
-                      <th class="text-right">CPC</th>
                       <th class="text-right">Conv.</th>
                       <th class="text-right">CPA</th>
                     </tr>
@@ -1838,7 +1722,26 @@
                   <tbody>
                     @for (ad of group.ads; track ad.ad_id) {
                       <tr>
-                        <td>{{ ad.ad_id }}</td>
+                        <td>
+                          <div class="ad-preview">
+                            @if (ad.headlines) {
+                              <div class="ad-headline">{{ ad.headlines }}</div>
+                            }
+                            @if (ad.descriptions) {
+                              <div class="ad-description text-muted small">{{ ad.descriptions }}</div>
+                            }
+                            @if (ad.final_url) {
+                              <div class="ad-url text-success small">{{ ad.final_url }}</div>
+                            }
+                            @if (!ad.headlines && !ad.descriptions) {
+                              <span class="text-muted">Ad #{{ ad.ad_id }}</span>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <div>{{ ad.campaign_name }}</div>
+                          <div class="text-muted small">{{ ad.customer_account_name }}</div>
+                        </td>
                         <td>{{ formatAdType(ad.ad_type) }}</td>
                         <td>
                           @if (ad.status === 'ENABLED') {
@@ -1850,10 +1753,8 @@
                           }
                         </td>
                         <td class="text-right">{{ ad.total_clicks | number }}</td>
-                        <td class="text-right">{{ ad.total_impressions | number }}</td>
                         <td class="text-right">{{ ad.ctr }}%</td>
                         <td class="text-right">{{ formatCurrency(ad.total_cost) }}</td>
-                        <td class="text-right">{{ formatCurrency(ad.cpc) }}</td>
                         <td class="text-right">{{ ad.total_conversions | number:'1.0-1' }}</td>
                         <td class="text-right">{{ ad.cpa > 0 ? formatCurrency(ad.cpa) : '—' }}</td>
                       </tr>
@@ -1969,11 +1870,59 @@
         @if (!loadingAdType && adTypeData.length === 0) {
           <div class="empty-state">Sin datos de tipos de anuncio</div>
         }
+
+        <!-- Landing Page Analysis -->
+        <h5 class="section-title mt-4">Analisis de Landing Pages</h5>
+        @if (loadingLandingPages) {
+          <div class="loading-state">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Analizando landing pages...</span>
+          </div>
+        }
+        @if (!loadingLandingPages && landingPageData.length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="max-width: 300px;">URL</th>
+                  <th class="text-right">Anuncios</th>
+                  <th class="text-right">Campanas</th>
+                  <th class="text-right">Clicks</th>
+                  <th class="text-right">Costo</th>
+                  <th class="text-right">Conversiones</th>
+                  <th class="text-right">CPA</th>
+                  <th class="text-right">Tasa Conv.</th>
+                  <th class="text-right">CTR</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of landingPageData; track row.final_url) {
+                  <tr>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="row.final_url">
+                      <a [href]="row.final_url" target="_blank" rel="noopener noreferrer" class="text-primary">{{ row.final_url }}</a>
+                    </td>
+                    <td class="text-right">{{ row.ad_count }}</td>
+                    <td class="text-right">{{ row.campaign_count }}</td>
+                    <td class="text-right">{{ row.total_clicks | number }}</td>
+                    <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                    <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                    <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '---' }}</td>
+                    <td class="text-right">{{ row.conversion_rate }}%</td>
+                    <td class="text-right">{{ row.ctr }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (!loadingLandingPages && landingPageData.length === 0) {
+          <div class="empty-state">Sin datos de landing pages</div>
+        }
       </div>
     }
 
-    <!-- Tab 15: Competencia (Auction Insights) -->
-    @if (activeTab === 14) {
+    <!-- Tab 13: Competencia (Auction Insights) -->
+    @if (activeTab === 12) {
       <div class="tab-content">
 
         <!-- Competitors Table -->
@@ -2027,7 +1976,7 @@
         @if (competitiveChartData) {
           <div class="chart-panel">
             <div class="chart-container">
-              <canvas baseChart [data]="competitiveChartData" [options]="isLineChartOptions" type="line"></canvas>
+              <canvas baseChart [data]="competitiveChartData" [options]="lineChartOptions" type="line"></canvas>
             </div>
           </div>
         }
@@ -2084,8 +2033,8 @@
       </div>
     }
 
-    <!-- Tab 16: Audiencia (Demographics) -->
-    @if (activeTab === 15) {
+    <!-- Tab 14: Audiencia (Demographics) -->
+    @if (activeTab === 13) {
       <div class="tab-content">
 
         <!-- Age Breakdown Bar Chart -->
@@ -2200,8 +2149,8 @@
       </div>
     }
 
-<!-- Tab 16: Dashboard Ejecutivo -->
-@if (activeTab === 16) {
+<!-- Tab 15: Dashboard Ejecutivo -->
+@if (activeTab === 14) {
   <div class="tab-content">
     <!-- Health Scores -->
     <h5 class="section-title">Semaforo de Salud por Cuenta</h5>
@@ -2374,11 +2323,103 @@
     @if (!loadingRecommendations && recommendationsData.length === 0) {
       <div class="empty-state">Sin recomendaciones disponibles</div>
     }
+
+    <!-- Month-over-Month Comparison -->
+    <h5 class="section-title mt-4">Comparacion Periodo vs Periodo Anterior</h5>
+    @if (loadingMonthComparison) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Calculando comparacion...</span>
+      </div>
+    }
+    @if (!loadingMonthComparison && monthComparisonData) {
+      <div class="mb-2 text-muted" style="font-size: 0.8rem;">
+        Actual: {{ monthComparisonData.period?.current?.from }} a {{ monthComparisonData.period?.current?.to }} vs
+        Anterior: {{ monthComparisonData.period?.previous?.from }} a {{ monthComparisonData.period?.previous?.to }}
+        ({{ monthComparisonData.period?.days }} dias)
+      </div>
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        @for (m of monthComparisonData.metrics; track m.name) {
+          <div class="kpi-card">
+            <div class="kpi-label">{{ m.name }}</div>
+            <div class="kpi-value">
+              @if (m.format === 'currency') { {{ formatCurrency(m.current) }} }
+              @else if (m.format === 'percent') { {{ m.current }}% }
+              @else if (m.format === 'decimal') { {{ m.current | number:'1.0-1' }} }
+              @else { {{ m.current | number }} }
+            </div>
+            <div class="kpi-delta" [ngClass]="{'text-success': (m.inverse ? m.delta < 0 : m.delta > 0), 'text-danger': (m.inverse ? m.delta > 0 : m.delta < 0)}">
+              @if (m.delta > 0) { +{{ m.delta }}% } @else { {{ m.delta }}% }
+            </div>
+            <div class="kpi-prev text-muted" style="font-size: 0.7rem;">
+              Anterior:
+              @if (m.format === 'currency') { {{ formatCurrency(m.previous) }} }
+              @else if (m.format === 'percent') { {{ m.previous }}% }
+              @else if (m.format === 'decimal') { {{ m.previous | number:'1.0-1' }} }
+              @else { {{ m.previous | number }} }
+            </div>
+          </div>
+        }
+      </div>
+    }
+    @if (!loadingMonthComparison && !monthComparisonData) {
+      <div class="empty-state">Sin datos para comparacion de periodos</div>
+    }
+
+    <!-- Conversion Funnel -->
+    <h5 class="section-title mt-4">Funnel de Conversion por Campana</h5>
+    @if (loadingConversionFunnel) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando funnel...</span>
+      </div>
+    }
+    @if (!loadingConversionFunnel && conversionFunnelData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Campana</th>
+              <th>Cuenta</th>
+              <th class="text-right">Impresiones</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">Click Rate</th>
+              <th class="text-right">Conv. Rate</th>
+              <th>Funnel</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of conversionFunnelData; track row.campaign_name) {
+              <tr>
+                <td class="fw-600" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" [title]="row.campaign_name">{{ row.campaign_name }}</td>
+                <td class="text-muted" style="font-size:0.78rem;">{{ row.customer_account_name }}</td>
+                <td class="text-right">{{ row.impressions | number }}</td>
+                <td class="text-right">{{ row.clicks | number }}</td>
+                <td class="text-right">{{ row.conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.click_rate }}%</td>
+                <td class="text-right">{{ row.conversion_rate }}%</td>
+                <td style="min-width: 150px;">
+                  <div class="funnel-bar" style="height: 8px; background: #e9ecef; border-radius: 4px; position: relative;">
+                    <div style="position: absolute; height: 100%; background: #3B82F6; border-radius: 4px; opacity: 0.3;" [style.width.%]="100"></div>
+                    <div style="position: absolute; height: 100%; background: #10B981; border-radius: 4px; opacity: 0.6;" [style.width.%]="getFunnelWidth(row.impressions, row.clicks)"></div>
+                    <div style="position: absolute; height: 100%; background: #F59E0B; border-radius: 4px;" [style.width.%]="getFunnelWidth(row.impressions, row.conversions)"></div>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingConversionFunnel && conversionFunnelData.length === 0) {
+      <div class="empty-state">Sin datos de funnel de conversion</div>
+    }
   </div>
 }
 
-<!-- Tab 17: Auditoria Financiera -->
-@if (activeTab === 17) {
+<!-- Tab 16: Auditoria Financiera -->
+@if (activeTab === 15) {
   <div class="tab-content">
     <!-- Zombie Keywords -->
     <h5 class="section-title">Keywords Zombie (Gasto sin Conversiones)</h5>
@@ -2526,8 +2567,8 @@
     }
   </div>
 }
-<!-- Tab 18: Benchmark Cross-Account -->
-@if (activeTab === 18) {
+<!-- Tab 17: Benchmark Cross-Account -->
+@if (activeTab === 16) {
   <div class="tab-content">
     <!-- Account Benchmark -->
     <h5 class="section-title">Benchmark de Cuentas</h5>
@@ -2667,6 +2708,272 @@
     }
     @if (!loadingPatterns && patternsData.length === 0) {
       <div class="empty-state">Sin datos de patrones</div>
+    }
+  </div>
+}
+
+<!-- Tab 18: Recursos (Assets) -->
+@if (activeTab === 17) {
+  <div class="tab-content">
+    <!-- Asset Summary -->
+    <h5 class="section-title">Resumen por Tipo de Recurso</h5>
+    @if (loadingAssetSummary) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando resumen de recursos...</span>
+      </div>
+    }
+    @if (!loadingAssetSummary && assetSummaryData.length > 0) {
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        @for (item of assetSummaryData; track item.asset_type) {
+          <div class="kpi-card">
+            <div class="kpi-label">{{ getAssetTypeLabel(item.asset_type) }}</div>
+            <div class="kpi-value">{{ item.asset_count }}</div>
+            <div style="font-size: 0.75rem; color: #6c757d;">
+              Costo: {{ formatCurrency(item.total_cost) }} | CTR: {{ item.ctr }}%
+            </div>
+          </div>
+        }
+      </div>
+    }
+    @if (!loadingAssetSummary && assetSummaryData.length === 0) {
+      <div class="empty-state">
+        No hay datos de recursos. Los recursos (titulos, descripciones, sitelinks) se sincronizaran en la proxima actualizacion de datos.
+      </div>
+    }
+
+    <!-- Headlines -->
+    <h5 class="section-title mt-4">Rendimiento de Titulos</h5>
+    @if (loadingHeadlines) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando titulos...</span>
+      </div>
+    }
+    @if (!loadingHeadlines && headlineData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="max-width: 300px;">Titulo</th>
+              <th>Cuenta</th>
+              <th>Campanas</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">Impresiones</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CTR</th>
+              <th class="text-right">CPA</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of headlineData; track row.asset_text) {
+              <tr>
+                <td class="fw-600" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="row.asset_text">{{ row.asset_text }}</td>
+                <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem;" [title]="row.account_names">{{ row.account_names || '---' }}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem;" [title]="row.campaign_names">{{ row.campaign_count }} ({{ row.campaign_names || '---' }})</td>
+                <td class="text-right">{{ row.total_clicks | number }}</td>
+                <td class="text-right">{{ row.total_impressions | number }}</td>
+                <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.ctr }}%</td>
+                <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '---' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingHeadlines && headlineData.length === 0) {
+      <div class="empty-state">Sin datos de titulos</div>
+    }
+
+    <!-- Descriptions -->
+    <h5 class="section-title mt-4">Rendimiento de Descripciones</h5>
+    @if (loadingDescriptions) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando descripciones...</span>
+      </div>
+    }
+    @if (!loadingDescriptions && descriptionData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="max-width: 400px;">Descripcion</th>
+              <th>Cuenta</th>
+              <th>Campanas</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CTR</th>
+              <th class="text-right">CPA</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of descriptionData; track row.asset_text) {
+              <tr>
+                <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="row.asset_text">{{ row.asset_text }}</td>
+                <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem;" [title]="row.account_names">{{ row.account_names || '---' }}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem;" [title]="row.campaign_names">{{ row.campaign_count }} ({{ row.campaign_names || '---' }})</td>
+                <td class="text-right">{{ row.total_clicks | number }}</td>
+                <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.ctr }}%</td>
+                <td class="text-right">{{ row.cpa > 0 ? formatCurrency(row.cpa) : '---' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingDescriptions && descriptionData.length === 0) {
+      <div class="empty-state">Sin datos de descripciones</div>
+    }
+
+    <!-- Sitelinks -->
+    <h5 class="section-title mt-4">Rendimiento de Enlaces de Sitio</h5>
+    @if (loadingSitelinks) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando enlaces de sitio...</span>
+      </div>
+    }
+    @if (!loadingSitelinks && sitelinkData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Texto</th>
+              <th style="max-width: 250px;">URL</th>
+              <th>Cuenta</th>
+              <th>Campanas</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CTR</th>
+              <th class="text-right">Tasa Conv.</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of sitelinkData; track row.asset_text) {
+              <tr>
+                <td class="fw-600">{{ row.asset_text }}</td>
+                <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" [title]="row.asset_url">
+                  @if (row.asset_url) {
+                    <a [href]="row.asset_url" target="_blank" rel="noopener noreferrer" class="text-primary">{{ row.asset_url }}</a>
+                  } @else {
+                    ---
+                  }
+                </td>
+                <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem;" [title]="row.account_names">{{ row.account_names || '---' }}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem;" [title]="row.campaign_names">{{ row.campaign_count }} ({{ row.campaign_names || '---' }})</td>
+                <td class="text-right">{{ row.total_clicks | number }}</td>
+                <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.ctr }}%</td>
+                <td class="text-right">{{ row.conversion_rate }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingSitelinks && sitelinkData.length === 0) {
+      <div class="empty-state">Sin datos de enlaces de sitio</div>
+    }
+  </div>
+}
+
+<!-- Tab 18: Geografia -->
+@if (activeTab === 18) {
+  <div class="tab-content">
+    <h5 class="section-title">Rendimiento por Ubicacion Geografica</h5>
+    @if (loadingGeo) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando datos geograficos...</span>
+      </div>
+    }
+    @if (!loadingGeo && geoData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ubicacion</th>
+              <th>Tipo</th>
+              <th class="text-right">Clicks</th>
+              <th class="text-right">Impresiones</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CTR</th>
+              <th class="text-right">CPA</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of geoData; track row.geo_target_name) {
+              <tr>
+                <td class="fw-600">{{ row.geo_target_name }}</td>
+                <td>{{ row.geo_target_type }}</td>
+                <td class="text-right">{{ row.total_clicks | number }}</td>
+                <td class="text-right">{{ row.total_impressions | number }}</td>
+                <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ row.ctr }}%</td>
+                <td class="text-right">{{ formatCurrency(row.cpa) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingGeo && geoData.length === 0) {
+      <div class="empty-state">Sin datos geograficos. Los datos se poblan automaticamente al sincronizar. Si acaba de hacer sync, espere unos minutos y recargue.</div>
+    }
+
+    <!-- Country Efficiency -->
+    <h5 class="section-title mt-4">Eficiencia por Pais</h5>
+    @if (loadingCountryEfficiency) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando eficiencia por pais...</span>
+      </div>
+    }
+    @if (!loadingCountryEfficiency && countryEfficiencyData.length > 0) {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pais</th>
+              <th class="text-right">Cuentas</th>
+              <th class="text-right">Campanas</th>
+              <th class="text-right">Costo Total</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">CTR</th>
+              <th class="text-right">CPC</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of countryEfficiencyData; track row.country_name) {
+              <tr>
+                <td class="fw-600">{{ row.country_name }}</td>
+                <td class="text-right">{{ row.account_count }}</td>
+                <td class="text-right">{{ row.campaigns_count }}</td>
+                <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ formatCurrency(row.cpa) }}</td>
+                <td class="text-right">{{ row.ctr }}%</td>
+                <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingCountryEfficiency && countryEfficiencyData.length === 0) {
+      <div class="empty-state">Sin datos de eficiencia por pais</div>
     }
   </div>
 }

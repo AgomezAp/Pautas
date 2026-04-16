@@ -5,6 +5,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import jwt from 'jsonwebtoken';
+import http from 'http';
 import { env } from './config/environment';
 import { corsOptions } from './config/cors.config';
 import { logger } from './utils/logger.util';
@@ -20,6 +21,7 @@ import { alertsRoutes } from './modules/alerts/alerts.routes';
 import { registerCronJobs } from './jobs/cron';
 import { initRedis } from './config/redis';
 import { cacheService } from './services/cache.service';
+import { websocketService } from './services/websocket.service';
 
 const app = express();
 
@@ -78,8 +80,12 @@ app.get('/api/v1/health', (_req, res) => {
 // Global error handler
 app.use(errorHandler);
 
+// Create HTTP server and initialize WebSocket
+const httpServer = http.createServer(app);
+websocketService.initialize(httpServer);
+
 // Start server
-app.listen(env.port, async () => {
+httpServer.listen(env.port, async () => {
   logger.info(`Server running on port ${env.port} in ${env.nodeEnv} mode`);
   await initRedis();
   registerCronJobs();

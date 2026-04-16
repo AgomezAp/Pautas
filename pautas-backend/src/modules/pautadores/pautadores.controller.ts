@@ -8,8 +8,24 @@ import { googleAdsAnalysisService } from '../../services/google-ads-analysis.ser
 import { parsePagination, buildPaginationMeta } from '../../utils/pagination.util';
 import { query as dbQuery } from '../../config/database';
 import { scheduledReportsService } from '../../services/scheduled-reports.service';
+import { googleAdsAssetAnalysisService } from '../../services/google-ads-asset-analysis.service';
 
 export class PautadoresController {
+
+  // Helper: resolve pautador account IDs for filtering
+  private async resolvePautadorAccountIds(req: Request): Promise<string[] | undefined> {
+    const myAccounts = (req.query as any).my_accounts;
+    if (myAccounts !== 'true') return undefined;
+    const userId = (req as any).user?.sub || (req as any).user?.id;
+    if (!userId) return undefined;
+    const result = await dbQuery(
+      'SELECT google_ads_account_id FROM user_google_ads_accounts WHERE user_id = $1',
+      [userId]
+    );
+    const ids = result.rows.map((r: any) => r.google_ads_account_id);
+    return ids.length > 0 ? ids : undefined;
+  }
+
   async getEntriesDaily(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await pautadoresService.getEntriesDaily(req.query);
@@ -204,8 +220,15 @@ export class PautadoresController {
 
   async triggerGoogleAdsSync(req: Request, res: Response, next: NextFunction) {
     try {
+      // Check if we're currently rate-limited
+      if (googleAdsSyncService.isRateLimited()) {
+        return sendSuccess(res, {
+          message: 'Sincronización omitida — límite de tasa de Google Ads activo. Reintente más tarde.',
+          rateLimited: true,
+        });
+      }
+
       const full = req.query.full === 'true';
-      const enhanced = req.query.enhanced === 'true';
       const backfill = req.query.backfill === 'true';
       await googleAdsSyncService.syncAllCampaigns(!full);
       // Also sync billing data (recharges — recent only for speed)
@@ -213,14 +236,14 @@ export class PautadoresController {
       await googleAdsSyncService.syncRecharges(true);
       await googleAdsSyncService.syncAccountCharges();
 
-      if (enhanced) {
-        await googleAdsSyncService.syncEnhancedAnalytics(backfill);
-      }
+      // Always run enhanced analytics (keywords, devices, geo, hourly, ads, demographics, assets)
+      await googleAdsSyncService.syncEnhancedAnalytics(backfill);
 
-      const msg = enhanced
-        ? `Sincronización completada (campañas + recargas + analíticas avanzadas${backfill ? ' BACKFILL 30 días' : ''})`
-        : 'Sincronización completada (campañas + recargas)';
-      return sendSuccess(res, { message: msg });
+      const wasRateLimited = googleAdsSyncService.isRateLimited();
+      const msg = wasRateLimited
+        ? 'Sincronización parcial — se alcanzó el límite de tasa. Los datos restantes se sincronizarán automáticamente.'
+        : `Sincronización completada (campañas + recargas + analíticas avanzadas)`;
+      return sendSuccess(res, { message: msg, rateLimited: wasRateLimited });
     } catch (err) { next(err); }
   }
 
@@ -241,6 +264,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -254,6 +278,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -324,15 +349,17 @@ export class PautadoresController {
 
   async getAnalysisKeywords(req: Request, res: Response, next: NextFunction) {
     try {
-      const { date_from, date_to, metric, match_type, account_id, country_id, limit } = req.query as any;
+      const { date_from, date_to, metric, match_type, account_id, country_id, limit, group_by } = req.query as any;
       const data = await googleAdsAnalysisService.getTopKeywords({
         dateFrom: date_from,
         dateTo: date_to,
         metric,
         matchType: match_type,
-        accountId: account_id,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
         limit: limit ? Number(limit) : undefined,
+        groupBy: group_by || undefined,
       });
       return sendSuccess(res, data);
     } catch (err) { next(err); }
@@ -370,9 +397,39 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getGeoPerformance({
         dateFrom: date_from,
         dateTo: date_to,
-        accountId: account_id,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
         limit: limit ? Number(limit) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisGeoMap(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id, metric } = req.query as any;
+      const data = await googleAdsAnalysisService.getGeoMapData({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+        metric: metric || 'cost',
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisCountryEfficiency(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getCountryEfficiencyReport({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
     } catch (err) { next(err); }
@@ -807,6 +864,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -820,6 +878,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -833,6 +892,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -846,6 +906,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -859,6 +920,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -872,6 +934,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -885,6 +948,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -898,6 +962,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -911,6 +976,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -924,6 +990,7 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -938,6 +1005,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getAccountHealthScores({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -950,6 +1018,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getExecutiveSummary({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -962,6 +1031,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getTopRecommendations({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -976,6 +1046,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getZombieKeywords({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -988,6 +1059,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getVampireCampaigns({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -1000,6 +1072,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getConsolidatedActionPlan({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -1014,6 +1087,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getAccountBenchmark({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -1026,6 +1100,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getPortfolioRecommendation({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -1038,6 +1113,7 @@ export class PautadoresController {
       const data = await googleAdsAnalysisService.getAccountPatterns({
         dateFrom: date_from, dateTo: date_to,
         accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
@@ -1056,6 +1132,106 @@ export class PautadoresController {
         dateFrom: date_from,
         dateTo: date_to,
         accountId: account_id,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisLandingPages(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getLandingPageAnalysis({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisConversionFunnel(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getConversionFunnel({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisMonthComparison(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getMonthOverMonthComparison({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  // ========== Wave 5A: Asset Analysis ==========
+
+  async getAnalysisAssetSummary(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAssetAnalysisService.getAssetSummary({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisAssetHeadlines(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAssetAnalysisService.getHeadlinePerformance({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisAssetDescriptions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAssetAnalysisService.getDescriptionPerformance({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisAssetSitelinks(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id } = req.query as any;
+      const data = await googleAdsAssetAnalysisService.getSitelinkPerformance({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
       });
       return sendSuccess(res, data);
     } catch (err) { next(err); }

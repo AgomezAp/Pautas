@@ -1,5 +1,6 @@
 import { query, getClient } from '../config/database';
 import { logger } from '../utils/logger.util';
+import { websocketService } from './websocket.service';
 
 interface DailyEntryData {
   id: number;
@@ -975,6 +976,18 @@ export class AlertsEngineService {
         ]);
       }
       await client.query('COMMIT');
+
+      // Broadcast new alerts via WebSocket
+      for (const alert of alerts) {
+        websocketService.broadcastAlert({
+          alert_type: alert.alert_type,
+          severity: alert.severity,
+          title: alert.title,
+          message: alert.message,
+          metadata: alert.metadata,
+          created_at: new Date().toISOString(),
+        }, alert.user_id);
+      }
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;

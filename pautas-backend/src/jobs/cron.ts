@@ -126,19 +126,54 @@ export function registerCronJobs() {
 
   logger.info('Image cleanup cron registered: daily at 4:00 AM (>14 days)');
 
-  // ─── ENHANCED ANALYTICS: Keywords, dispositivos, geo, horario (diario a las 4:30 AM) ────
-  cron.schedule('30 4 * * *', async () => {
-    logger.info('[CRON] Starting enhanced analytics sync (keywords, devices, geo, hourly)...');
+  // ─── DISTRIBUTED ENHANCED ANALYTICS: One method per slot, spreads load throughout the day ────
+  // Instead of running ALL 8 methods every 3 hours (which generates hundreds of API calls),
+  // we distribute them across the day. Each method syncs LAST_3_DAYS by default.
+  // Schedule: 6AM keywords, 8AM devices, 10AM geo, 12PM hourly,
+  //           2PM searchTerms, 4PM adPerformance, 6PM demographics, 8PM assets
+  // By 8PM all data is fresh. Daily 3AM backfill covers anything missed.
+
+  const distributedSchedule: { cron: string; method: string; label: string }[] = [
+    { cron: '0 6 * * *',  method: 'keywords',      label: 'Keywords' },
+    { cron: '0 8 * * *',  method: 'devices',        label: 'Devices' },
+    { cron: '0 10 * * *', method: 'geo',             label: 'Geo' },
+    { cron: '0 12 * * *', method: 'hourly',          label: 'Hourly' },
+    { cron: '0 14 * * *', method: 'searchTerms',     label: 'Search Terms' },
+    { cron: '0 16 * * *', method: 'adPerformance',   label: 'Ad Performance' },
+    { cron: '0 18 * * *', method: 'demographics',    label: 'Demographics' },
+    { cron: '0 20 * * *', method: 'assets',           label: 'Assets' },
+  ];
+
+  for (const slot of distributedSchedule) {
+    cron.schedule(slot.cron, async () => {
+      logger.info(`[CRON] [DISTRIBUTED] Starting ${slot.label} sync...`);
+      try {
+        const ran = await googleAdsSyncService.syncSingleMethod(slot.method);
+        if (ran) {
+          logger.info(`[CRON] [DISTRIBUTED] ${slot.label} sync completed`);
+          await cacheService.invalidatePattern('gestion:*');
+        } else {
+          logger.warn(`[CRON] [DISTRIBUTED] ${slot.label} skipped (rate limited)`);
+        }
+      } catch (error: any) {
+        logger.error(`[CRON] [DISTRIBUTED] ${slot.label} sync error: ${error.message}`);
+      }
+    });
+  }
+
+  // Nightly full enhanced sync at 11PM — catches anything missed during the day
+  cron.schedule('0 23 * * *', async () => {
+    logger.info('[CRON] Starting nightly full enhanced analytics sync...');
     try {
-      await googleAdsSyncService.syncEnhancedAnalytics();
-      logger.info('[CRON] Enhanced analytics sync completed');
+      await googleAdsSyncService.syncEnhancedAnalytics(false);
+      logger.info('[CRON] Nightly enhanced analytics sync completed');
       await cacheService.invalidatePattern('gestion:*');
     } catch (error: any) {
-      logger.error('[CRON] Enhanced analytics sync error: ' + error.message);
+      logger.error('[CRON] Nightly enhanced analytics sync error: ' + error.message);
     }
   });
 
-  logger.info('Enhanced analytics cron registered: daily at 4:30 AM');
+  logger.info('Distributed enhanced analytics cron registered: 6AM-8PM (one method every 2 hours) + 11PM full sweep');
 
   // ─── ALERTAS PRESUPUESTO: Detectar sobregasto/subgasto/agotamiento (diario 12 PM y 6 PM) ────
   cron.schedule('0 12,18 * * 1-5', async () => {

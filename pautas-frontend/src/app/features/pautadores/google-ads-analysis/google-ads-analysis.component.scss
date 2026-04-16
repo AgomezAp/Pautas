@@ -1560,3 +1560,35 @@ h6 {
     }
   }
 }
+
+// KPI comparison cards
+.kpi-card {
+  background: $color-bg-white;
+  border: 1px solid $color-border-light;
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 130px;
+  flex: 1 1 130px;
+  text-align: center;
+
+  .kpi-label {
+    font-size: 0.72rem;
+    color: $color-text-muted;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .kpi-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: $color-text-dark;
+    margin-bottom: 2px;
+  }
+
+  .kpi-delta {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+}

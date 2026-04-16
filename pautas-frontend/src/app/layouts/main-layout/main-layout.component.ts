@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
@@ -6,6 +6,7 @@ import { ROLE_LABELS } from '../../core/constants/app.constants';
 import { SidebarComponent, NavItem } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
 import { routeAnimation } from '../../config/route-animation';
+import { WebSocketService } from '../../core/services/websocket.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -14,20 +15,33 @@ import { routeAnimation } from '../../config/route-animation';
   styleUrl: './main-layout.component.scss',
   animations: [routeAnimation],
 })
-export class MainLayoutComponent {
+export class MainLayoutComponent implements OnInit, OnDestroy {
   navItems: NavItem[] = [];
   roleLabel = '';
   userName = '';
   sidebarCollapsed = false;
 
-  constructor(public authService: AuthService, private router: Router) {
+  constructor(
+    public authService: AuthService,
+    private router: Router,
+    private wsService: WebSocketService,
+  ) {
     const role = this.authService.userRole();
     this.roleLabel = role ? ROLE_LABELS[role] || role : '';
     this.userName = this.authService.user()?.fullName || '';
     this.navItems = this.getNavItems(role);
   }
 
+  ngOnInit(): void {
+    this.wsService.connect();
+  }
+
+  ngOnDestroy(): void {
+    this.wsService.disconnect();
+  }
+
   logout(): void {
+    this.wsService.disconnect();
     this.authService.logout();
   }
 

@@ -4,6 +4,18 @@ import { predictiveBudgetService } from './predictive-budget.service';
 
 export class GoogleAdsAnalysisService {
 
+  // Helper: add account_ids array filter for pautador filtering
+  private addAccountIdsFilter(
+    conditions: string[], values: any[], paramIdx: number, accountIds?: string[]
+  ): number {
+    if (accountIds && accountIds.length > 0) {
+      conditions.push(`c.customer_account_id = ANY($${paramIdx}::text[])`);
+      values.push(accountIds);
+      return paramIdx + 1;
+    }
+    return paramIdx;
+  }
+
   async getDataRange() {
     const sql = `
       SELECT MIN(snapshot_date) AS min_date, MAX(snapshot_date) AS max_date,
@@ -19,6 +31,7 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
     const granularity = params.granularity || 'daily';
@@ -34,7 +47,7 @@ export class GoogleAdsAnalysisService {
         truncExpr = "DATE_TRUNC('day', gs.snapshot_date)";
     }
 
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -43,6 +56,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -70,9 +84,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -81,6 +96,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -161,7 +177,7 @@ export class GoogleAdsAnalysisService {
   }
 
   async getBudgetDistribution(params: { countryId?: number }) {
-    const conditions: string[] = [];
+    const conditions: string[] = ["c.ads_status = 'ENABLED'"];
     const values: any[] = [];
     let paramIdx = 1;
 
@@ -210,6 +226,7 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
     const granularity = params.granularity || 'daily';
@@ -225,7 +242,7 @@ export class GoogleAdsAnalysisService {
         truncExpr = "DATE_TRUNC('day', gs.snapshot_date)";
     }
 
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -234,6 +251,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -265,9 +283,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -276,6 +295,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -325,9 +345,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -336,6 +357,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -394,8 +416,10 @@ export class GoogleAdsAnalysisService {
     metric?: string;
     matchType?: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
     limit?: number;
+    groupBy?: string;
   }) {
     const metric = params.metric || 'clicks';
     const metricMap: Record<string, string> = {
@@ -407,7 +431,7 @@ export class GoogleAdsAnalysisService {
     const metricExpr = metricMap[metric] || metricMap['clicks'];
     const limitVal = params.limit || 50;
 
-    const conditions: string[] = ['kw.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['kw.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -421,6 +445,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -429,8 +454,25 @@ export class GoogleAdsAnalysisService {
 
     values.push(limitVal);
 
+    // Dynamic GROUP BY based on grouping preference
+    const groupMode = params.groupBy || 'flat';
+    let selectExtra = '';
+    let groupByExtra = '';
+    let orderByPrefix = '';
+
+    if (groupMode === 'account') {
+      selectExtra = `c.customer_account_id, c.customer_account_name,`;
+      groupByExtra = ', c.customer_account_id, c.customer_account_name';
+      orderByPrefix = 'c.customer_account_name, ';
+    } else if (groupMode === 'campaign') {
+      selectExtra = `c.customer_account_id, c.customer_account_name, c.name AS campaign_name,`;
+      groupByExtra = ', c.customer_account_id, c.customer_account_name, c.name';
+      orderByPrefix = 'c.customer_account_name, c.name, ';
+    }
+
     const sql = `
       SELECT
+        ${selectExtra}
         kw.keyword_text,
         ${EnumMappingService.getMatchTypeCaseSQL('kw.match_type')} AS match_type,
         ROUND(AVG(kw.quality_score), 1) AS avg_quality_score,
@@ -450,8 +492,8 @@ export class GoogleAdsAnalysisService {
       FROM google_ads_keyword_snapshots kw
       JOIN campaigns c ON c.id = kw.campaign_id
       WHERE ${conditions.join(' AND ')}
-      GROUP BY kw.keyword_text, kw.match_type
-      ORDER BY sort_value DESC
+      GROUP BY kw.keyword_text, kw.match_type${groupByExtra}
+      ORDER BY ${orderByPrefix}sort_value DESC
       LIMIT $${paramIdx}
     `;
 
@@ -463,9 +505,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['kw.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['kw.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -474,6 +517,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -518,9 +562,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -529,6 +574,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -571,10 +617,11 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
     limit?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -583,6 +630,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -620,15 +668,15 @@ export class GoogleAdsAnalysisService {
     return result.rows;
   }
 
-  // ========== Budget Intelligence ==========
-
-  async getBudgetPacing(params: {
+  async getGeoMapData(params: {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
+    metric?: string;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -637,6 +685,148 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
+    if (params.countryId) {
+      conditions.push(`c.country_id = $${paramIdx}`);
+      values.push(params.countryId);
+      paramIdx++;
+    }
+
+    const sql = `
+      SELECT
+        gs.geo_target_name AS country,
+        gs.geo_target_type,
+        SUM(gs.clicks)::int AS clicks,
+        SUM(gs.impressions)::int AS impressions,
+        SUM(gs.cost)::numeric AS cost,
+        SUM(gs.conversions)::numeric AS conversions,
+        CASE WHEN SUM(gs.clicks) > 0
+          THEN ROUND(SUM(gs.cost) / SUM(gs.clicks), 2)
+          ELSE 0
+        END AS cpc,
+        CASE WHEN SUM(gs.impressions) > 0
+          THEN ROUND((SUM(gs.clicks)::numeric / SUM(gs.impressions)) * 100, 2)
+          ELSE 0
+        END AS ctr,
+        CASE WHEN SUM(gs.conversions) > 0
+          THEN ROUND((SUM(gs.cost) / SUM(gs.conversions))::numeric, 2)
+          ELSE 0
+        END AS cpa,
+        CASE WHEN SUM(gs.clicks) > 0
+          THEN ROUND((SUM(gs.conversions)::numeric / SUM(gs.clicks)) * 100, 2)
+          ELSE 0
+        END AS conversion_rate
+      FROM google_ads_geo_snapshots gs
+      JOIN campaigns c ON c.id = gs.campaign_id
+      WHERE ${conditions.join(' AND ')}
+      GROUP BY gs.geo_target_name, gs.geo_target_type
+      ORDER BY SUM(gs.cost) DESC
+    `;
+
+    const result = await query(sql, values);
+    const rows = result.rows;
+
+    // Calculate totals for percentage calculations
+    const totals = rows.reduce((acc: any, r: any) => ({
+      cost: acc.cost + Number(r.cost),
+      clicks: acc.clicks + Number(r.clicks),
+      impressions: acc.impressions + Number(r.impressions),
+      conversions: acc.conversions + Number(r.conversions),
+    }), { cost: 0, clicks: 0, impressions: 0, conversions: 0 });
+
+    return rows.map((r: any) => ({
+      ...r,
+      cost_pct: totals.cost > 0 ? Number(((Number(r.cost) / totals.cost) * 100).toFixed(1)) : 0,
+      clicks_pct: totals.clicks > 0 ? Number(((Number(r.clicks) / totals.clicks) * 100).toFixed(1)) : 0,
+      impressions_pct: totals.impressions > 0 ? Number(((Number(r.impressions) / totals.impressions) * 100).toFixed(1)) : 0,
+    }));
+  }
+
+  async getCountryEfficiencyReport(params: {
+    dateFrom: string;
+    dateTo: string;
+    accountId?: string;
+    accountIds?: string[];
+    countryId?: number;
+  }) {
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
+    const values: any[] = [params.dateFrom, params.dateTo];
+    let paramIdx = 3;
+
+    if (params.accountId) {
+      conditions.push(`c.customer_account_id = $${paramIdx}`);
+      values.push(params.accountId);
+      paramIdx++;
+    }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
+    if (params.countryId) {
+      conditions.push(`c.country_id = $${paramIdx}`);
+      values.push(params.countryId);
+      paramIdx++;
+    }
+
+    const sql = `
+      WITH country_metrics AS (
+        SELECT
+          gs.geo_target_name AS country,
+          SUM(gs.cost)::numeric AS total_cost,
+          SUM(gs.clicks)::int AS total_clicks,
+          SUM(gs.impressions)::int AS total_impressions,
+          SUM(gs.conversions)::numeric AS total_conversions,
+          CASE WHEN SUM(gs.clicks) > 0
+            THEN ROUND(SUM(gs.cost) / SUM(gs.clicks), 2) ELSE 0 END AS cpc,
+          CASE WHEN SUM(gs.impressions) > 0
+            THEN ROUND((SUM(gs.clicks)::numeric / SUM(gs.impressions)) * 100, 2) ELSE 0 END AS ctr,
+          CASE WHEN SUM(gs.conversions) > 0
+            THEN ROUND((SUM(gs.cost) / SUM(gs.conversions))::numeric, 2) ELSE 0 END AS cpa,
+          CASE WHEN SUM(gs.clicks) > 0
+            THEN ROUND((SUM(gs.conversions)::numeric / SUM(gs.clicks)) * 100, 2) ELSE 0 END AS conversion_rate
+        FROM google_ads_geo_snapshots gs
+        JOIN campaigns c ON c.id = gs.campaign_id
+        WHERE ${conditions.join(' AND ')}
+        GROUP BY gs.geo_target_name
+        HAVING SUM(gs.cost) > 0
+      ),
+      ranked AS (
+        SELECT *,
+          ROW_NUMBER() OVER (ORDER BY cpa ASC NULLS LAST) AS cpa_rank,
+          ROW_NUMBER() OVER (ORDER BY ctr DESC) AS ctr_rank,
+          ROW_NUMBER() OVER (ORDER BY conversion_rate DESC) AS conv_rank
+        FROM country_metrics
+      )
+      SELECT *,
+        ROUND((
+          (1.0 / GREATEST(cpa_rank, 1)) * 40 +
+          (1.0 / GREATEST(ctr_rank, 1)) * 30 +
+          (1.0 / GREATEST(conv_rank, 1)) * 30
+        ) * 100, 1) AS efficiency_score
+      FROM ranked
+      ORDER BY efficiency_score DESC
+    `;
+
+    const result = await query(sql, values);
+    return result.rows;
+  }
+
+  // ========== Budget Intelligence ==========
+
+  async getBudgetPacing(params: {
+    dateFrom: string;
+    dateTo: string;
+    accountId?: string;
+    accountIds?: string[];
+    countryId?: number;
+  }) {
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
+    const values: any[] = [params.dateFrom, params.dateTo];
+    let paramIdx = 3;
+
+    if (params.accountId) {
+      conditions.push(`c.customer_account_id = $${paramIdx}`);
+      values.push(params.accountId);
+      paramIdx++;
+    }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -682,14 +872,13 @@ export class GoogleAdsAnalysisService {
           MIN(gs.snapshot_date) AS first_date,
           MAX(gs.snapshot_date) AS last_date,
           COALESCE(ab.total_daily_budget, 0) AS total_daily_budget,
-          COALESCE(ab.avg_cpa, 0) AS account_avg_cpa,
-          COALESCE(ab.avg_cpc, 0) AS account_avg_cpc
+          COALESCE(ab.avg_cpa, 0) AS account_avg_cpa
         FROM google_ads_snapshots gs
         JOIN campaigns c ON c.id = gs.campaign_id
         LEFT JOIN countries co ON co.id = c.country_id
         LEFT JOIN account_budgets ab ON ab.customer_account_id = c.customer_account_id
         WHERE ${conditions.join(' AND ')}
-        GROUP BY c.customer_account_id, c.customer_account_name, co.name, ab.total_daily_budget, ab.avg_cpa, ab.avg_cpc
+        GROUP BY c.customer_account_id, c.customer_account_name, co.name, ab.total_daily_budget, ab.avg_cpa
       ),
       with_recommendations AS (
         SELECT
@@ -705,7 +894,6 @@ export class GoogleAdsAnalysisService {
           total_clicks,
           total_conversions,
           account_avg_cpa,
-          account_avg_cpc,
           CASE WHEN total_daily_budget > 0 AND days_with_data > 0
             THEN ROUND((total_cost / (total_daily_budget * days_with_data)) * 100, 2)
             ELSE 0
@@ -718,20 +906,12 @@ export class GoogleAdsAnalysisService {
             THEN ROUND((total_cost / days_with_data) * 30, 2)
             ELSE 0
           END AS projected_monthly_spend,
-          -- Smart budget recommendation
+          -- Budget recommendation targeting 100% pacing
+          -- Formula: ideal budget = actual daily spend (run rate), so pacing becomes ~100%
           CASE
-            WHEN total_conversions = 0 AND total_cost > 0 THEN
-              -- No conversions: reduce by 50%
-              ROUND((total_daily_budget * 0.5)::numeric, 2)
-            WHEN total_conversions > 0 AND total_cost > 0 THEN
-              -- Has conversions: calculate optimal based on target (10 conversions/month)
-              ROUND(((total_conversions / days_with_data) * 30 * (total_cost / NULLIF(total_conversions, 0)) / 10)::numeric, 2)
-            WHEN total_clicks > 0 AND total_cost > 0 THEN
-              -- Has clicks but no conversions: assess for optimization
-              ROUND((total_daily_budget * 0.7)::numeric, 2)
-            ELSE
-              -- No data: maintain current
-              total_daily_budget
+            WHEN total_daily_budget = 0 THEN 0
+            WHEN days_with_data = 0 THEN total_daily_budget
+            ELSE ROUND((total_cost / days_with_data)::numeric, 0)
           END AS recommended_daily_budget
         FROM account_metrics
       )
@@ -750,18 +930,25 @@ export class GoogleAdsAnalysisService {
         projected_monthly_spend,
         recommended_daily_budget,
         CASE
-          WHEN pacing_pct <= 80 AND recommended_daily_budget > total_daily_budget
-            THEN 'Increase budget - under-pacing'
-          WHEN pacing_pct >= 120 AND recommended_daily_budget < total_daily_budget
-            THEN 'Reduce budget - over-pacing'
-          WHEN recommended_daily_budget > total_daily_budget
-            THEN 'Increase budget for better ROI'
-          WHEN recommended_daily_budget < total_daily_budget
-            THEN 'Reduce budget - low conversion rate'
-          ELSE 'On-track - maintain budget'
+          WHEN recommended_daily_budget > total_daily_budget THEN
+            'Aumentar +' || ROUND(((recommended_daily_budget - total_daily_budget) / NULLIF(total_daily_budget, 0)) * 100) || '%'
+          WHEN recommended_daily_budget < total_daily_budget THEN
+            'Reducir ' || ROUND(((recommended_daily_budget - total_daily_budget) / NULLIF(total_daily_budget, 0)) * 100) || '%'
+          ELSE 'Mantener'
         END AS budget_status,
-        ROUND((recommended_daily_budget - total_daily_budget)::numeric, 2) AS budget_adjustment
+        ROUND((recommended_daily_budget - total_daily_budget)::numeric, 0) AS budget_adjustment,
+        -- Pacing recommendation text for 100% target
+        CASE
+          WHEN pacing_pct = 0 THEN 'Sin datos de gasto. Verificar que las campanas esten activas.'
+          WHEN pacing_pct < 50 THEN 'Pacing critico (' || pacing_pct || '%). Se esta gastando menos de la mitad del presupuesto. Reducir presupuesto diario a ' || recommended_daily_budget || ' o revisar restricciones de segmentacion/pujas.'
+          WHEN pacing_pct < 70 THEN 'Sub-ejecucion (' || pacing_pct || '%). Reducir presupuesto diario a ' || recommended_daily_budget || ' o ampliar audiencias/keywords para generar mas impresiones.'
+          WHEN pacing_pct < 90 THEN 'Pacing bajo (' || pacing_pct || '%). Ajustar presupuesto a ' || recommended_daily_budget || ' o incrementar pujas 10-15% para mejorar competitividad.'
+          WHEN pacing_pct <= 110 THEN 'Pacing optimo (' || pacing_pct || '%). El presupuesto se esta consumiendo correctamente. Mantener configuracion actual.'
+          WHEN pacing_pct <= 130 THEN 'Sobre-ejecucion leve (' || pacing_pct || '%). Aumentar presupuesto a ' || recommended_daily_budget || ' para evitar limitaciones de entrega.'
+          ELSE 'Sobre-ejecucion alta (' || pacing_pct || '%). Aumentar presupuesto a ' || recommended_daily_budget || ' urgentemente o reducir pujas para controlar el gasto.'
+        END AS pacing_recommendation
       FROM with_recommendations
+      WHERE total_daily_budget > 0
       ORDER BY total_cost DESC
     `;
 
@@ -773,9 +960,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -784,6 +972,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -850,9 +1039,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['hs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['hs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -861,6 +1051,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -870,7 +1061,7 @@ export class GoogleAdsAnalysisService {
     const sql = `
       SELECT
         hs.hour_of_day,
-        hs.day_of_week,
+        EXTRACT(ISODOW FROM hs.snapshot_date) AS day_of_week,
         SUM(hs.clicks) AS total_clicks,
         SUM(hs.cost) AS total_cost,
         SUM(hs.conversions) AS total_conversions,
@@ -885,8 +1076,8 @@ export class GoogleAdsAnalysisService {
       FROM google_ads_hourly_snapshots hs
       JOIN campaigns c ON c.id = hs.campaign_id
       WHERE ${conditions.join(' AND ')}
-      GROUP BY hs.hour_of_day, hs.day_of_week
-      ORDER BY hs.day_of_week, hs.hour_of_day
+      GROUP BY hs.hour_of_day, EXTRACT(ISODOW FROM hs.snapshot_date)
+      ORDER BY day_of_week, hs.hour_of_day
     `;
 
     const result = await query(sql, values);
@@ -897,9 +1088,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -908,6 +1100,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -956,8 +1149,22 @@ export class GoogleAdsAnalysisService {
     const projected14d = Math.max(0, Math.round((intercept + slope * (n + 7)) * 14 * 100) / 100);
     const projected30d = Math.max(0, Math.round((intercept + slope * (n + 15)) * 30 * 100) / 100);
 
+    // Determine scope label for frontend
+    let scopeLabel = 'todas las cuentas';
+    if (params.accountId) {
+      const acctResult = await query(
+        'SELECT DISTINCT customer_account_name FROM campaigns WHERE customer_account_id = $1 LIMIT 1',
+        [params.accountId]
+      );
+      scopeLabel = acctResult.rows[0]?.customer_account_name || params.accountId;
+    } else if (params.countryId) {
+      const countryResult = await query('SELECT name FROM countries WHERE id = $1', [params.countryId]);
+      scopeLabel = countryResult.rows[0]?.name || 'pais seleccionado';
+    }
+
     return {
       trend: rows,
+      scope_label: scopeLabel,
       forecast: {
         avg_daily_cost: Math.round(avgDailyCost * 100) / 100,
         slope: Math.round(slope * 100) / 100,
@@ -974,9 +1181,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -985,6 +1193,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1053,9 +1262,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1064,6 +1274,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1170,6 +1381,7 @@ export class GoogleAdsAnalysisService {
     dateTo: string;
     metric?: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
     const metric = params.metric || 'clicks';
@@ -1181,7 +1393,7 @@ export class GoogleAdsAnalysisService {
     };
     const metricExpr = metricMap[metric] || metricMap['clicks'];
 
-    const conditions: string[] = ['hs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['hs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1190,6 +1402,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1198,16 +1411,14 @@ export class GoogleAdsAnalysisService {
 
     const sql = `
       SELECT
-        hs.snapshot_date,
+        EXTRACT(ISODOW FROM hs.snapshot_date) AS day_of_week,
         hs.hour_of_day,
-        TO_CHAR(hs.snapshot_date, 'Dy') AS day_name,
-        EXTRACT(DOW FROM hs.snapshot_date) AS day_of_week,
         ${metricExpr} AS value
       FROM google_ads_hourly_snapshots hs
       JOIN campaigns c ON c.id = hs.campaign_id
       WHERE ${conditions.join(' AND ')}
-      GROUP BY hs.snapshot_date, hs.hour_of_day
-      ORDER BY hs.snapshot_date, hs.hour_of_day
+      GROUP BY EXTRACT(ISODOW FROM hs.snapshot_date), hs.hour_of_day
+      ORDER BY day_of_week, hs.hour_of_day
     `;
 
     const result = await query(sql, values);
@@ -1222,6 +1433,7 @@ export class GoogleAdsAnalysisService {
     dateFrom2: string;
     dateTo2: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
     const conditions1: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
@@ -1309,9 +1521,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1320,6 +1533,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1354,9 +1568,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1365,6 +1580,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1395,9 +1611,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1406,6 +1623,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1465,9 +1683,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1476,6 +1695,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1533,10 +1753,11 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
     limit?: number;
   }) {
-    const conditions: string[] = ['st.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['st.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1545,6 +1766,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1584,9 +1806,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['st.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['st.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1595,6 +1818,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1629,9 +1853,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['st.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['st.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1640,6 +1865,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1696,9 +1922,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1707,6 +1934,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1741,9 +1969,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ads.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ads.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1752,6 +1981,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1781,12 +2011,13 @@ export class GoogleAdsAnalysisService {
         CASE WHEN SUM(ads.conversions) > 0
           THEN ROUND((SUM(ads.cost) / SUM(ads.conversions))::numeric, 2)
           ELSE 0 END AS cpa,
-        c.name AS campaign_name
+        c.name AS campaign_name,
+        c.customer_account_name
       FROM google_ads_ad_snapshots ads
       JOIN campaigns c ON c.id = ads.campaign_id
       WHERE ${conditions.join(' AND ')}
       GROUP BY ads.ad_group_id, ads.ad_group_name, ads.ad_id, ads.ad_type,
-               ads.headlines, ads.descriptions, ads.final_url, ads.status, c.name
+               ads.headlines, ads.descriptions, ads.final_url, ads.status, c.name, c.customer_account_name
       ORDER BY ads.ad_group_name, SUM(ads.cost) DESC
     `;
 
@@ -1800,9 +2031,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ads.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ads.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1811,6 +2043,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1890,9 +2123,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ads.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ads.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1901,6 +2135,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1941,9 +2176,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ai.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ai.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1952,6 +2188,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -1982,9 +2219,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ai.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ai.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -1993,6 +2231,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -2022,9 +2261,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ai.snapshot_date BETWEEN $1 AND $2', 'gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ai.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'", 'gs.snapshot_date BETWEEN $1 AND $2'];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -2033,6 +2273,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -2101,9 +2342,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2', "ds.demographic_type = 'AGE'"];
+    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2', "ds.demographic_type = 'AGE'", "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -2112,6 +2354,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -2149,9 +2392,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2', "ds.demographic_type = 'GENDER'"];
+    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2', "ds.demographic_type = 'GENDER'", "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
 
@@ -2160,6 +2404,7 @@ export class GoogleAdsAnalysisService {
       values.push(params.accountId);
       paramIdx++;
     }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
     if (params.countryId) {
       conditions.push(`c.country_id = $${paramIdx}`);
       values.push(params.countryId);
@@ -2199,9 +2444,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2270,9 +2516,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ds.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2302,9 +2549,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2363,9 +2611,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2402,9 +2651,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2477,9 +2727,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2555,9 +2806,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2625,9 +2877,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2692,9 +2945,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2732,9 +2986,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2768,9 +3023,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2842,14 +3098,14 @@ export class GoogleAdsAnalysisService {
             CASE WHEN wa.account_total_cost > 0 THEN GREATEST(0, 20 - COALESCE(wa.wasted_cost, 0) / wa.account_total_cost * 20) ELSE 20 END +
             LEAST(15, am.avg_impression_share / 100 * 15) +
             15
-          )::numeric, 0) >= 70 THEN 'HEALTHY'
+          )::numeric, 0) >= 80 THEN 'HEALTHY'
           WHEN ROUND((
             CASE WHEN am.cpa IS NOT NULL AND ga.avg_cpa > 0 AND am.cpa <= ga.avg_cpa THEN 25 WHEN am.cpa IS NOT NULL AND ga.avg_cpa > 0 THEN GREATEST(0, 25 - (am.cpa - ga.avg_cpa) / ga.avg_cpa * 25) ELSE 0 END +
             LEAST(25, am.conversion_rate * 5) +
             CASE WHEN wa.account_total_cost > 0 THEN GREATEST(0, 20 - COALESCE(wa.wasted_cost, 0) / wa.account_total_cost * 20) ELSE 20 END +
             LEAST(15, am.avg_impression_share / 100 * 15) +
             15
-          )::numeric, 0) >= 40 THEN 'ATTENTION'
+          )::numeric, 0) >= 50 THEN 'ATTENTION'
           ELSE 'CRITICAL'
         END AS status
       FROM account_metrics am
@@ -2865,9 +3121,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -2964,9 +3221,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -3042,9 +3300,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['ks.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -3081,9 +3340,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -3139,9 +3399,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -3220,9 +3481,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -3298,9 +3560,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -3366,9 +3629,10 @@ export class GoogleAdsAnalysisService {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    accountIds?: string[];
     countryId?: number;
   }) {
-    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2'];
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
     const values: any[] = [params.dateFrom, params.dateTo];
     let paramIdx = 3;
     if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
@@ -3424,6 +3688,194 @@ export class GoogleAdsAnalysisService {
   }
 
   // ========== ML Predictive Budget Analysis ==========
+
+  // ========== Wave 4: Landing Pages, Funnel, Month Comparison ==========
+
+  async getLandingPageAnalysis(params: {
+    dateFrom: string;
+    dateTo: string;
+    accountId?: string;
+    accountIds?: string[];
+    countryId?: number;
+  }) {
+    const conditions: string[] = ['ads.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'", "ads.final_url IS NOT NULL", "ads.final_url != ''"];
+    const values: any[] = [params.dateFrom, params.dateTo];
+    let paramIdx = 3;
+
+    if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
+    if (params.countryId) { conditions.push(`c.country_id = $${paramIdx}`); values.push(params.countryId); paramIdx++; }
+
+    const sql = `
+      SELECT
+        ads.final_url,
+        COUNT(DISTINCT ads.ad_id) AS ad_count,
+        COUNT(DISTINCT c.id) AS campaign_count,
+        SUM(ads.clicks)::int AS total_clicks,
+        SUM(ads.impressions)::int AS total_impressions,
+        SUM(ads.cost)::numeric AS total_cost,
+        SUM(ads.conversions)::numeric AS total_conversions,
+        CASE WHEN SUM(ads.clicks) > 0
+          THEN ROUND(SUM(ads.cost) / SUM(ads.clicks), 2) ELSE 0 END AS cpc,
+        CASE WHEN SUM(ads.impressions) > 0
+          THEN ROUND((SUM(ads.clicks)::numeric / SUM(ads.impressions)) * 100, 2) ELSE 0 END AS ctr,
+        CASE WHEN SUM(ads.conversions) > 0
+          THEN ROUND((SUM(ads.cost) / SUM(ads.conversions))::numeric, 2) ELSE 0 END AS cpa,
+        CASE WHEN SUM(ads.clicks) > 0
+          THEN ROUND((SUM(ads.conversions)::numeric / SUM(ads.clicks)) * 100, 2) ELSE 0 END AS conversion_rate
+      FROM google_ads_ad_snapshots ads
+      JOIN campaigns c ON c.id = ads.campaign_id
+      WHERE ${conditions.join(' AND ')}
+      GROUP BY ads.final_url
+      ORDER BY SUM(ads.cost) DESC
+      LIMIT 50
+    `;
+
+    const result = await query(sql, values);
+    return result.rows;
+  }
+
+  async getConversionFunnel(params: {
+    dateFrom: string;
+    dateTo: string;
+    accountId?: string;
+    accountIds?: string[];
+    countryId?: number;
+  }) {
+    const conditions: string[] = ['gs.snapshot_date BETWEEN $1 AND $2', "c.ads_status = 'ENABLED'"];
+    const values: any[] = [params.dateFrom, params.dateTo];
+    let paramIdx = 3;
+
+    if (params.accountId) { conditions.push(`c.customer_account_id = $${paramIdx}`); values.push(params.accountId); paramIdx++; }
+    paramIdx = this.addAccountIdsFilter(conditions, values, paramIdx, params.accountIds);
+    if (params.countryId) { conditions.push(`c.country_id = $${paramIdx}`); values.push(params.countryId); paramIdx++; }
+
+    const sql = `
+      SELECT
+        c.name AS campaign_name,
+        c.customer_account_name,
+        SUM(gs.impressions)::int AS impressions,
+        SUM(gs.clicks)::int AS clicks,
+        SUM(gs.conversions)::numeric AS conversions,
+        CASE WHEN SUM(gs.impressions) > 0
+          THEN ROUND((SUM(gs.clicks)::numeric / SUM(gs.impressions)) * 100, 2) ELSE 0 END AS click_rate,
+        CASE WHEN SUM(gs.clicks) > 0
+          THEN ROUND((SUM(gs.conversions)::numeric / SUM(gs.clicks)) * 100, 2) ELSE 0 END AS conversion_rate,
+        CASE WHEN SUM(gs.impressions) > 0
+          THEN ROUND((SUM(gs.conversions)::numeric / SUM(gs.impressions)) * 100, 4) ELSE 0 END AS overall_rate,
+        SUM(gs.cost)::numeric AS total_cost
+      FROM google_ads_snapshots gs
+      JOIN campaigns c ON c.id = gs.campaign_id
+      WHERE ${conditions.join(' AND ')}
+      GROUP BY c.name, c.customer_account_name
+      HAVING SUM(gs.impressions) > 0
+      ORDER BY SUM(gs.impressions) DESC
+      LIMIT 30
+    `;
+
+    const result = await query(sql, values);
+    return result.rows;
+  }
+
+  async getMonthOverMonthComparison(params: {
+    dateFrom: string;
+    dateTo: string;
+    accountId?: string;
+    accountIds?: string[];
+    countryId?: number;
+  }) {
+    // Calculate current and previous period
+    const from = new Date(params.dateFrom);
+    const to = new Date(params.dateTo);
+    const periodDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+    const prevTo = new Date(from);
+    prevTo.setDate(prevTo.getDate() - 1);
+    const prevFrom = new Date(prevTo);
+    prevFrom.setDate(prevFrom.getDate() - periodDays);
+
+    const buildConditions = (paramStart: number) => {
+      const conds: string[] = ["c.ads_status = 'ENABLED'"];
+      const vals: any[] = [];
+      let idx = paramStart;
+
+      if (params.accountId) { conds.push(`c.customer_account_id = $${idx}`); vals.push(params.accountId); idx++; }
+      idx = this.addAccountIdsFilter(conds, vals, idx, params.accountIds);
+      if (params.countryId) { conds.push(`c.country_id = $${idx}`); vals.push(params.countryId); idx++; }
+      return { conds, vals, idx };
+    };
+
+    const { conds, vals } = buildConditions(5);
+    const allValues = [
+      params.dateFrom, params.dateTo,
+      prevFrom.toISOString().split('T')[0], prevTo.toISOString().split('T')[0],
+      ...vals,
+    ];
+
+    const accountFilter = conds.length > 1 ? ' AND ' + conds.slice(1).join(' AND ') : '';
+
+    const sql = `
+      WITH current_period AS (
+        SELECT
+          SUM(gs.cost)::numeric AS cost,
+          SUM(gs.clicks)::int AS clicks,
+          SUM(gs.impressions)::int AS impressions,
+          SUM(gs.conversions)::numeric AS conversions,
+          CASE WHEN SUM(gs.clicks) > 0 THEN ROUND(SUM(gs.cost) / SUM(gs.clicks), 2) ELSE 0 END AS cpc,
+          CASE WHEN SUM(gs.impressions) > 0 THEN ROUND((SUM(gs.clicks)::numeric / SUM(gs.impressions)) * 100, 2) ELSE 0 END AS ctr,
+          CASE WHEN SUM(gs.conversions) > 0 THEN ROUND((SUM(gs.cost) / SUM(gs.conversions))::numeric, 2) ELSE 0 END AS cpa
+        FROM google_ads_snapshots gs
+        JOIN campaigns c ON c.id = gs.campaign_id
+        WHERE gs.snapshot_date BETWEEN $1 AND $2 AND c.ads_status = 'ENABLED'${accountFilter}
+      ),
+      previous_period AS (
+        SELECT
+          SUM(gs.cost)::numeric AS cost,
+          SUM(gs.clicks)::int AS clicks,
+          SUM(gs.impressions)::int AS impressions,
+          SUM(gs.conversions)::numeric AS conversions,
+          CASE WHEN SUM(gs.clicks) > 0 THEN ROUND(SUM(gs.cost) / SUM(gs.clicks), 2) ELSE 0 END AS cpc,
+          CASE WHEN SUM(gs.impressions) > 0 THEN ROUND((SUM(gs.clicks)::numeric / SUM(gs.impressions)) * 100, 2) ELSE 0 END AS ctr,
+          CASE WHEN SUM(gs.conversions) > 0 THEN ROUND((SUM(gs.cost) / SUM(gs.conversions))::numeric, 2) ELSE 0 END AS cpa
+        FROM google_ads_snapshots gs
+        JOIN campaigns c ON c.id = gs.campaign_id
+        WHERE gs.snapshot_date BETWEEN $3 AND $4 AND c.ads_status = 'ENABLED'${accountFilter}
+      )
+      SELECT
+        cp.cost AS current_cost, pp.cost AS previous_cost,
+        cp.clicks AS current_clicks, pp.clicks AS previous_clicks,
+        cp.impressions AS current_impressions, pp.impressions AS previous_impressions,
+        cp.conversions AS current_conversions, pp.conversions AS previous_conversions,
+        cp.cpc AS current_cpc, pp.cpc AS previous_cpc,
+        cp.ctr AS current_ctr, pp.ctr AS previous_ctr,
+        cp.cpa AS current_cpa, pp.cpa AS previous_cpa
+      FROM current_period cp, previous_period pp
+    `;
+
+    const result = await query(sql, allValues);
+    const row = result.rows[0] || {};
+
+    const calcDelta = (curr: number, prev: number) => {
+      if (!prev || prev === 0) return curr > 0 ? 100 : 0;
+      return Number(((curr - prev) / prev * 100).toFixed(1));
+    };
+
+    return {
+      period: {
+        current: { from: params.dateFrom, to: params.dateTo },
+        previous: { from: prevFrom.toISOString().split('T')[0], to: prevTo.toISOString().split('T')[0] },
+        days: periodDays,
+      },
+      metrics: [
+        { name: 'Costo', current: Number(row.current_cost) || 0, previous: Number(row.previous_cost) || 0, delta: calcDelta(Number(row.current_cost), Number(row.previous_cost)), format: 'currency', inverse: true },
+        { name: 'Clicks', current: Number(row.current_clicks) || 0, previous: Number(row.previous_clicks) || 0, delta: calcDelta(Number(row.current_clicks), Number(row.previous_clicks)), format: 'number' },
+        { name: 'Impresiones', current: Number(row.current_impressions) || 0, previous: Number(row.previous_impressions) || 0, delta: calcDelta(Number(row.current_impressions), Number(row.previous_impressions)), format: 'number' },
+        { name: 'Conversiones', current: Number(row.current_conversions) || 0, previous: Number(row.previous_conversions) || 0, delta: calcDelta(Number(row.current_conversions), Number(row.previous_conversions)), format: 'decimal' },
+        { name: 'CPC', current: Number(row.current_cpc) || 0, previous: Number(row.previous_cpc) || 0, delta: calcDelta(Number(row.current_cpc), Number(row.previous_cpc)), format: 'currency', inverse: true },
+        { name: 'CTR', current: Number(row.current_ctr) || 0, previous: Number(row.previous_ctr) || 0, delta: calcDelta(Number(row.current_ctr), Number(row.previous_ctr)), format: 'percent' },
+        { name: 'CPA', current: Number(row.current_cpa) || 0, previous: Number(row.previous_cpa) || 0, delta: calcDelta(Number(row.current_cpa), Number(row.previous_cpa)), format: 'currency', inverse: true },
+      ],
+    };
+  }
 
   async getPredictiveAnalysis(params: {
     accountId: string;

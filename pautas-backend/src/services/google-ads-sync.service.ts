@@ -23,7 +23,7 @@ const COUNTRY_PATTERNS: Record<string, string> = {
   'ESPAÑA': 'ES',
 };
 
-const CONCURRENCY_LIMIT = 5;
+const CONCURRENCY_LIMIT = 2; // Keep low to avoid Google Ads API rate limits
 
 export class GoogleAdsSyncService {
   private client: any = null;
@@ -107,17 +107,44 @@ export class GoogleAdsSyncService {
 
   // Run async tasks with limited concurrency (stops on rate limit)
   private rateLimitHit = false;
+  private rateLimitResetAt = 0; // timestamp when rate limit expires
+
+  /** Check if we're currently rate-limited */
+  isRateLimited(): boolean {
+    if (!this.rateLimitHit) return false;
+    // Auto-clear if the retry period has passed
+    if (this.rateLimitResetAt && Date.now() > this.rateLimitResetAt) {
+      this.rateLimitHit = false;
+      this.rateLimitResetAt = 0;
+      logger.info('Rate limit period expired, resuming API calls');
+      return false;
+    }
+    return true;
+  }
+
+  /** Mark rate limit as hit, with optional retry-after seconds */
+  private markRateLimited(retryAfterSecs?: number): void {
+    this.rateLimitHit = true;
+    if (retryAfterSecs) {
+      this.rateLimitResetAt = Date.now() + retryAfterSecs * 1000;
+      logger.error(`Rate limit hit. Will auto-clear in ${Math.round(retryAfterSecs / 60)} minutes`);
+    }
+  }
+
   private async runWithConcurrency<T>(
     items: T[],
     fn: (item: T) => Promise<void>,
-    limit: number = 3,
+    limit: number = 2,
   ): Promise<void> {
-    this.rateLimitHit = false;
+    // Do NOT reset rateLimitHit here — it must persist across sync methods
     let index = 0;
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     const run = async () => {
       while (index < items.length && !this.rateLimitHit) {
         const i = index++;
         await fn(items[i]);
+        // Small delay between accounts to avoid bursting API calls
+        if (index < items.length) await delay(1000);
       }
     };
     const workers = Array.from({ length: Math.min(limit, items.length) }, () => run());
@@ -187,12 +214,14 @@ export class GoogleAdsSyncService {
 
           if (campaignList.length === 0) return;
 
-          // Step 2: Fetch today's metrics
-          const metricsMap = new Map<string, any>();
+          // Step 2: Fetch metrics for last 3 days (Google Ads has 1-2 day delay)
+          // Key: "campaignId_date" -> { metrics, date }
+          const metricsMultiDay = new Map<string, { metrics: any; date: string }[]>();
           try {
             const metricsResults = await customer.query(`
               SELECT
                 campaign.id,
+                segments.date,
                 metrics.conversions,
                 metrics.cost_micros,
                 metrics.clicks,
@@ -204,13 +233,16 @@ export class GoogleAdsSyncService {
                 metrics.search_budget_lost_impression_share,
                 metrics.search_rank_lost_impression_share
               FROM campaign
-              WHERE segments.date = '${today}'
+              WHERE segments.date DURING LAST_3_DAYS
             `);
             for (const row of metricsResults) {
-              metricsMap.set(String(row.campaign.id), row.metrics);
+              const cId = String(row.campaign.id);
+              const segDate = row.segments?.date || today;
+              if (!metricsMultiDay.has(cId)) metricsMultiDay.set(cId, []);
+              metricsMultiDay.get(cId)!.push({ metrics: row.metrics, date: segDate });
             }
           } catch (metricsError: any) {
-            // Metrics may not exist for today — not critical
+            // Metrics may not exist — not critical
           }
 
           // Detect country from account name
@@ -228,7 +260,9 @@ export class GoogleAdsSyncService {
             const statusStr = STATUS_MAP[statusCode] || String(statusCode);
             const channelType = row.campaign?.advertising_channel_type || null;
             const biddingStrategyType = row.campaign?.bidding_strategy_type || null;
-            const todayMetrics = metricsMap.get(adsCampaignId);
+            const campaignMetrics = metricsMultiDay.get(adsCampaignId) || [];
+            // Use today's metrics for remaining_budget calculation; fallback to most recent
+            const todayMetrics = campaignMetrics.find(m => m.date === today)?.metrics;
             const costMicros = todayMetrics?.cost_micros || 0;
 
             // Also try to detect country from campaign name (more specific)
@@ -285,7 +319,9 @@ export class GoogleAdsSyncService {
               );
             }
 
-            if (todayMetrics) {
+            // Insert snapshot for each day with metrics (last 3 days)
+            for (const { metrics: dayMetrics, date: snapshotDate } of campaignMetrics) {
+              const dayCostMicros = dayMetrics?.cost_micros || 0;
               await query(
                 `INSERT INTO google_ads_snapshots
                   (campaign_id, snapshot_date, conversions, status, remaining_budget, cost, clicks, impressions, ctr, daily_budget,
@@ -309,20 +345,20 @@ export class GoogleAdsSyncService {
                   fetched_at = NOW()`,
                 [
                   localCampaignId,
-                  today,
-                  todayMetrics?.conversions || 0,
+                  snapshotDate,
+                  dayMetrics?.conversions || 0,
                   statusStr,
-                  (budgetMicros - costMicros) / 1_000_000,
-                  costMicros / 1_000_000,
-                  todayMetrics?.clicks || 0,
-                  todayMetrics?.impressions || 0,
-                  todayMetrics?.ctr || 0,
+                  (budgetMicros - dayCostMicros) / 1_000_000,
+                  dayCostMicros / 1_000_000,
+                  dayMetrics?.clicks || 0,
+                  dayMetrics?.impressions || 0,
+                  dayMetrics?.ctr || 0,
                   dailyBudget,
-                  todayMetrics?.search_impression_share || null,
-                  todayMetrics?.search_top_impression_rate || null,
-                  todayMetrics?.search_absolute_top_impression_rate || null,
-                  todayMetrics?.search_budget_lost_impression_share || null,
-                  todayMetrics?.search_rank_lost_impression_share || null,
+                  dayMetrics?.search_impression_share || null,
+                  dayMetrics?.search_top_impression_rate || null,
+                  dayMetrics?.search_absolute_top_impression_rate || null,
+                  dayMetrics?.search_budget_lost_impression_share || null,
+                  dayMetrics?.search_rank_lost_impression_share || null,
                 ]
               );
             }
@@ -331,7 +367,8 @@ export class GoogleAdsSyncService {
         } catch (accountError: any) {
           const errorMsg = accountError.errors?.[0]?.message || accountError.message || '';
           if (errorMsg.includes('Too many requests') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
-            this.rateLimitHit = true;
+            const retryMatch = errorMsg.match(/Retry in (\d+) seconds/);
+            this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
             logger.error('Google Ads API rate limit reached — stopping sync to avoid further errors');
           } else {
             errors++;
@@ -1303,7 +1340,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
 
     // Build campaign map: google_ads_campaign_id -> local id
     const existingCampaigns = await query(
@@ -1378,8 +1415,9 @@ export class GoogleAdsSyncService {
         }
       } catch (err: any) {
         const msg = err.errors?.[0]?.message || err.message || '';
-        if (msg.includes('RESOURCE_EXHAUSTED')) {
-          this.rateLimitHit = true;
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
           logger.error('Rate limit hit during keyword sync');
         } else {
           errors++;
@@ -1400,7 +1438,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1457,8 +1495,12 @@ export class GoogleAdsSyncService {
         }
       } catch (err: any) {
         const msg = err.errors?.[0]?.message || err.message || '';
-        if (msg.includes('RESOURCE_EXHAUSTED')) {
-          this.rateLimitHit = true;
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during device sync');
+        } else {
+          logger.warn(`Device sync error for account ${account.id}: ${msg}`);
         }
       }
     }, CONCURRENCY_LIMIT);
@@ -1476,7 +1518,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1484,6 +1526,7 @@ export class GoogleAdsSyncService {
     const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
 
     let synced = 0;
+    let errors = 0;
 
     await this.runWithConcurrency(clientAccounts, async (account) => {
       const customer = this.getCustomer(api, account.id, managerId);
@@ -1493,9 +1536,6 @@ export class GoogleAdsSyncService {
             campaign.id,
             geographic_view.country_criterion_id,
             geographic_view.location_type,
-            campaign_criterion.location.geo_target_constant,
-            geo_target_constant.name,
-            geo_target_constant.canonical_name,
             segments.date,
             metrics.clicks,
             metrics.impressions,
@@ -1510,9 +1550,8 @@ export class GoogleAdsSyncService {
           const localCampaignId = campaignMap.get(adsCampaignId);
           if (!localCampaignId) continue;
 
-          const geoName = row.geo_target_constant?.canonical_name
-            || row.geo_target_constant?.name
-            || (row.geographic_view?.country_criterion_id ? `Geo:${row.geographic_view.country_criterion_id}` : 'Unknown');
+          const countryCriterionId = row.geographic_view?.country_criterion_id;
+          const geoName = countryCriterionId ? `Geo:${countryCriterionId}` : 'Unknown';
           const geoType = row.geographic_view?.location_type || 'UNKNOWN';
           const snapshotDate = row.segments?.date || today;
 
@@ -1542,13 +1581,66 @@ export class GoogleAdsSyncService {
         }
       } catch (err: any) {
         const msg = err.errors?.[0]?.message || err.message || '';
-        if (msg.includes('RESOURCE_EXHAUSTED')) {
-          this.rateLimitHit = true;
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during geo sync');
+        } else {
+          errors++;
+          logger.warn(`Geo sync error for account ${account.id} (${account.name}): ${msg}`);
         }
       }
     }, CONCURRENCY_LIMIT);
 
-    logger.info(`Geographic sync: ${synced} records synced`);
+    // Resolve geo criterion IDs to human-readable names
+    if (synced > 0) {
+      try {
+        await this.resolveGeoCriterionNames(api, managerId);
+      } catch (e: any) {
+        logger.warn('Failed to resolve geo criterion names: ' + e.message);
+      }
+    }
+
+    logger.info(`Geographic sync: ${synced} records synced, ${errors} errors`);
+  }
+
+  // Resolve Geo:XXXX names to actual location names using Google Ads geo_target_constant
+  private async resolveGeoCriterionNames(api: any, managerId: string): Promise<void> {
+    // Find unresolved names (still "Geo:XXXX")
+    const unresolvedResult = await query(
+      `SELECT DISTINCT geo_target_name FROM google_ads_geo_snapshots WHERE geo_target_name LIKE 'Geo:%'`
+    );
+    if (unresolvedResult.rows.length === 0) return;
+
+    const criterionIds = unresolvedResult.rows.map((r: any) => r.geo_target_name.replace('Geo:', ''));
+    logger.info(`Resolving ${criterionIds.length} geo criterion names...`);
+
+    const customer = this.getCustomer(api, managerId);
+    const nameMap = new Map<string, string>();
+
+    // Query geo_target_constant for each criterion ID
+    for (const criterionId of criterionIds) {
+      try {
+        const results = await customer.query(
+          `SELECT geo_target_constant.name, geo_target_constant.canonical_name FROM geo_target_constant WHERE geo_target_constant.resource_name = 'geoTargetConstants/${criterionId}'`
+        );
+        if (results.length > 0) {
+          const name = results[0].geo_target_constant?.canonical_name || results[0].geo_target_constant?.name || null;
+          if (name) nameMap.set(criterionId, name);
+        }
+      } catch {
+        // Some criterion IDs may not resolve — skip
+      }
+    }
+
+    // Update DB with resolved names
+    for (const [criterionId, name] of nameMap) {
+      await query(
+        `UPDATE google_ads_geo_snapshots SET geo_target_name = $1 WHERE geo_target_name = $2`,
+        [name, `Geo:${criterionId}`]
+      );
+    }
+    logger.info(`Resolved ${nameMap.size} of ${criterionIds.length} geo criterion names`);
   }
 
   async syncHourlyPerformance(backfill = false): Promise<void> {
@@ -1561,7 +1653,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1628,8 +1720,12 @@ export class GoogleAdsSyncService {
         }
       } catch (err: any) {
         const msg = err.errors?.[0]?.message || err.message || '';
-        if (msg.includes('RESOURCE_EXHAUSTED')) {
-          this.rateLimitHit = true;
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during hourly sync');
+        } else {
+          logger.warn(`Hourly sync error for account ${account.id}: ${msg}`);
         }
       }
     }, CONCURRENCY_LIMIT);
@@ -1640,29 +1736,68 @@ export class GoogleAdsSyncService {
   async syncEnhancedAnalytics(backfill = false): Promise<void> {
     logger.info('Starting enhanced analytics sync...' + (backfill ? ' (BACKFILL MODE - LAST_30_DAYS)' : ''));
 
-    try { await this.syncKeywords(backfill); } catch (e: any) {
-      logger.error('Keywords sync failed: ' + e.message);
-    }
-    try { await this.syncDevicePerformance(backfill); } catch (e: any) {
-      logger.error('Device sync failed: ' + e.message);
-    }
-    try { await this.syncGeoPerformance(backfill); } catch (e: any) {
-      logger.error('Geo sync failed: ' + e.message);
-    }
-    try { await this.syncHourlyPerformance(backfill); } catch (e: any) {
-      logger.error('Hourly sync failed: ' + e.message);
-    }
-    try { await this.syncSearchTerms(backfill); } catch (e: any) {
-      logger.error('Search terms sync failed: ' + e.message);
-    }
-    try { await this.syncAdPerformance(backfill); } catch (e: any) {
-      logger.error('Ad performance sync failed: ' + e.message);
-    }
-    try { await this.syncDemographics(backfill); } catch (e: any) {
-      logger.error('Demographics sync failed: ' + e.message);
+    // Reset rate limit flag only at the START of a full enhanced sync
+    this.rateLimitHit = false;
+    this.rateLimitResetAt = 0;
+
+    const methods: { name: string; fn: () => Promise<void> }[] = [
+      { name: 'Keywords', fn: () => this.syncKeywords(backfill) },
+      { name: 'Devices', fn: () => this.syncDevicePerformance(backfill) },
+      { name: 'Geo', fn: () => this.syncGeoPerformance(backfill) },
+      { name: 'Hourly', fn: () => this.syncHourlyPerformance(backfill) },
+      { name: 'SearchTerms', fn: () => this.syncSearchTerms(backfill) },
+      { name: 'AdPerformance', fn: () => this.syncAdPerformance(backfill) },
+      { name: 'Demographics', fn: () => this.syncDemographics(backfill) },
+      { name: 'Assets', fn: () => this.syncAssetPerformance(backfill) },
+    ];
+
+    let completed = 0;
+    for (const method of methods) {
+      if (this.isRateLimited()) {
+        logger.warn(`Skipping ${method.name} sync — rate limit active`);
+        continue;
+      }
+      try {
+        await method.fn();
+        completed++;
+      } catch (e: any) {
+        logger.error(`${method.name} sync failed: ${e.message}`);
+      }
     }
 
-    logger.info('Enhanced analytics sync completed');
+    logger.info(`Enhanced analytics sync completed (${completed}/${methods.length} methods ran)`);
+  }
+
+  /**
+   * Run a single sync method by name. Used by distributed cron schedule.
+   * Returns true if the method ran, false if rate-limited.
+   */
+  async syncSingleMethod(methodName: string, backfill = false): Promise<boolean> {
+    if (this.isRateLimited()) {
+      logger.warn(`[DISTRIBUTED SYNC] Skipping ${methodName} — rate limit active`);
+      return false;
+    }
+
+    logger.info(`[DISTRIBUTED SYNC] Running ${methodName}...` + (backfill ? ' (backfill)' : ''));
+
+    try {
+      switch (methodName) {
+        case 'keywords': await this.syncKeywords(backfill); break;
+        case 'devices': await this.syncDevicePerformance(backfill); break;
+        case 'geo': await this.syncGeoPerformance(backfill); break;
+        case 'hourly': await this.syncHourlyPerformance(backfill); break;
+        case 'searchTerms': await this.syncSearchTerms(backfill); break;
+        case 'adPerformance': await this.syncAdPerformance(backfill); break;
+        case 'demographics': await this.syncDemographics(backfill); break;
+        case 'assets': await this.syncAssetPerformance(backfill); break;
+        default: logger.warn(`Unknown sync method: ${methodName}`); return false;
+      }
+      logger.info(`[DISTRIBUTED SYNC] ${methodName} completed`);
+      return true;
+    } catch (e: any) {
+      logger.error(`[DISTRIBUTED SYNC] ${methodName} failed: ${e.message}`);
+      return false;
+    }
   }
 
   async syncSearchTerms(backfill = false): Promise<void> {
@@ -1675,7 +1810,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1738,8 +1873,15 @@ export class GoogleAdsSyncService {
           synced++;
         }
       } catch (e: any) {
-        errors++;
-        logger.error(`Search terms sync error for account ${account.id}: ${e.message}`);
+        const msg = e.errors?.[0]?.message || e.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during search terms sync');
+        } else {
+          errors++;
+          logger.error(`Search terms sync error for account ${account.id}: ${msg}`);
+        }
       }
     });
 
@@ -1756,7 +1898,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1842,8 +1984,15 @@ export class GoogleAdsSyncService {
           synced++;
         }
       } catch (e: any) {
-        errors++;
-        logger.error(`Ad performance sync error for account ${account.id}: ${e.message}`);
+        const msg = e.errors?.[0]?.message || e.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during ad performance sync');
+        } else {
+          errors++;
+          logger.error(`Ad performance sync error for account ${account.id}: ${msg}`);
+        }
       }
     });
 
@@ -1911,8 +2060,15 @@ export class GoogleAdsSyncService {
           synced++;
         }
       } catch (e: any) {
-        errors++;
-        logger.error(`Auction insights sync error for account ${account.id}: ${e.message}`);
+        const msg = e.errors?.[0]?.message || e.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during auction insights sync');
+        } else {
+          errors++;
+          logger.error(`Auction insights sync error for account ${account.id}: ${msg}`);
+        }
       }
     }, CONCURRENCY_LIMIT);
 
@@ -1929,7 +2085,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : `segments.date = '${today}'`;
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1986,8 +2142,15 @@ export class GoogleAdsSyncService {
           synced++;
         }
       } catch (e: any) {
-        errors++;
-        logger.error(`Demographics age sync error for account ${account.id}: ${e.message}`);
+        const msg = e.errors?.[0]?.message || e.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during demographics age sync');
+        } else {
+          errors++;
+          logger.error(`Demographics age sync error for account ${account.id}: ${msg}`);
+        }
       }
 
       // Gender query
@@ -2034,12 +2197,252 @@ export class GoogleAdsSyncService {
           synced++;
         }
       } catch (e: any) {
-        errors++;
-        logger.error(`Demographics gender sync error for account ${account.id}: ${e.message}`);
+        const msg = e.errors?.[0]?.message || e.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Too many requests')) {
+          const retryMatch = msg.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during demographics gender sync');
+        } else {
+          errors++;
+          logger.error(`Demographics gender sync error for account ${account.id}: ${msg}`);
+        }
       }
     }, CONCURRENCY_LIMIT);
 
     logger.info(`Demographics sync completed: ${synced} synced, ${errors} errors`);
+  }
+
+  // ========================================================
+  // Asset Performance sync (headlines, descriptions, sitelinks)
+  // ========================================================
+  async syncAssetPerformance(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads asset performance...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+
+    const existingCampaigns = await query(
+      `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
+    );
+    const campaignMap = new Map(existingCampaigns.rows.map((c: any) => [String(c.google_ads_campaign_id), c.id]));
+
+    let synced = 0;
+    let errors = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account) => {
+      const customer = this.getCustomer(api, account.id, managerId);
+
+      // Try ad_group_ad_asset_view for per-asset metrics
+      try {
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            ad_group.id,
+            ad_group_ad_asset_view.field_type,
+            asset.id,
+            asset.type,
+            asset.text_asset.text,
+            asset.sitelink_asset.link_text,
+            asset.sitelink_asset.final_urls,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions
+          FROM ad_group_ad_asset_view
+          WHERE ${dateFilter}
+            AND ad_group_ad.status != 'REMOVED'
+        `);
+
+        for (const row of results) {
+          const adsCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(adsCampaignId);
+          if (!localCampaignId) continue;
+
+          const adGroupId = String(row.ad_group?.id || '');
+          const assetId = String(row.asset?.id || '');
+          if (!assetId) continue;
+
+          // Determine asset type from field_type
+          const fieldType = row.ad_group_ad_asset_view?.field_type || '';
+          let assetType = 'OTHER';
+          if (fieldType === 'HEADLINE' || fieldType === 2) assetType = 'HEADLINE';
+          else if (fieldType === 'DESCRIPTION' || fieldType === 3) assetType = 'DESCRIPTION';
+          else if (fieldType === 'SITELINK' || fieldType === 17) assetType = 'SITELINK';
+          else if (fieldType === 'CALLOUT' || fieldType === 18) assetType = 'CALLOUT';
+          else if (fieldType === 'CALL' || fieldType === 19) assetType = 'CALL';
+          else if (fieldType === 'STRUCTURED_SNIPPET' || fieldType === 22) assetType = 'STRUCTURED_SNIPPET';
+
+          // Extract text and url depending on asset type
+          let assetText = row.asset?.text_asset?.text || null;
+          let assetUrl: string | null = null;
+
+          if (assetType === 'SITELINK') {
+            assetText = row.asset?.sitelink_asset?.link_text || assetText;
+            const sitelinkUrls = row.asset?.sitelink_asset?.final_urls;
+            if (Array.isArray(sitelinkUrls) && sitelinkUrls.length > 0) {
+              assetUrl = sitelinkUrls[0];
+            }
+          }
+
+          const clicks = Number(row.metrics?.clicks) || 0;
+          const impressions = Number(row.metrics?.impressions) || 0;
+          const costMicros = Number(row.metrics?.cost_micros) || 0;
+          const cost = costMicros / 1_000_000;
+          const conversions = Number(row.metrics?.conversions) || 0;
+          const snapshotDate = row.segments?.date || today;
+
+          await query(`
+            INSERT INTO google_ads_asset_snapshots
+              (campaign_id, ad_group_id, asset_id, asset_type, asset_text, asset_url, clicks, impressions, cost, conversions, snapshot_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (campaign_id, asset_id, snapshot_date) DO UPDATE SET
+              ad_group_id = EXCLUDED.ad_group_id,
+              asset_type = EXCLUDED.asset_type,
+              asset_text = EXCLUDED.asset_text,
+              asset_url = EXCLUDED.asset_url,
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions
+          `, [localCampaignId, adGroupId, assetId, assetType, assetText, assetUrl, clicks, impressions, cost, conversions, snapshotDate]);
+
+          synced++;
+        }
+      } catch (e: any) {
+        // If ad_group_ad_asset_view fails, try extracting from existing ad snapshots
+        if (e.message?.includes('not found') || e.message?.includes('UNIMPLEMENTED') || e.message?.includes('not supported')) {
+          logger.warn(`Asset view not available for account ${account.id}, extracting from ad snapshots...`);
+          try {
+            await this.extractAssetsFromAdSnapshots(account.id, localCampaignId => campaignMap, today, backfill);
+          } catch (fallbackErr: any) {
+            errors++;
+            logger.error(`Asset fallback extraction error for account ${account.id}: ${fallbackErr.message}`);
+          }
+        } else if (e.message?.includes('RESOURCE_EXHAUSTED') || e.message?.includes('Too many requests')) {
+          const retryMatch = e.message.match(/Retry in (\d+) seconds/);
+          this.markRateLimited(retryMatch ? parseInt(retryMatch[1]) : 3600);
+          logger.error('Rate limit hit during asset sync');
+        } else {
+          errors++;
+          logger.error(`Asset sync error for account ${account.id}: ${e.message}`);
+        }
+      }
+    }, CONCURRENCY_LIMIT);
+
+    // If no asset_view data was obtained, populate from existing ad_snapshots as fallback
+    if (synced === 0) {
+      logger.info('No assets from API views, extracting from existing ad snapshot data...');
+      await this.populateAssetsFromAdSnapshots(backfill);
+    }
+
+    logger.info(`Asset performance sync completed: ${synced} synced, ${errors} errors`);
+  }
+
+  // Fallback: extract assets from google_ads_ad_snapshots headlines/descriptions JSON
+  private async populateAssetsFromAdSnapshots(backfill = false): Promise<void> {
+    const dateFilter = backfill
+      ? `snapshot_date >= CURRENT_DATE - INTERVAL '30 days'`
+      : `snapshot_date = CURRENT_DATE`;
+
+    const adSnapshots = await query(`
+      SELECT campaign_id, ad_group_id, ad_id, headlines, descriptions, final_url, snapshot_date,
+             clicks, impressions, cost, conversions
+      FROM google_ads_ad_snapshots
+      WHERE ${dateFilter} AND (headlines IS NOT NULL OR descriptions IS NOT NULL)
+    `);
+
+    let synced = 0;
+
+    for (const row of adSnapshots.rows) {
+      // Process headlines
+      if (row.headlines) {
+        try {
+          const headlines = typeof row.headlines === 'string' ? JSON.parse(row.headlines) : row.headlines;
+          if (Array.isArray(headlines)) {
+            for (let i = 0; i < headlines.length; i++) {
+              const text = headlines[i]?.text || headlines[i];
+              if (!text) continue;
+              const assetId = `${row.ad_id}_H${i}`;
+              // Distribute metrics proportionally across headlines
+              const portion = 1 / headlines.length;
+              await query(`
+                INSERT INTO google_ads_asset_snapshots
+                  (campaign_id, ad_group_id, asset_id, asset_type, asset_text, clicks, impressions, cost, conversions, snapshot_date)
+                VALUES ($1, $2, $3, 'HEADLINE', $4, $5, $6, $7, $8, $9)
+                ON CONFLICT (campaign_id, asset_id, snapshot_date) DO UPDATE SET
+                  asset_text = EXCLUDED.asset_text,
+                  clicks = EXCLUDED.clicks,
+                  impressions = EXCLUDED.impressions,
+                  cost = EXCLUDED.cost,
+                  conversions = EXCLUDED.conversions
+              `, [
+                row.campaign_id, row.ad_group_id, assetId, text,
+                Math.round((Number(row.clicks) || 0) * portion),
+                Math.round((Number(row.impressions) || 0) * portion),
+                Number(((Number(row.cost) || 0) * portion).toFixed(2)),
+                Number(((Number(row.conversions) || 0) * portion).toFixed(2)),
+                row.snapshot_date,
+              ]);
+              synced++;
+            }
+          }
+        } catch { /* skip malformed JSON */ }
+      }
+
+      // Process descriptions
+      if (row.descriptions) {
+        try {
+          const descriptions = typeof row.descriptions === 'string' ? JSON.parse(row.descriptions) : row.descriptions;
+          if (Array.isArray(descriptions)) {
+            for (let i = 0; i < descriptions.length; i++) {
+              const text = descriptions[i]?.text || descriptions[i];
+              if (!text) continue;
+              const assetId = `${row.ad_id}_D${i}`;
+              const portion = 1 / descriptions.length;
+              await query(`
+                INSERT INTO google_ads_asset_snapshots
+                  (campaign_id, ad_group_id, asset_id, asset_type, asset_text, clicks, impressions, cost, conversions, snapshot_date)
+                VALUES ($1, $2, $3, 'DESCRIPTION', $4, $5, $6, $7, $8, $9)
+                ON CONFLICT (campaign_id, asset_id, snapshot_date) DO UPDATE SET
+                  asset_text = EXCLUDED.asset_text,
+                  clicks = EXCLUDED.clicks,
+                  impressions = EXCLUDED.impressions,
+                  cost = EXCLUDED.cost,
+                  conversions = EXCLUDED.conversions
+              `, [
+                row.campaign_id, row.ad_group_id, assetId, text,
+                Math.round((Number(row.clicks) || 0) * portion),
+                Math.round((Number(row.impressions) || 0) * portion),
+                Number(((Number(row.cost) || 0) * portion).toFixed(2)),
+                Number(((Number(row.conversions) || 0) * portion).toFixed(2)),
+                row.snapshot_date,
+              ]);
+              synced++;
+            }
+          }
+        } catch { /* skip malformed JSON */ }
+      }
+    }
+
+    logger.info(`Asset extraction from ad snapshots: ${synced} assets created`);
+  }
+
+  // Fallback for a specific account (unused but available for per-account retry)
+  private async extractAssetsFromAdSnapshots(
+    _accountId: string,
+    _campaignMapFn: (id: number) => Map<string, number>,
+    _today: string,
+    _backfill: boolean
+  ): Promise<void> {
+    // Use global fallback instead
+    await this.populateAssetsFromAdSnapshots(_backfill);
   }
 }
 

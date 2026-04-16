@@ -9,7 +9,15 @@ export type AlertType =
   | 'CONVERSION_SPIKE'
   | 'RECORD_DAY'
   | 'TREND_DECLINING'
-  | 'ADS_DISCREPANCY';
+  | 'ADS_DISCREPANCY'
+  | 'BUDGET_EXHAUSTION'
+  | 'BUDGET_OVERSPEND'
+  | 'BUDGET_UNDERSPEND'
+  | 'CPC_SPIKE'
+  | 'CTR_ANOMALY'
+  | 'IMPRESSION_SHARE_DROP'
+  | 'QUALITY_SCORE_DROP'
+  | 'OPPORTUNITY_DETECTED';
 
 export interface Alert {
   id: number;
