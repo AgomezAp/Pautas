@@ -70,6 +70,7 @@ export const API_URLS = {
     recharges: `${BASE}/pautadores/google-ads/billing/recharges`,
     rechargesExport: `${BASE}/pautadores/google-ads/billing/recharges/export`,
     sync: `${BASE}/pautadores/google-ads/sync`,
+    syncCampaigns: `${BASE}/pautadores/google-ads/sync-campaigns`,
     analysisSpendingTrend: `${BASE}/pautadores/google-ads/analysis/spending-trend`,
     analysisDataRange: `${BASE}/pautadores/google-ads/analysis/data-range`,
     analysisPerformance: `${BASE}/pautadores/google-ads/analysis/performance`,
@@ -137,6 +138,8 @@ export const API_URLS = {
     analysisGeo: `${BASE}/pautadores/google-ads/analysis/geo`,
     analysisGeoMap: `${BASE}/pautadores/google-ads/analysis/geo-map`,
     analysisCountryEfficiency: `${BASE}/pautadores/google-ads/analysis/country-efficiency`,
+    analysisGeoTier: `${BASE}/pautadores/google-ads/analysis/geo-tier`,
+    analysisLocations: `${BASE}/pautadores/google-ads/analysis/locations`,
     myAccounts: `${BASE}/pautadores/google-ads/my-accounts`,
   },
   alerts: {

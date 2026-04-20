@@ -133,7 +133,25 @@
             <button type="button" class="btn btn-outline-secondary" [class.active]="granularity === 'weekly'" (click)="granularity = 'weekly'; loadSpendingTrend()">Semanal</button>
             <button type="button" class="btn btn-outline-secondary" [class.active]="granularity === 'monthly'" (click)="granularity = 'monthly'; loadSpendingTrend()">Mensual</button>
           </div>
+          <button class="btn btn-outline-success btn-sm ms-auto" (click)="syncSpendingTrend()" [disabled]="syncingTrend"
+            ngbTooltip="Sincronizar solo campanas desde Google Ads para actualizar esta grafica">
+            @if (syncingTrend) {
+              <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+              Actualizando...
+            } @else {
+              <app-icon name="sync" size="sm"></app-icon>
+              Actualizar tendencia
+            }
+          </button>
         </div>
+
+        @if (syncTrendMessage) {
+          <div class="alert mt-2 py-2 px-3 d-flex align-items-center gap-2"
+            [class.alert-success]="!syncTrendError" [class.alert-danger]="syncTrendError" role="alert">
+            <app-icon [name]="syncTrendError ? 'error' : 'check_circle'" size="sm"></app-icon>
+            {{ syncTrendMessage }}
+          </div>
+        }
 
         @if (loadingTrend) {
           <div class="loading-state">
@@ -903,7 +921,7 @@
         }
 
         <!-- Waste Detection -->
-        <h5 class="section-title mt-4">Deteccion de Desperdicio</h5>
+        <h5 class="section-title mt-4">Deteccion de costo alto de conversion</h5>
         @if (loadingWaste) {
           <div class="loading-state">
             <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -961,14 +979,23 @@
             <div class="kpi-card">
               <span class="kpi-label">Proyeccion 7 dias</span>
               <span class="kpi-value">{{ formatCurrency(forecastData.forecast?.projected_7d) }}</span>
+              @if (forecastData.forecast?.ci95_7d) {
+                <span class="kpi-sub">CI 95%: {{ formatCurrency(forecastData.forecast.ci95_7d.lower) }} - {{ formatCurrency(forecastData.forecast.ci95_7d.upper) }}</span>
+              }
             </div>
             <div class="kpi-card">
               <span class="kpi-label">Proyeccion 14 dias</span>
               <span class="kpi-value">{{ formatCurrency(forecastData.forecast?.projected_14d) }}</span>
+              @if (forecastData.forecast?.ci95_14d) {
+                <span class="kpi-sub">CI 95%: {{ formatCurrency(forecastData.forecast.ci95_14d.lower) }} - {{ formatCurrency(forecastData.forecast.ci95_14d.upper) }}</span>
+              }
             </div>
             <div class="kpi-card">
               <span class="kpi-label">Proyeccion 30 dias</span>
               <span class="kpi-value">{{ formatCurrency(forecastData.forecast?.projected_30d) }}</span>
+              @if (forecastData.forecast?.ci95_30d) {
+                <span class="kpi-sub">CI 95%: {{ formatCurrency(forecastData.forecast.ci95_30d.lower) }} - {{ formatCurrency(forecastData.forecast.ci95_30d.upper) }}</span>
+              }
             </div>
             <div class="kpi-card">
               <span class="kpi-label">Tendencia Diaria</span>
@@ -977,6 +1004,19 @@
               </span>
             </div>
           </div>
+
+          <!-- Model quality indicator -->
+          @if (forecastData.forecast?.model_quality) {
+            <div class="d-flex align-items-center gap-2 mt-2 mb-2" style="font-size: 0.82rem; color: #666;">
+              <span class="badge" [class]="forecastData.forecast.model_quality.mape < 15 ? 'bg-success' : forecastData.forecast.model_quality.mape < 30 ? 'bg-warning text-dark' : 'bg-danger'">
+                MAPE: {{ forecastData.forecast.model_quality.mape }}%
+              </span>
+              <span>Basado en {{ forecastData.forecast.data_points }} dias de datos</span>
+              @if (forecastData.forecast.seasonal_pattern) {
+                <span class="badge bg-info text-dark">Estacionalidad semanal detectada</span>
+              }
+            </div>
+          }
 
           @if (forecastChartData) {
             <div class="chart-panel mt-3">
@@ -1085,6 +1125,9 @@
         <div class="kpi-card">
           <div class="kpi-label">Conversiones 30d</div>
           <div class="kpi-value">{{ fullForecastData.forecast.conversions_30d | number:'1.0-0' }}</div>
+          @if (fullForecastData.forecast.conversions_30d_ci80) {
+            <div class="kpi-sub">CI 80%: {{ fullForecastData.forecast.conversions_30d_ci80.lower | number:'1.0-0' }} - {{ fullForecastData.forecast.conversions_30d_ci80.upper | number:'1.0-0' }}</div>
+          }
           <div class="kpi-delta" [class]="fullForecastData.forecast.conv_slope >= 0 ? 'text-success' : 'text-danger'">
             {{ fullForecastData.forecast.conv_slope >= 0 ? '+' : '' }}{{ fullForecastData.forecast.conv_slope }} conv/dia
           </div>
@@ -1092,22 +1135,43 @@
         <div class="kpi-card">
           <div class="kpi-label">Conversiones 90d</div>
           <div class="kpi-value">{{ fullForecastData.forecast.conversions_90d | number:'1.0-0' }}</div>
+          @if (fullForecastData.forecast.conversions_90d_ci80) {
+            <div class="kpi-sub">CI 80%: {{ fullForecastData.forecast.conversions_90d_ci80.lower | number:'1.0-0' }} - {{ fullForecastData.forecast.conversions_90d_ci80.upper | number:'1.0-0' }}</div>
+          }
         </div>
         <div class="kpi-card">
           <div class="kpi-label">CPA Proyectado 30d</div>
           <div class="kpi-value">{{ fullForecastData.forecast.cpa_30d ? formatCurrency(fullForecastData.forecast.cpa_30d) : '---' }}</div>
-          <div class="kpi-delta" [class]="(fullForecastData.forecast.cpa_slope || 0) <= 0 ? 'text-success' : 'text-danger'">
-            {{ fullForecastData.forecast.cpa_slope ? ((fullForecastData.forecast.cpa_slope >= 0 ? '+' : '') + fullForecastData.forecast.cpa_slope + '/dia') : '' }}
-          </div>
+          @if (fullForecastData.forecast.cpa_30d_ci80) {
+            <div class="kpi-sub">CI 80%: {{ formatCurrency(fullForecastData.forecast.cpa_30d_ci80.lower) }} - {{ formatCurrency(fullForecastData.forecast.cpa_30d_ci80.upper) }}</div>
+          }
         </div>
         <div class="kpi-card">
           <div class="kpi-label">CPA Proyectado 90d</div>
           <div class="kpi-value">{{ fullForecastData.forecast.cpa_90d ? formatCurrency(fullForecastData.forecast.cpa_90d) : '---' }}</div>
+          @if (fullForecastData.forecast.cpa_90d_ci80) {
+            <div class="kpi-sub">CI 80%: {{ formatCurrency(fullForecastData.forecast.cpa_90d_ci80.lower) }} - {{ formatCurrency(fullForecastData.forecast.cpa_90d_ci80.upper) }}</div>
+          }
         </div>
       </div>
+      <!-- Model quality for full forecast -->
+      @if (fullForecastData.forecast.model_quality) {
+        <div class="d-flex align-items-center gap-2 mt-2" style="font-size: 0.82rem; color: #666;">
+          @if (fullForecastData.forecast.model_quality.cost_mape != null) {
+            <span class="badge" [class]="fullForecastData.forecast.model_quality.cost_mape < 15 ? 'bg-success' : fullForecastData.forecast.model_quality.cost_mape < 30 ? 'bg-warning text-dark' : 'bg-danger'">
+              Costo MAPE: {{ fullForecastData.forecast.model_quality.cost_mape }}%
+            </span>
+          }
+          @if (fullForecastData.forecast.model_quality.conversions_mape != null) {
+            <span class="badge" [class]="fullForecastData.forecast.model_quality.conversions_mape < 15 ? 'bg-success' : fullForecastData.forecast.model_quality.conversions_mape < 30 ? 'bg-warning text-dark' : 'bg-danger'">
+              Conv. MAPE: {{ fullForecastData.forecast.model_quality.conversions_mape }}%
+            </span>
+          }
+        </div>
+      }
     }
     @if (!loadingFullForecast && !fullForecastData?.forecast) {
-      <div class="empty-state">Datos insuficientes para pronostico extendido (min 7 dias)</div>
+      <div class="empty-state">Datos insuficientes para pronostico extendido (min 14 dias)</div>
     }
 
     <!-- Phase 9: Scaling Health -->
@@ -1389,7 +1453,7 @@
               <thead>
                 <tr>
                   <th>Termino de Busqueda</th>
-                  <th class="text-right">Gasto Desperdiciado</th>
+                  <th class="text-right">Dinero invertido</th>
                   <th class="text-right">Clicks</th>
                   <th class="text-right">Impressions</th>
                   <th>Campanas</th>
@@ -1724,16 +1788,31 @@
                       <tr>
                         <td>
                           <div class="ad-preview">
-                            @if (ad.headlines) {
-                              <div class="ad-headline">{{ ad.headlines }}</div>
+                            @if (parseAdTexts(ad.headlines).length > 0) {
+                              <div class="ad-headlines-list">
+                                @for (h of parseAdTexts(ad.headlines); track h; let i = $index) {
+                                  @if (i < 3) {
+                                    <span class="ad-headline-chip">{{ h }}</span>
+                                  }
+                                }
+                                @if (parseAdTexts(ad.headlines).length > 3) {
+                                  <span class="ad-more-badge">+{{ parseAdTexts(ad.headlines).length - 3 }} mas</span>
+                                }
+                              </div>
                             }
-                            @if (ad.descriptions) {
-                              <div class="ad-description text-muted small">{{ ad.descriptions }}</div>
+                            @if (parseAdTexts(ad.descriptions).length > 0) {
+                              <div class="ad-descriptions-list">
+                                @for (d of parseAdTexts(ad.descriptions); track d; let i = $index) {
+                                  @if (i < 2) {
+                                    <div class="ad-description-text">{{ d }}</div>
+                                  }
+                                }
+                              </div>
                             }
                             @if (ad.final_url) {
                               <div class="ad-url text-success small">{{ ad.final_url }}</div>
                             }
-                            @if (!ad.headlines && !ad.descriptions) {
+                            @if (parseAdTexts(ad.headlines).length === 0 && parseAdTexts(ad.descriptions).length === 0) {
                               <span class="text-muted">Ad #{{ ad.ad_id }}</span>
                             }
                           </div>
@@ -2262,7 +2341,7 @@
       }
 
       @if (execSummaryData.problems?.length > 0) {
-        <h5 class="section-title mt-4">Cuentas Problematicas</h5>
+        <h5 class="section-title mt-4">Cuentas con cero conversiones</h5>
         <div class="table-responsive">
           <table class="data-table">
             <thead><tr><th>Cuenta</th><th class="text-right">Gasto</th><th class="text-right">Conversiones</th></tr></thead>
@@ -2889,6 +2968,83 @@
 <!-- Tab 18: Geografia -->
 @if (activeTab === 18) {
   <div class="tab-content">
+
+    <!-- Mapa Interactivo Leaflet -->
+    <div class="map-section">
+      <div class="map-header">
+        <h5 class="section-title mb-0">Mapa Interactivo - Distribucion Geografica</h5>
+        <select class="metric-select" [(ngModel)]="selectedMapMetric" (change)="onMapMetricChange()">
+          <option value="total_cost">Costo</option>
+          <option value="total_conversions">Conversiones</option>
+          <option value="cpa">CPA</option>
+          <option value="ctr">CTR</option>
+        </select>
+      </div>
+      <p class="map-hint">Usa scroll para zoom, arrastra para mover. Haz clic en un circulo para ver detalles.</p>
+      @if (loadingGeoMap) {
+        <div class="loading-state">
+          <div class="spinner-border spinner-border-sm" role="status"></div>
+          <span>Cargando mapa geografico...</span>
+        </div>
+      }
+      @if (!loadingGeoMap && geoMapData.length > 0) {
+        <div class="leaflet-map-container">
+          <div id="leafletMap"></div>
+        </div>
+      }
+      @if (!loadingGeoMap && geoMapData.length === 0) {
+        <div class="empty-state">Sin datos geograficos para el mapa</div>
+      }
+    </div>
+
+    <!-- Localidades (cuando se filtra por pais) -->
+    @if (filterCountryId) {
+      <h5 class="section-title mt-4">Localidades del Pais Seleccionado</h5>
+      @if (loadingLocations) {
+        <div class="loading-state">
+          <div class="spinner-border spinner-border-sm" role="status"></div>
+          <span>Cargando localidades...</span>
+        </div>
+      }
+      @if (!loadingLocations && locationData.length > 0) {
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Localidad</th>
+                <th>Tipo</th>
+                <th>Pais</th>
+                <th class="text-right">Clicks</th>
+                <th class="text-right">Impresiones</th>
+                <th class="text-right">Costo</th>
+                <th class="text-right">Conversiones</th>
+                <th class="text-right">CTR</th>
+                <th class="text-right">CPA</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of locationData; track row.location_name) {
+                <tr>
+                  <td class="fw-600">{{ row.location_name }}</td>
+                  <td><span class="badge bg-secondary">{{ row.location_type || 'Region' }}</span></td>
+                  <td>{{ row.country_name || '-' }}</td>
+                  <td class="text-right">{{ row.total_clicks | number }}</td>
+                  <td class="text-right">{{ row.total_impressions | number }}</td>
+                  <td class="text-right fw-600">{{ formatCurrency(row.total_cost) }}</td>
+                  <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                  <td class="text-right">{{ row.ctr }}%</td>
+                  <td class="text-right">{{ formatCurrency(row.cpa) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      @if (!loadingLocations && locationData.length === 0) {
+        <div class="empty-state">Sin datos de localidades. Sincronice primero para obtener datos de localidades.</div>
+      }
+    }
+
     <h5 class="section-title">Rendimiento por Ubicacion Geografica</h5>
     @if (loadingGeo) {
       <div class="loading-state">
@@ -2953,6 +3109,8 @@
               <th class="text-right">CPA</th>
               <th class="text-right">CTR</th>
               <th class="text-right">CPC</th>
+              <th class="text-right">Tasa Conv.</th>
+              <th class="text-right">Score</th>
             </tr>
           </thead>
           <tbody>
@@ -2966,6 +3124,12 @@
                 <td class="text-right">{{ formatCurrency(row.cpa) }}</td>
                 <td class="text-right">{{ row.ctr }}%</td>
                 <td class="text-right">{{ formatCurrency(row.cpc) }}</td>
+                <td class="text-right">{{ row.conversion_rate }}%</td>
+                <td class="text-right">
+                  <span class="badge" [class.bg-success]="row.efficiency_score >= 70" [class.bg-warning]="row.efficiency_score >= 40 && row.efficiency_score < 70" [class.bg-danger]="row.efficiency_score < 40">
+                    {{ row.efficiency_score }}
+                  </span>
+                </td>
               </tr>
             }
           </tbody>
@@ -2974,6 +3138,63 @@
     }
     @if (!loadingCountryEfficiency && countryEfficiencyData.length === 0) {
       <div class="empty-state">Sin datos de eficiencia por pais</div>
+    }
+
+    <!-- Geo Tier Classification -->
+    <h5 class="section-title mt-4">Clasificacion por Tier Geografico</h5>
+    @if (loadingGeoTier) {
+      <div class="loading-state">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Cargando clasificacion por tier...</span>
+      </div>
+    }
+    @if (!loadingGeoTier && geoTierData.length > 0) {
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <span class="badge bg-success">TIER 1 (CPA ≤ promedio): {{ countTier('TIER_1') }} ubicaciones</span>
+        <span class="badge bg-warning text-dark">TIER 2 (CPA ≤ 1.3x): {{ countTier('TIER_2') }} ubicaciones</span>
+        <span class="badge bg-danger">TIER 3 (CPA > 1.3x): {{ countTier('TIER_3') }} ubicaciones</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ubicacion</th>
+              <th>Tier</th>
+              <th class="text-right">Costo</th>
+              <th class="text-right">Conversiones</th>
+              <th class="text-right">CPA</th>
+              <th class="text-right">CPA Promedio</th>
+              <th class="text-right">Ahorro Est.</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of geoTierData; track row.geo_target_name) {
+              <tr>
+                <td class="fw-600">{{ row.geo_target_name }}</td>
+                <td>
+                  <span class="badge" [class.bg-success]="row.tier === 'TIER_1'" [class.bg-warning]="row.tier === 'TIER_2'" [class.bg-danger]="row.tier === 'TIER_3'" [class.text-dark]="row.tier === 'TIER_2'">
+                    {{ row.tier }}
+                  </span>
+                </td>
+                <td class="text-right">{{ formatCurrency(row.total_cost) }}</td>
+                <td class="text-right">{{ row.total_conversions | number:'1.0-1' }}</td>
+                <td class="text-right">{{ formatCurrency(row.cpa) }}</td>
+                <td class="text-right">{{ formatCurrency(row.global_avg_cpa) }}</td>
+                <td class="text-right">
+                  @if (row.estimated_savings > 0) {
+                    <span class="text-danger">{{ formatCurrency(row.estimated_savings) }}</span>
+                  } @else {
+                    <span class="text-muted">-</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!loadingGeoTier && geoTierData.length === 0) {
+      <div class="empty-state">Sin datos de clasificacion por tier</div>
     }
   </div>
 }

@@ -23,7 +23,7 @@ export class CountryListComponent implements OnInit {
 
   timezones = [
     'America/Bogota', 'America/Mexico_City', 'America/Lima',
-    'America/Santiago', 'America/Guayaquil', 'America/Panama', 'America/Costa_Rica',
+    'America/Santiago', 'America/Guayaquil', 'America/Panama', 'America/La_Paz', 'Europe/Madrid',
   ];
 
   constructor(private adminService: AdminService, private cdr: ChangeDetectorRef) {}

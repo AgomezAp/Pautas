@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.pautas.app',
-  appName: 'Pautas',
+  appName: 'Reportes',
   webDir: 'dist/pautas-frontend/browser',
   server: {
     androidScheme: 'https',

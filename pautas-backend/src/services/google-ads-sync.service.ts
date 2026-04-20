@@ -1,8 +1,48 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ *  Google Ads Sync Service — Sincronización con la API de Google Ads
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ *  PROPÓSITO:
+ *    Sincroniza datos de la API de Google Ads a la BD PostgreSQL local.
+ *    Maneja campañas, keywords, dispositivos, geo, horario, términos
+ *    de búsqueda, anuncios, demografía, assets, billing e invoices.
+ *
+ *  TABLAS QUE ESCRIBE:
+ *    campaigns, google_ads_snapshots, google_ads_keyword_snapshots,
+ *    google_ads_device_snapshots, google_ads_geo_snapshots,
+ *    google_ads_hourly_snapshots, google_ads_search_term_snapshots,
+ *    google_ads_ad_snapshots, google_ads_auction_insights,
+ *    google_ads_demographics_snapshots, google_ads_asset_snapshots,
+ *    google_ads_billing_accounts, google_ads_account_charges,
+ *    google_ads_billing_history, google_ads_recharges
+ *
+ *  CONTROL DE CONCURRENCIA:
+ *    ─ CONCURRENCY_LIMIT = 2 cuentas en paralelo (evita rate limit)
+ *    ─ 1 segundo de delay entre iteraciones
+ *    ─ Detección automática de rate limit (RESOURCE_EXHAUSTED)
+ *    ─ Cooldown configurable (default 1 hora)
+ *
+ *  FLUJO DE SYNC COMPLETO (syncAll):
+ *    1. syncAllCampaigns() → campañas + snapshots diarios (14 días)
+ *    2. syncBillingAccounts() → cuentas de facturación
+ *    3. syncAccountCharges() → cargos/presupuestos
+ *    4. syncRecharges() → recargas (proposals de presupuesto)
+ *    5. syncBillingHistory() → invoices del último año fiscal
+ *    6. syncEnhancedAnalytics() → keywords, devices, geo, hourly,
+ *       searchTerms, adPerformance, demographics, assets
+ * ══════════════════════════════════════════════════════════════════════
+ */
+
 import { env } from '../config/environment';
 import { query } from '../config/database';
 import { logger } from '../utils/logger.util';
 
-// Map Google Ads status codes to strings
+/**
+ * Mapa de códigos de estado numéricos de Google Ads → cadena legible.
+ * La API devuelve enteros (0-4); los convertimos para almacenar en BD.
+ *  0 = UNSPECIFIED | 1 = UNKNOWN | 2 = ENABLED | 3 = PAUSED | 4 = REMOVED
+ */
 const STATUS_MAP: Record<number, string> = {
   0: 'UNSPECIFIED',
   1: 'UNKNOWN',
@@ -11,7 +51,11 @@ const STATUS_MAP: Record<number, string> = {
   4: 'REMOVED',
 };
 
-// Map Google Ads account name patterns to country codes
+/**
+ * Patrones para detectar el país a partir del nombre de la cuenta de Google Ads.
+ * Ej: "ACME - COLOMBIA SAS" → detecta "COLOMBIA" → código "CO".
+ * Se usa en {@link GoogleAdsSyncService.detectCountryCode} para asignar country_id.
+ */
 const COUNTRY_PATTERNS: Record<string, string> = {
   'COLOMBIA': 'CO',
   'MEXICO': 'MX',
@@ -23,14 +67,36 @@ const COUNTRY_PATTERNS: Record<string, string> = {
   'ESPAÑA': 'ES',
 };
 
-const CONCURRENCY_LIMIT = 2; // Keep low to avoid Google Ads API rate limits
+/**
+ * Límite de concurrencia para llamadas paralelas a la API de Google Ads.
+ * Se mantiene bajo (2) para evitar errores RESOURCE_EXHAUSTED / 429.
+ * Cada worker añade un delay de 1 segundo entre cuentas procesadas.
+ */
+const CONCURRENCY_LIMIT = 2;
 
 export class GoogleAdsSyncService {
+  /** Instancia singleton del cliente GoogleAdsApi (se crea lazily en getApi()) */
   private client: any = null;
+
+  /** Cache de cuentas client (no-manager) descubiertas bajo el MCC */
   private cachedClientAccounts: { id: string; name: string }[] | null = null;
+
+  /** Timestamp (ms) de la última vez que se pobló cachedClientAccounts */
   private cacheTimestamp = 0;
+
+  /** Tiempo de vida del cache de cuentas: 30 minutos en milisegundos */
   private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
+  /**
+   * Inicializa el cliente de Google Ads API de forma lazy (singleton).
+   *
+   * Usa las credenciales de `env.googleAds` (developerToken, clientId, clientSecret).
+   * Si las credenciales no están configuradas, retorna null y loguea un warning.
+   * El import de 'google-ads-api' es dinámico para evitar errores si el paquete
+   * no está instalado.
+   *
+   * @returns {Promise<any>} Instancia de GoogleAdsApi, o null si no está configurado.
+   */
   private async getApi(): Promise<any> {
     if (this.client) return this.client;
 
@@ -55,6 +121,14 @@ export class GoogleAdsSyncService {
     }
   }
 
+  /**
+   * Crea un objeto Customer autenticado para ejecutar queries GAQL.
+   *
+   * @param api           - Instancia de GoogleAdsApi (obtenida de getApi())
+   * @param customerId    - ID de la cuenta Google Ads (ej: "1234567890")
+   * @param loginCustomerId - (Opcional) ID del MCC que autoriza el acceso
+   * @returns Objeto Customer con método .query() para ejecutar GAQL
+   */
   private getCustomer(api: any, customerId: string, loginCustomerId?: string): any {
     const opts: any = {
       customer_id: customerId,
@@ -66,7 +140,20 @@ export class GoogleAdsSyncService {
     return api.Customer(opts);
   }
 
-  // Discover all client accounts under the MCC with caching
+  /**
+   * Descubre todas las cuentas client (no-manager) bajo el MCC.
+   *
+   * Ejecuta la query GAQL:
+   *   SELECT customer_client.id, customer_client.descriptive_name,
+   *          customer_client.manager, customer_client.status
+   *   FROM customer_client
+   *   WHERE customer_client.manager = FALSE AND customer_client.status = 'ENABLED'
+   *
+   * Los resultados se cachean por 30 minutos (CACHE_TTL) para reducir
+   * llamadas redundantes a la API durante un ciclo de sync completo.
+   *
+   * @returns {Promise<{id: string, name: string}[]>} Array de cuentas con id y nombre descriptivo.
+   */
   private async getClientAccounts(): Promise<{ id: string; name: string }[]> {
     if (this.cachedClientAccounts && (Date.now() - this.cacheTimestamp) < this.CACHE_TTL) {
       return this.cachedClientAccounts;
@@ -96,7 +183,15 @@ export class GoogleAdsSyncService {
     }
   }
 
-  // Detect country code from account/campaign name
+  /**
+   * Detecta el código ISO de país a partir del nombre de una cuenta o campaña.
+   *
+   * Compara el nombre (en mayúsculas) contra COUNTRY_PATTERNS.
+   * Ej: "MiEmpresa COLOMBIA" → "CO", "Ventas PERU" → "PE".
+   *
+   * @param name - Nombre de la cuenta o campaña de Google Ads
+   * @returns Código ISO de 2 letras (ej: "CO", "MX") o null si no se detecta país.
+   */
   private detectCountryCode(name: string): string | null {
     const upper = name.toUpperCase();
     for (const [pattern, code] of Object.entries(COUNTRY_PATTERNS)) {
@@ -105,11 +200,21 @@ export class GoogleAdsSyncService {
     return null;
   }
 
-  // Run async tasks with limited concurrency (stops on rate limit)
+  // ── Control de Rate Limit ──────────────────────────────────────────
+  // Cuando la API responde RESOURCE_EXHAUSTED (429), se marca rateLimitHit = true
+  // y se detiene el procesamiento de nuevas cuentas. El flag persiste entre métodos
+  // de sync para que, si keywords hace rate limit, devices/geo no intenten más.
+  /** Bandera: true cuando se detectó rate limit. No se resetea entre métodos. */
   private rateLimitHit = false;
-  private rateLimitResetAt = 0; // timestamp when rate limit expires
+  /** Timestamp (ms) en que expira el rate limit. 0 = sin fecha definida. */
+  private rateLimitResetAt = 0;
 
-  /** Check if we're currently rate-limited */
+  /**
+   * Verifica si estamos actualmente bajo rate limit de la API.
+   * Si el período de espera ya expiró, limpia el flag automáticamente.
+   *
+   * @returns true si estamos en rate limit activo, false si podemos continuar.
+   */
   isRateLimited(): boolean {
     if (!this.rateLimitHit) return false;
     // Auto-clear if the retry period has passed
@@ -122,7 +227,13 @@ export class GoogleAdsSyncService {
     return true;
   }
 
-  /** Mark rate limit as hit, with optional retry-after seconds */
+  /**
+   * Marca el servicio como rate-limited por la API de Google Ads.
+   * Si se detecta "Retry in X seconds" en el error, configura un cooldown automático.
+   * Por defecto el cooldown es de 1 hora (3600 segundos).
+   *
+   * @param retryAfterSecs - Segundos de espera sugeridos por la API (opcional)
+   */
   private markRateLimited(retryAfterSecs?: number): void {
     this.rateLimitHit = true;
     if (retryAfterSecs) {
@@ -131,6 +242,25 @@ export class GoogleAdsSyncService {
     }
   }
 
+  /**
+   * Pool de concurrencia limitada para procesar cuentas en paralelo.
+   *
+   * Crea `limit` workers que consumen del array `items` secuencialmente.
+   * Si se detecta rate limit (rateLimitHit), todos los workers se detienen.
+   * Incluye un delay de 1 segundo entre iteraciones para evitar ráfagas.
+   *
+   * Ejemplo con 10 cuentas y limit=2:
+   *   Worker A: cuenta[0] → delay → cuenta[2] → delay → cuenta[4] → ...
+   *   Worker B: cuenta[1] → delay → cuenta[3] → delay → cuenta[5] → ...
+   *
+   * NOTA: No resetea rateLimitHit internamente; el flag persiste entre
+   * llamadas a distintos métodos de sync.
+   *
+   * @template T - Tipo de los items a procesar (generalmente {id, name})
+   * @param items - Array de elementos a procesar (cuentas de Google Ads)
+   * @param fn    - Función async que procesa cada item
+   * @param limit - Máximo de workers concurrentes (default: 2)
+   */
   private async runWithConcurrency<T>(
     items: T[],
     fn: (item: T) => Promise<void>,
@@ -151,9 +281,35 @@ export class GoogleAdsSyncService {
     await Promise.all(workers);
   }
 
-  // ========================================================
-  // 1. Sync campaigns
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // 1. Sync de campañas — Método principal de sincronización
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sincroniza todas las campañas de Google Ads y sus métricas diarias.
+   *
+   * FLUJO:
+   *   1. Descubre cuentas client bajo el MCC (getClientAccounts)
+   *   2. Si activeOnly=true, filtra cuentas que empiecen con "PAUSADA"
+   *   3. Carga mapa de países (countries) y campañas existentes (campaigns)
+   *   4. Por cada cuenta (con concurrencia limitada):
+   *      a. Query GAQL: todas las campañas no-REMOVED (sin filtro de fecha)
+   *      b. Query GAQL: métricas de LAST_14_DAYS (conversions, cost, clicks, etc.)
+   *      c. Detecta país por nombre de cuenta y nombre de campaña
+   *      d. INSERT o UPDATE en tabla `campaigns`
+   *      e. UPSERT snapshots diarios en `google_ads_snapshots`
+   *         (ON CONFLICT campaign_id + snapshot_date)
+   *
+   * QUERIES GAQL:
+   *   - SELECT campaign.id, name, status, channel_type, budget FROM campaign
+   *   - SELECT campaign.id, segments.date, metrics.* FROM campaign WHERE LAST_14_DAYS
+   *
+   * TABLAS AFECTADAS:
+   *   - campaigns: INSERT (nuevas) o UPDATE (existentes)
+   *   - google_ads_snapshots: UPSERT por (campaign_id, snapshot_date)
+   *
+   * @param activeOnly - Si true, excluye cuentas "PAUSADA" (para syncs horarios rápidos)
+   */
   async syncAllCampaigns(activeOnly = false): Promise<void> {
     const api = await this.getApi();
     if (!api) {
@@ -214,7 +370,7 @@ export class GoogleAdsSyncService {
 
           if (campaignList.length === 0) return;
 
-          // Step 2: Fetch metrics for last 3 days (Google Ads has 1-2 day delay)
+          // Step 2: Fetch metrics for last 14 days to cover gaps if sync was down
           // Key: "campaignId_date" -> { metrics, date }
           const metricsMultiDay = new Map<string, { metrics: any; date: string }[]>();
           try {
@@ -233,7 +389,7 @@ export class GoogleAdsSyncService {
                 metrics.search_budget_lost_impression_share,
                 metrics.search_rank_lost_impression_share
               FROM campaign
-              WHERE segments.date DURING LAST_3_DAYS
+              WHERE segments.date DURING LAST_14_DAYS
             `);
             for (const row of metricsResults) {
               const cId = String(row.campaign.id);
@@ -383,9 +539,29 @@ export class GoogleAdsSyncService {
     }
   }
 
-  // ========================================================
-  // 2. Sync billing accounts (with payment profile details)
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // 2. Sync de cuentas de facturación
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sincroniza la configuración de facturación (billing setup) de cada cuenta.
+   *
+   * QUERY GAQL:
+   *   SELECT billing_setup.id, billing_setup.status,
+   *          billing_setup.payments_account_info.payments_account_id,
+   *          billing_setup.payments_account_info.payments_account_name,
+   *          billing_setup.payments_account_info.payments_profile_id,
+   *          billing_setup.payments_account_info.payments_profile_name
+   *   FROM billing_setup
+   *
+   * Además obtiene el currency_code de la cuenta (SELECT customer.currency_code).
+   *
+   * TABLA AFECTADA:
+   *   google_ads_billing_accounts — UPSERT por billing_id (payments_account_id)
+   *
+   * Campos sincronizados: billing_id, name, status, currency_code,
+   *   payments_profile_name, customer_account_id, customer_account_name
+   */
   async syncBillingAccounts(): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -462,9 +638,31 @@ export class GoogleAdsSyncService {
     }
   }
 
-  // ========================================================
-  // 3. Sync account charges (budget transactions for each account)
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // 3. Sync de cargos/presupuestos de cuenta (account budgets)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sincroniza las transacciones de presupuesto (account_budget) por cuenta.
+   *
+   * FLUJO:
+   *   1. Por cada cuenta, obtiene billing_setup y currency_code
+   *   2. Query GAQL: SELECT account_budget.id, name, status, dates, adjustments, served
+   *   3. Busca el billing_account_id local en google_ads_billing_accounts
+   *   4. UPSERT en google_ads_account_charges
+   *
+   * QUERY GAQL:
+   *   SELECT account_budget.id, account_budget.name, account_budget.status,
+   *          proposed_start/end_date, approved_start/end_date,
+   *          purchase_order_number, total_adjustments_micros, amount_served_micros
+   *   FROM account_budget
+   *
+   * TABLA AFECTADA:
+   *   google_ads_account_charges — UPSERT por (customer_account_id, payments_account_id)
+   *
+   * NOTA: Los montos vienen en micros (÷ 1,000,000 para valor real).
+   *       No todas las cuentas tienen account_budget disponible.
+   */
   async syncAccountCharges(): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -571,9 +769,28 @@ export class GoogleAdsSyncService {
     }
   }
 
-  // ========================================================
-  // 3. Sync billing history (invoices)
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // 4. Sync de historial de facturación (invoices)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sincroniza las facturas (invoices) del último año fiscal de cada cuenta.
+   *
+   * QUERY GAQL:
+   *   SELECT invoice.id, invoice.issue_date, invoice.due_date,
+   *          invoice.subtotal_amount_micros, invoice.tax_amount_micros,
+   *          invoice.total_amount_micros, invoice.currency_code,
+   *          invoice.type, invoice.pdf_url, invoice.payments_account_id
+   *   FROM invoice
+   *   WHERE invoice.issue_date DURING LAST_BUSINESS_YEAR
+   *
+   * TABLA AFECTADA:
+   *   google_ads_billing_history — UPSERT por invoice_id
+   *
+   * Los montos se convierten de micros a unidades reales (÷ 1,000,000).
+   * Relaciona cada invoice con su billing_account_id local.
+   * No todas las cuentas tienen acceso a invoices.
+   */
   async syncBillingHistory(): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -648,9 +865,38 @@ export class GoogleAdsSyncService {
     }
   }
 
-  // ========================================================
-  // 4. Sync recharges (account_budget_proposal — individual top-ups)
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // 5. Sync de recargas (account_budget_proposal — top-ups individuales)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sincroniza las recargas de presupuesto (account_budget_proposal) por cuenta.
+   *
+   * LÓGICA DE CÁLCULO DE MONTO DE RECARGA:
+   *   Las proposals de Google Ads indican el spending_limit acumulado, no el delta.
+   *   Para obtener el monto de cada recarga, se calcula:
+   *     - proposal_type = 2 (CREATE): rechargeAmount = newSpendingLimit
+   *     - proposal_type = 3 (UPDATE): rechargeAmount = newSpendingLimit - previousLimit
+   *   Las proposals se ordenan por creation_date para mantener el running total correcto.
+   *   Se descartan recargas con monto <= 0.
+   *
+   * QUERY GAQL:
+   *   SELECT account_budget_proposal.id, proposal_type, status,
+   *          proposed_spending_limit_micros, approved_spending_limit_micros,
+   *          creation_date_time, approval_date_time
+   *   FROM account_budget_proposal
+   *   ORDER BY creation_date_time ASC
+   *
+   * MODO INCREMENTAL (recentOnly=true):
+   *   Carga los proposal_id existentes en BD y los salta durante el insert.
+   *   Aún itera TODAS las proposals para calcular correctamente los deltas.
+   *
+   * TABLA AFECTADA:
+   *   google_ads_recharges — UPSERT por proposal_id
+   *
+   * @param recentOnly - Si true, modo incremental (solo inserta proposals nuevos).
+   *                      Si false, rebuild completo.
+   */
   async syncRecharges(recentOnly = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -792,9 +1038,27 @@ export class GoogleAdsSyncService {
     }
   }
 
-  // ========================================================
-  // 5. Full sync
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // 6. Sync completo — Orquestador principal
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Orquestador que ejecuta todos los métodos de sync en secuencia.
+   *
+   * ORDEN DE EJECUCIÓN:
+   *   1. syncAllCampaigns()      — Campañas + snapshots de 14 días
+   *   2. syncBillingAccounts()    — Cuentas de facturación
+   *   3. syncAccountCharges()     — Presupuestos (account_budget)
+   *   4. syncRecharges()          — Recargas (budget proposals)
+   *   5. syncBillingHistory()     — Invoices del último año fiscal
+   *   6. syncEnhancedAnalytics()  — Keywords, devices, geo, hourly,
+   *                                  searchTerms, ads, demographics, assets
+   *
+   * Se ejecuta secuencialmente (no en paralelo) porque cada paso
+   * puede depender de datos del anterior (ej: campañas deben existir
+   * antes de sincronizar keywords). Además, el rate limit se propaga
+   * entre métodos gracias al flag persistente rateLimitHit.
+   */
   async syncAll(): Promise<void> {
     await this.syncAllCampaigns();
     await this.syncBillingAccounts();
@@ -804,9 +1068,26 @@ export class GoogleAdsSyncService {
     await this.syncEnhancedAnalytics();
   }
 
-  // ========================================================
-  // Query methods (for API endpoints)
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // Métodos de consulta — Usados por los endpoints de la API REST
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Obtiene el detalle de todas las campañas activas con su último snapshot.
+   *
+   * Ejecuta un JOIN entre:
+   *   - campaigns (c): datos base de la campaña
+   *   - countries (co): nombre y código del país
+   *   - latest_snapshots (CTE): último snapshot por campaña
+   *     (DISTINCT ON campaign_id ORDER BY snapshot_date DESC)
+   *
+   * Retorna: id, google_ads_campaign_id, name, daily_budget, ads_status,
+   *          country_name, conversions, cost, clicks, impressions, ctr,
+   *          remaining_budget, snapshot_date
+   *
+   * @param countryId - (Opcional) Filtra por country_id específico
+   * @returns Array de campañas con métricas del último snapshot
+   */
   async getCampaignDetails(countryId?: number): Promise<any[]> {
     let sql = `
       WITH latest_snapshots AS (
@@ -836,6 +1117,24 @@ export class GoogleAdsSyncService {
     return result.rows;
   }
 
+  /**
+   * Obtiene campañas agrupadas por cuenta de Google Ads, con resumen de recargas.
+   *
+   * Ejecuta 2 queries en paralelo:
+   *   1. Campañas + último snapshot (similar a getCampaignDetails)
+   *   2. Resumen de recargas por cuenta:
+   *      - latest_recharges: última recarga por cuenta
+   *      - recharges_summary: COUNT + SUM total por cuenta
+   *      - same_day_flags: cuentas con >= 2 recargas en el mismo día
+   *
+   * Agrupa los resultados en un Map por customer_account_id y calcula totales:
+   *   total_daily_budget, total_cost_today, total_remaining, total_clicks,
+   *   total_impressions, total_conversions, campaigns_count, enabled/paused_count
+   *
+   * @param countryId  - (Opcional) Filtra campañas por country_id
+   * @param accountIds - (Opcional) Filtra por array de customer_account_id
+   * @returns Array de objetos-cuenta con sus campañas anidadas y resumen de recargas
+   */
   async getCampaignsGroupedByAccount(countryId?: number, accountIds?: string[]): Promise<any[]> {
     let sql = `
       WITH latest_snapshots AS (
@@ -961,6 +1260,16 @@ export class GoogleAdsSyncService {
     return Array.from(accountMap.values());
   }
 
+  /**
+   * Obtiene el historial de snapshots de una campaña específica.
+   *
+   * Consulta google_ads_snapshots para los últimos N días, ordenado ASC.
+   * Útil para gráficas de tendencia de costo, clicks, impresiones, etc.
+   *
+   * @param campaignId - ID local de la campaña (campaigns.id)
+   * @param days       - Cantidad de días hacia atrás (default: 30)
+   * @returns Array de snapshots ordenados por fecha ascendente
+   */
   async getCampaignHistory(campaignId: number, days = 30): Promise<any[]> {
     const result = await query(
       `SELECT snapshot_date, conversions, status, remaining_budget, daily_budget, cost, clicks, impressions, ctr
@@ -972,6 +1281,12 @@ export class GoogleAdsSyncService {
     return result.rows;
   }
 
+  /**
+   * Lista todas las cuentas de facturación sincronizadas.
+   * Consulta google_ads_billing_accounts ordenado por nombre de cuenta.
+   *
+   * @returns Array de billing accounts con sus datos de perfil de pago
+   */
   async getBillingAccounts(): Promise<any[]> {
     const result = await query(
       `SELECT id, billing_id, name, currency_code, status,
@@ -982,6 +1297,14 @@ export class GoogleAdsSyncService {
     return result.rows;
   }
 
+  /**
+   * Obtiene cargos de cuenta con paginación.
+   * JOIN con google_ads_billing_accounts para obtener nombre de billing account.
+   *
+   * @param limit  - Registros por página (default: 50)
+   * @param offset - Offset para paginación (default: 0)
+   * @returns { rows, total } — registros paginados y total general
+   */
   async getAccountCharges(limit = 50, offset = 0): Promise<{ rows: any[], total: number }> {
     const countResult = await query('SELECT COUNT(*) FROM google_ads_account_charges');
     const total = parseInt(countResult.rows[0].count);
@@ -1006,6 +1329,24 @@ export class GoogleAdsSyncService {
     return { rows: result.rows, total };
   }
 
+  /**
+   * Obtiene recargas con paginación y filtros dinámicos.
+   *
+   * Construye un WHERE dinámico según los filtros proporcionados:
+   *   - dateFrom/dateTo: rango de fecha de recarga
+   *   - account: ILIKE sobre customer_account_name
+   *   - paymentProfile: ILIKE sobre payments_profile_name
+   *   - accountIds: filtro por array de customer_account_id
+   *
+   * Incluye un CTE `account_financials` que calcula el presupuesto diario
+   * total y remaining por cuenta, y una window function para detectar
+   * recargas del mismo día (same_day_count >= 2).
+   *
+   * @param limit   - Registros por página (default: 50)
+   * @param offset  - Offset para paginación (default: 0)
+   * @param filters - Objeto con filtros opcionales (dateFrom, dateTo, account, paymentProfile, accountIds)
+   * @returns { rows, total } — recargas paginadas con total_daily_budget y total_remaining
+   */
   async getRecharges(
     limit = 50, offset = 0,
     filters: { dateFrom?: string; dateTo?: string; account?: string; paymentProfile?: string; accountIds?: string[] } = {}
@@ -1079,6 +1420,18 @@ export class GoogleAdsSyncService {
     return { rows: result.rows, total };
   }
 
+  /**
+   * Exporta recargas a formato CSV con filtros opcionales.
+   *
+   * Genera un string CSV con header en español:
+   *   "ID Cuenta,Nombre Cuenta,Cuenta de Pago,Perfil de Pago,Moneda,
+   *    Monto Recarga,Nuevo Limite,Tipo,Fecha"
+   *
+   * El campo Tipo se traduce: 2→Inicial, 3→Recarga, 4→Cierre.
+   *
+   * @param filters - Mismos filtros que getRecharges (dateFrom, dateTo, account, paymentProfile)
+   * @returns String CSV listo para descarga
+   */
   async exportRechargesCsv(
     filters: { dateFrom?: string; dateTo?: string; account?: string; paymentProfile?: string } = {}
   ): Promise<string> {
@@ -1141,6 +1494,35 @@ export class GoogleAdsSyncService {
     return [header, ...rows].join('\n');
   }
 
+  /**
+   * Dashboard de recargas: ejecuta 10 queries en paralelo para KPIs y tendencias.
+   *
+   * QUERIES PARALELAS (todas sobre google_ads_recharges):
+   *   1. Totales generales (count + sum)
+   *   2. Desglose por país (detectado con CASE WHEN sobre nombre de cuenta)
+   *   3. Tendencia diaria últimos 30 días
+   *   4. Total de hoy
+   *   5. Total de ayer
+   *   6. Total de esta semana (lunes a hoy)
+   *   7. Total de la semana pasada
+   *   8. Total de este mes
+   *   9. Total del mes pasado
+   *  10. Valores únicos de payments_profile_name (para dropdowns de filtro)
+   *
+   * Calcula variaciones porcentuales: hoy vs ayer, semana vs semana anterior,
+   * mes vs mes anterior. Si el período anterior es 0, retorna +100%.
+   *
+   * RESPUESTA:
+   *   {
+   *     kpis: { totalAmount, totalCount, avgAmount, todayTotal, weekChange, monthChange... },
+   *     byCountry: [{ country, count, total }],
+   *     dailyTrend: [{ date, count, total }],
+   *     filters: { paymentProfiles: string[] }
+   *   }
+   *
+   * @param filters - Filtros opcionales: country, dateFrom, dateTo, account, paymentProfile
+   * @returns Objeto con KPIs, desglose por país, tendencia diaria y opciones de filtro
+   */
   async getRechargesDashboard(filters: {
     country?: string;
     dateFrom?: string;
@@ -1311,6 +1693,15 @@ export class GoogleAdsSyncService {
     };
   }
 
+  /**
+   * Obtiene historial de facturación con paginación.
+   * JOIN con google_ads_billing_accounts para nombre de cuenta.
+   * Ordenado por issue_date DESC.
+   *
+   * @param limit  - Registros por página (default: 50)
+   * @param offset - Offset para paginación (default: 0)
+   * @returns { rows, total } — invoices paginados y total general
+   */
   async getBillingHistory(limit = 50, offset = 0): Promise<{ rows: any[], total: number }> {
     const countResult = await query('SELECT COUNT(*) FROM google_ads_billing_history');
     const total = parseInt(countResult.rows[0].count);
@@ -1326,10 +1717,30 @@ export class GoogleAdsSyncService {
     return { rows: result.rows, total };
   }
 
-  // ========================================================
-  // Enhanced Analytics: Keywords, Devices, Geo, Hourly
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // Analytics Avanzados: Keywords, Dispositivos, Geo, Horario, etc.
+  // ════════════════════════════════════════════════════════════════════
 
+  /**
+   * Sincroniza keywords desde keyword_view de Google Ads.
+   *
+   * QUERY GAQL:
+   *   SELECT campaign.id, ad_group.name, ad_group_criterion.keyword.text,
+   *          ad_group_criterion.keyword.match_type,
+   *          ad_group_criterion.quality_info.quality_score,
+   *          segments.date, metrics.clicks, impressions, cost_micros,
+   *          conversions, ctr
+   *   FROM keyword_view
+   *   WHERE segments.date DURING LAST_14_DAYS (o LAST_30_DAYS en backfill)
+   *
+   * TABLA AFECTADA:
+   *   google_ads_keyword_snapshots — UPSERT por (campaign_id, keyword_text, match_type, snapshot_date)
+   *
+   * Campos: ad_group_name, keyword_text, match_type (EXACT/PHRASE/BROAD),
+   *         quality_score, clicks, impressions, cost, conversions, ctr
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncKeywords(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -1340,7 +1751,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     // Build campaign map: google_ads_campaign_id -> local id
     const existingCampaigns = await query(
@@ -1428,6 +1839,22 @@ export class GoogleAdsSyncService {
     logger.info(`Keywords sync: ${synced} keywords synced, ${errors} errors`);
   }
 
+  /**
+   * Sincroniza rendimiento por dispositivo desde campaign view.
+   *
+   * QUERY GAQL:
+   *   SELECT campaign.id, segments.device, segments.date,
+   *          metrics.clicks, impressions, cost_micros, conversions
+   *   FROM campaign
+   *   WHERE segments.date DURING LAST_14_DAYS (o LAST_30_DAYS)
+   *
+   * El campo segments.device retorna: MOBILE, DESKTOP, TABLET, OTHER.
+   *
+   * TABLA AFECTADA:
+   *   google_ads_device_snapshots — UPSERT por (campaign_id, device, snapshot_date)
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncDevicePerformance(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -1438,7 +1865,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1508,6 +1935,25 @@ export class GoogleAdsSyncService {
     logger.info(`Device sync: ${synced} records synced`);
   }
 
+  /**
+   * Sincroniza rendimiento geográfico desde geographic_view.
+   *
+   * QUERY GAQL:
+   *   SELECT campaign.id, geographic_view.country_criterion_id,
+   *          geographic_view.location_type, segments.date,
+   *          metrics.clicks, impressions, cost_micros, conversions
+   *   FROM geographic_view
+   *   WHERE segments.date DURING LAST_14_DAYS (o LAST_30_DAYS)
+   *
+   * Los criterion IDs se almacenan temporalmente como "Geo:XXXX".
+   * Después del sync, se resuelven a nombres legibles usando
+   * resolveGeoCriterionNames() (consulta geo_target_constant).
+   *
+   * TABLA AFECTADA:
+   *   google_ads_geo_snapshots — UPSERT por (campaign_id, geo_target_name, snapshot_date)
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncGeoPerformance(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -1518,7 +1964,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1604,7 +2050,43 @@ export class GoogleAdsSyncService {
     logger.info(`Geographic sync: ${synced} records synced, ${errors} errors`);
   }
 
-  // Resolve Geo:XXXX names to actual location names using Google Ads geo_target_constant
+  /**
+   * Resuelve criterion IDs geográficos ("Geo:XXXX") a nombres legibles.
+   *
+   * Busca en google_ads_geo_snapshots las entradas con geo_target_name LIKE 'Geo:%',
+   * luego consulta geo_target_constant de la API para obtener el canonical_name.
+   * Actualiza la BD con los nombres resueltos.
+   *
+   * QUERY GAQL (por cada criterion):
+   *   SELECT geo_target_constant.name, geo_target_constant.canonical_name
+   *   FROM geo_target_constant
+   *   WHERE resource_name = 'geoTargetConstants/{criterionId}'
+   *
+   * @param api       - Instancia de GoogleAdsApi
+   * @param managerId - ID del MCC para autenticación
+   */
+  /** Mapeo estático de Geo Criterion IDs → nombres (fallback si la API falla) */
+  private static readonly GEO_FALLBACK: Record<string, string> = {
+    '2032': 'Argentina', '2068': 'Bolivia', '2076': 'Brasil', '2152': 'Chile',
+    '2170': 'Colombia', '2188': 'Costa Rica', '2192': 'Cuba', '2218': 'Ecuador',
+    '2222': 'El Salvador', '2320': 'Guatemala', '2340': 'Honduras', '2484': 'México',
+    '2558': 'Nicaragua', '2591': 'Panamá', '2600': 'Paraguay', '2604': 'Perú',
+    '2214': 'República Dominicana', '2858': 'Uruguay', '2862': 'Venezuela',
+    '2724': 'España', '2840': 'Estados Unidos',
+    '2156': 'China', '2356': 'India', '2826': 'Reino Unido', '2276': 'Alemania',
+    '2250': 'Francia', '2380': 'Italia', '2392': 'Japón', '2124': 'Canadá',
+    '2036': 'Australia', '2410': 'Corea del Sur', '2158': 'Taiwán',
+    '2056': 'Bélgica', '2528': 'Países Bajos', '2756': 'Suiza',
+    '2643': 'Rusia', '2792': 'Turquía', '2818': 'Egipto', '2710': 'Sudáfrica',
+    '2682': 'Arabia Saudita', '2376': 'Israel', '2764': 'Tailandia',
+    '2704': 'Vietnam', '2360': 'Indonesia', '2458': 'Malasia',
+    '2608': 'Filipinas', '2702': 'Singapur', '2196': 'Chipre', '2300': 'Grecia',
+    '2616': 'Polonia', '2620': 'Portugal', '2203': 'Chequia',
+    '2348': 'Hungría', '2040': 'Austria', '2752': 'Suecia',
+    '2578': 'Noruega', '2208': 'Dinamarca', '2246': 'Finlandia',
+    '2372': 'Irlanda', '2554': 'Nueva Zelanda',
+  };
+
   private async resolveGeoCriterionNames(api: any, managerId: string): Promise<void> {
     // Find unresolved names (still "Geo:XXXX")
     const unresolvedResult = await query(
@@ -1618,8 +2100,15 @@ export class GoogleAdsSyncService {
     const customer = this.getCustomer(api, managerId);
     const nameMap = new Map<string, string>();
 
-    // Query geo_target_constant for each criterion ID
+    // First: apply static fallback for known IDs
     for (const criterionId of criterionIds) {
+      const fallback = GoogleAdsSyncService.GEO_FALLBACK[criterionId];
+      if (fallback) nameMap.set(criterionId, fallback);
+    }
+
+    // Then: try API resolution for any remaining (overrides fallback with canonical names)
+    const unresolved = criterionIds.filter(id => !nameMap.has(id));
+    for (const criterionId of [...unresolved, ...criterionIds.filter(id => nameMap.has(id))]) {
       try {
         const results = await customer.query(
           `SELECT geo_target_constant.name, geo_target_constant.canonical_name FROM geo_target_constant WHERE geo_target_constant.resource_name = 'geoTargetConstants/${criterionId}'`
@@ -1629,20 +2118,202 @@ export class GoogleAdsSyncService {
           if (name) nameMap.set(criterionId, name);
         }
       } catch {
-        // Some criterion IDs may not resolve — skip
+        // API failed - fallback already in map if known ID
       }
     }
 
-    // Update DB with resolved names
+    // Update DB with resolved names — use INSERT+DELETE to avoid duplicate key violations
+    // when the resolved name already exists for the same (campaign_id, snapshot_date)
     for (const [criterionId, name] of nameMap) {
+      const geoKey = `Geo:${criterionId}`;
       await query(
-        `UPDATE google_ads_geo_snapshots SET geo_target_name = $1 WHERE geo_target_name = $2`,
-        [name, `Geo:${criterionId}`]
+        `INSERT INTO google_ads_geo_snapshots
+           (campaign_id, geo_target_name, geo_target_type, clicks, impressions, cost, conversions, snapshot_date)
+         SELECT campaign_id, $1, geo_target_type, clicks, impressions, cost, conversions, snapshot_date
+         FROM google_ads_geo_snapshots
+         WHERE geo_target_name = $2
+         ON CONFLICT (campaign_id, geo_target_name, snapshot_date) DO UPDATE SET
+           geo_target_type = EXCLUDED.geo_target_type,
+           clicks = google_ads_geo_snapshots.clicks + EXCLUDED.clicks,
+           impressions = google_ads_geo_snapshots.impressions + EXCLUDED.impressions,
+           cost = google_ads_geo_snapshots.cost + EXCLUDED.cost,
+           conversions = google_ads_geo_snapshots.conversions + EXCLUDED.conversions`,
+        [name, geoKey]
+      );
+      await query(
+        `DELETE FROM google_ads_geo_snapshots WHERE geo_target_name = $1`,
+        [geoKey]
       );
     }
     logger.info(`Resolved ${nameMap.size} of ${criterionIds.length} geo criterion names`);
   }
 
+  /**
+   * Sincroniza rendimiento por localidad (regiones, ciudades) usando user_location_view.
+   * Guarda en google_ads_location_snapshots.
+   */
+  async syncUserLocationPerformance(backfill = false): Promise<void> {
+    const api = await this.getApi();
+    if (!api) return;
+
+    logger.info('Syncing Google Ads location performance...' + (backfill ? ' (backfill)' : ''));
+    const clientAccounts = await this.getClientAccounts();
+    if (!clientAccounts.length) return;
+
+    const managerId = env.googleAds.managerAccountId;
+
+    const dateFilter = backfill
+      ? "segments.date DURING LAST_30_DAYS"
+      : "segments.date DURING LAST_14_DAYS";
+
+    let synced = 0;
+    let errors = 0;
+
+    await this.runWithConcurrency(clientAccounts, async (account: any) => {
+      if (this.isRateLimited()) return;
+      try {
+        const customer = this.getCustomer(api, account.id, managerId);
+        const localCampaigns = await query(
+          `SELECT id, google_ads_campaign_id FROM campaigns WHERE customer_account_id = $1 AND ads_status = 'ENABLED'`,
+          [account.id]
+        );
+        if (localCampaigns.rows.length === 0) return;
+
+        const campaignMap = new Map<string, number>();
+        for (const c of localCampaigns.rows) {
+          campaignMap.set(String(c.google_ads_campaign_id), c.id);
+        }
+
+        const results = await customer.query(`
+          SELECT
+            campaign.id,
+            user_location_view.country_criterion_id,
+            user_location_view.targeting_location,
+            segments.geo_target_most_specific_location,
+            segments.date,
+            metrics.clicks,
+            metrics.impressions,
+            metrics.cost_micros,
+            metrics.conversions
+          FROM user_location_view
+          WHERE ${dateFilter}
+        `);
+
+        for (const row of results) {
+          const gCampaignId = String(row.campaign?.id);
+          const localCampaignId = campaignMap.get(gCampaignId);
+          if (!localCampaignId) continue;
+
+          const countryCriterionId = String(row.user_location_view?.country_criterion_id || '');
+          // segments.geo_target_most_specific_location is a resource name like "geoTargetConstants/1009973"
+          const geoTargetLocation = row.segments?.geo_target_most_specific_location || '';
+          const locationCriterionId = typeof geoTargetLocation === 'string'
+            ? geoTargetLocation.replace('geoTargetConstants/', '')
+            : String(geoTargetLocation);
+
+          if (!locationCriterionId || locationCriterionId === countryCriterionId) continue; // Skip country-level (already in geo_snapshots)
+
+          const countryName = GoogleAdsSyncService.GEO_FALLBACK[countryCriterionId] || `Geo:${countryCriterionId}`;
+          const locationName = `Loc:${locationCriterionId}`;
+
+          const clicks = Number(row.metrics?.clicks) || 0;
+          const impressions = Number(row.metrics?.impressions) || 0;
+          const costMicros = Number(row.metrics?.cost_micros) || 0;
+          const cost = costMicros / 1_000_000;
+          const conversions = Number(row.metrics?.conversions) || 0;
+          const snapshotDate = row.segments?.date || new Date().toISOString().slice(0, 10);
+
+          await query(`
+            INSERT INTO google_ads_location_snapshots
+              (campaign_id, country_criterion_id, country_name, location_criterion_id, location_name, clicks, impressions, cost, conversions, snapshot_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (campaign_id, location_criterion_id, snapshot_date) DO UPDATE SET
+              clicks = EXCLUDED.clicks,
+              impressions = EXCLUDED.impressions,
+              cost = EXCLUDED.cost,
+              conversions = EXCLUDED.conversions
+          `, [localCampaignId, countryCriterionId, countryName, locationCriterionId, locationName, clicks, impressions, cost, conversions, snapshotDate]);
+          synced++;
+        }
+      } catch (e: any) {
+        const msg = e.message || '';
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
+          this.markRateLimited();
+          logger.error('Rate limit hit during location sync');
+        } else {
+          errors++;
+          logger.warn(`Location sync error for account ${account.id}: ${msg}`);
+        }
+      }
+    }, CONCURRENCY_LIMIT);
+
+    // Resolve location criterion IDs to names
+    if (synced > 0) {
+      try {
+        await this.resolveLocationCriterionNames(api, managerId);
+      } catch (e: any) {
+        logger.warn('Failed to resolve location criterion names: ' + e.message);
+      }
+    }
+
+    logger.info(`Location sync: ${synced} records synced, ${errors} errors`);
+  }
+
+  /** Resolve location criterion IDs (Loc:XXXX) to readable names using geo_target_constant API */
+  private async resolveLocationCriterionNames(api: any, managerId: string): Promise<void> {
+    const unresolvedResult = await query(
+      `SELECT DISTINCT location_criterion_id, location_name FROM google_ads_location_snapshots WHERE location_name LIKE 'Loc:%' LIMIT 200`
+    );
+    if (unresolvedResult.rows.length === 0) return;
+
+    const criterionIds = unresolvedResult.rows.map((r: any) => r.location_criterion_id);
+    logger.info(`Resolving ${criterionIds.length} location criterion names...`);
+
+    const customer = this.getCustomer(api, managerId);
+    const nameMap = new Map<string, { name: string; type: string }>();
+
+    for (const criterionId of criterionIds) {
+      try {
+        const results = await customer.query(
+          `SELECT geo_target_constant.name, geo_target_constant.canonical_name, geo_target_constant.target_type FROM geo_target_constant WHERE geo_target_constant.resource_name = 'geoTargetConstants/${criterionId}'`
+        );
+        if (results.length > 0) {
+          const gc = results[0].geo_target_constant;
+          const name = gc?.canonical_name || gc?.name || null;
+          const targetType = gc?.target_type || 'UNKNOWN';
+          if (name) nameMap.set(criterionId, { name, type: targetType });
+        }
+      } catch {
+        // Skip unresolvable IDs
+      }
+    }
+
+    for (const [criterionId, info] of nameMap) {
+      await query(
+        `UPDATE google_ads_location_snapshots SET location_name = $1, location_type = $2 WHERE location_criterion_id = $3 AND location_name LIKE 'Loc:%'`,
+        [info.name, info.type, criterionId]
+      );
+    }
+    logger.info(`Resolved ${nameMap.size} of ${criterionIds.length} location criterion names`);
+  }
+
+  /**
+   * Sincroniza rendimiento por hora del día desde campaign view.
+   *
+   * QUERY GAQL:
+   *   SELECT campaign.id, segments.hour, segments.day_of_week,
+   *          segments.date, metrics.clicks, impressions, cost_micros, conversions
+   *   FROM campaign
+   *   WHERE segments.date DURING LAST_14_DAYS (o LAST_30_DAYS)
+   *
+   * Convierte day_of_week de enum (MONDAY=0, ..., SUNDAY=6) a entero.
+   * segments.hour retorna 0-23 representando la hora del día.
+   *
+   * TABLA AFECTADA:
+   *   google_ads_hourly_snapshots — UPSERT por (campaign_id, hour_of_day, day_of_week, snapshot_date)
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncHourlyPerformance(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -1653,7 +2324,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1733,6 +2404,25 @@ export class GoogleAdsSyncService {
     logger.info(`Hourly sync: ${synced} records synced`);
   }
 
+  /**
+   * Orquestador de analytics avanzados — ejecuta todos los syncs de análisis en secuencia.
+   *
+   * ORDEN DE EJECUCIÓN:
+   *   1. syncKeywords()           → google_ads_keyword_snapshots
+   *   2. syncDevicePerformance()  → google_ads_device_snapshots
+   *   3. syncGeoPerformance()     → google_ads_geo_snapshots
+   *   4. syncHourlyPerformance()  → google_ads_hourly_snapshots
+   *   5. syncSearchTerms()        → google_ads_search_term_snapshots
+   *   6. syncAdPerformance()      → google_ads_ad_snapshots
+   *   7. syncDemographics()       → google_ads_demographics_snapshots
+   *   8. syncAssetPerformance()   → google_ads_asset_snapshots
+   *
+   * Resetea los flags de rate limit al inicio del ciclo.
+   * Si un método activa el rate limit, los siguientes se saltan automáticamente.
+   * Loguea cuántos de los 8 métodos se ejecutaron exitosamente.
+   *
+   * @param backfill - Si true, todos los métodos usan LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncEnhancedAnalytics(backfill = false): Promise<void> {
     logger.info('Starting enhanced analytics sync...' + (backfill ? ' (BACKFILL MODE - LAST_30_DAYS)' : ''));
 
@@ -1744,6 +2434,7 @@ export class GoogleAdsSyncService {
       { name: 'Keywords', fn: () => this.syncKeywords(backfill) },
       { name: 'Devices', fn: () => this.syncDevicePerformance(backfill) },
       { name: 'Geo', fn: () => this.syncGeoPerformance(backfill) },
+      { name: 'Locations', fn: () => this.syncUserLocationPerformance(backfill) },
       { name: 'Hourly', fn: () => this.syncHourlyPerformance(backfill) },
       { name: 'SearchTerms', fn: () => this.syncSearchTerms(backfill) },
       { name: 'AdPerformance', fn: () => this.syncAdPerformance(backfill) },
@@ -1769,8 +2460,20 @@ export class GoogleAdsSyncService {
   }
 
   /**
-   * Run a single sync method by name. Used by distributed cron schedule.
-   * Returns true if the method ran, false if rate-limited.
+   * Dispatcher para ejecutar un método de sync individual por nombre.
+   * Diseñado para cron distribuido: permite ejecutar cada analytics
+   * en diferentes momentos para distribuir la carga de la API.
+   *
+   * Nombres válidos:
+   *   'keywords' | 'devices' | 'geo' | 'hourly' | 'searchTerms' |
+   *   'adPerformance' | 'demographics' | 'assets'
+   *
+   * Verifica rate limit antes de ejecutar. Si está activo, retorna false
+   * sin intentar la sincronización.
+   *
+   * @param methodName - Nombre del método a ejecutar (ver lista arriba)
+   * @param backfill   - Si true, usa LAST_30_DAYS
+   * @returns true si el método se ejecutó, false si estaba rate-limited o nombre inválido
    */
   async syncSingleMethod(methodName: string, backfill = false): Promise<boolean> {
     if (this.isRateLimited()) {
@@ -1785,6 +2488,7 @@ export class GoogleAdsSyncService {
         case 'keywords': await this.syncKeywords(backfill); break;
         case 'devices': await this.syncDevicePerformance(backfill); break;
         case 'geo': await this.syncGeoPerformance(backfill); break;
+        case 'locations': await this.syncUserLocationPerformance(backfill); break;
         case 'hourly': await this.syncHourlyPerformance(backfill); break;
         case 'searchTerms': await this.syncSearchTerms(backfill); break;
         case 'adPerformance': await this.syncAdPerformance(backfill); break;
@@ -1800,6 +2504,24 @@ export class GoogleAdsSyncService {
     }
   }
 
+  /**
+   * Sincroniza términos de búsqueda desde search_term_view.
+   *
+   * QUERY GAQL:
+   *   SELECT search_term_view.search_term, search_term_view.status,
+   *          campaign.id, ad_group.name, segments.date,
+   *          metrics.clicks, impressions, cost_micros, conversions, ctr
+   *   FROM search_term_view
+   *   WHERE segments.date DURING LAST_14_DAYS (o LAST_30_DAYS)
+   *
+   * TABLA AFECTADA:
+   *   google_ads_search_term_snapshots — UPSERT por (campaign_id, search_term, snapshot_date)
+   *
+   * Los términos de búsqueda representan las consultas reales que los usuarios
+   * escribieron en Google y que activaron los anuncios.
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncSearchTerms(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -1810,7 +2532,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1888,6 +2610,27 @@ export class GoogleAdsSyncService {
     logger.info(`Search terms sync completed: ${synced} synced, ${errors} errors`);
   }
 
+  /**
+   * Sincroniza rendimiento de anuncios individuales desde ad_group_ad.
+   *
+   * QUERY GAQL:
+   *   SELECT campaign.id, ad_group.id, ad_group.name,
+   *          ad_group_ad.ad.id, ad_group_ad.ad.type,
+   *          ad_group_ad.ad.responsive_search_ad.headlines,
+   *          ad_group_ad.ad.responsive_search_ad.descriptions,
+   *          ad_group_ad.ad.final_urls, ad_group_ad.status,
+   *          segments.date, metrics.*
+   *   FROM ad_group_ad
+   *   WHERE segments.date DURING LAST_14_DAYS AND status != 'REMOVED'
+   *
+   * Los headlines y descriptions de Responsive Search Ads se almacenan
+   * como JSON stringificado. final_urls se toma el primer elemento del array.
+   *
+   * TABLA AFECTADA:
+   *   google_ads_ad_snapshots — UPSERT por (campaign_id, ad_id, snapshot_date)
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncAdPerformance(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -1898,7 +2641,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -1999,9 +2742,31 @@ export class GoogleAdsSyncService {
     logger.info(`Ad performance sync completed: ${synced} synced, ${errors} errors`);
   }
 
-  // ========================================================
-  // Auction Insights sync (weekly)
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // Auction Insights — Análisis de subastas (semanal)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sincroniza métricas de competencia (auction insights) de los últimos 7 días.
+   *
+   * Solo procesa campañas tipo SEARCH con status ENABLED.
+   *
+   * QUERY GAQL:
+   *   SELECT campaign.id, campaign.name,
+   *          metrics.search_impression_share,
+   *          metrics.search_rank_lost_impression_share,
+   *          metrics.search_budget_lost_impression_share
+   *   FROM campaign
+   *   WHERE advertising_channel_type = 'SEARCH'
+   *     AND status = 'ENABLED'
+   *     AND segments.date DURING LAST_7_DAYS
+   *
+   * TABLA AFECTADA:
+   *   google_ads_auction_insights — UPSERT por (campaign_id, display_domain, snapshot_date)
+   *
+   * NOTA: display_domain se guarda como el nombre de la campaña (self),
+   *       overlap_rate y position_above_rate se mapean desde rank_lost_is y budget_lost_is.
+   */
   async syncAuctionInsights(): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -2075,6 +2840,30 @@ export class GoogleAdsSyncService {
     logger.info(`Auction insights sync completed: ${synced} synced, ${errors} errors`);
   }
 
+  /**
+   * Sincroniza datos demográficos: edad y género por campaña.
+   *
+   * Ejecuta 2 queries GAQL por cuenta:
+   *
+   *   1. EDAD (age_range_view):
+   *      SELECT campaign.id, ad_group_criterion.age_range.type,
+   *             segments.date, metrics.clicks, impressions, cost_micros, conversions, ctr
+   *      FROM age_range_view
+   *      Valores típicos: AGE_RANGE_18_24, AGE_RANGE_25_34, etc.
+   *
+   *   2. GÉNERO (gender_view):
+   *      SELECT campaign.id, ad_group_criterion.gender.type,
+   *             segments.date, metrics.*
+   *      FROM gender_view
+   *      Valores típicos: MALE, FEMALE, UNDETERMINED
+   *
+   * TABLA AFECTADA:
+   *   google_ads_demographics_snapshots — UPSERT por
+   *     (campaign_id, demographic_type, demographic_value, snapshot_date)
+   *   donde demographic_type es 'AGE' o 'GENDER'
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncDemographics(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -2085,7 +2874,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -2212,9 +3001,37 @@ export class GoogleAdsSyncService {
     logger.info(`Demographics sync completed: ${synced} synced, ${errors} errors`);
   }
 
-  // ========================================================
-  // Asset Performance sync (headlines, descriptions, sitelinks)
-  // ========================================================
+  // ════════════════════════════════════════════════════════════════════
+  // Asset Performance — Headlines, descriptions, sitelinks
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Sincroniza rendimiento de assets (headlines, descriptions, sitelinks).
+   *
+   * QUERY GAQL PRINCIPAL (ad_group_ad_asset_view):
+   *   SELECT campaign.id, ad_group.id, ad_group_ad_asset_view.field_type,
+   *          asset.id, asset.type, asset.text_asset.text,
+   *          asset.sitelink_asset.link_text, asset.sitelink_asset.final_urls,
+   *          segments.date, metrics.clicks, impressions, cost_micros, conversions
+   *   FROM ad_group_ad_asset_view
+   *   WHERE segments.date DURING LAST_14_DAYS AND status != 'REMOVED'
+   *
+   * Tipos de asset detectados por field_type:
+   *   HEADLINE | DESCRIPTION | SITELINK | CALLOUT | CALL | STRUCTURED_SNIPPET | OTHER
+   *
+   * FALLBACK:
+   *   Si ad_group_ad_asset_view no está disponible para una cuenta
+   *   (UNIMPLEMENTED / not supported), usa extractAssetsFromAdSnapshots()
+   *   como fallback por cuenta.
+   *   Si al final synced === 0, ejecuta populateAssetsFromAdSnapshots()
+   *   como fallback global, extrayendo headlines/descriptions del JSON
+   *   almacenado en google_ads_ad_snapshots.
+   *
+   * TABLA AFECTADA:
+   *   google_ads_asset_snapshots — UPSERT por (campaign_id, asset_id, snapshot_date)
+   *
+   * @param backfill - Si true, usa LAST_30_DAYS en vez de LAST_14_DAYS
+   */
   async syncAssetPerformance(backfill = false): Promise<void> {
     const api = await this.getApi();
     if (!api) return;
@@ -2225,7 +3042,7 @@ export class GoogleAdsSyncService {
 
     const managerId = env.googleAds.managerAccountId;
     const today = new Date().toISOString().split('T')[0];
-    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_3_DAYS';
+    const dateFilter = backfill ? 'segments.date DURING LAST_30_DAYS' : 'segments.date DURING LAST_14_DAYS';
 
     const existingCampaigns = await query(
       `SELECT id, google_ads_campaign_id FROM campaigns WHERE google_ads_campaign_id IS NOT NULL`
@@ -2345,7 +3162,24 @@ export class GoogleAdsSyncService {
     logger.info(`Asset performance sync completed: ${synced} synced, ${errors} errors`);
   }
 
-  // Fallback: extract assets from google_ads_ad_snapshots headlines/descriptions JSON
+  /**
+   * Fallback global: extrae assets desde el JSON de google_ads_ad_snapshots.
+   *
+   * Cuando la API de asset_view no está disponible, este método parsea los
+   * campos `headlines` y `descriptions` (JSON arrays) de los snapshots de
+   * anuncios existentes y crea registros sintéticos en google_ads_asset_snapshots.
+   *
+   * LÓGICA:
+   *   - Lee google_ads_ad_snapshots donde headlines/descriptions IS NOT NULL
+   *   - Para cada headline[i], crea asset_id = "{ad_id}_H{i}" con type HEADLINE
+   *   - Para cada description[i], crea asset_id = "{ad_id}_D{i}" con type DESCRIPTION
+   *   - Las métricas se distribuyen proporcionalmente: clicks / N headlines, etc.
+   *
+   * TABLA AFECTADA:
+   *   google_ads_asset_snapshots — UPSERT por (campaign_id, asset_id, snapshot_date)
+   *
+   * @param backfill - Si true, lee últimos 30 días; si false, solo hoy
+   */
   private async populateAssetsFromAdSnapshots(backfill = false): Promise<void> {
     const dateFilter = backfill
       ? `snapshot_date >= CURRENT_DATE - INTERVAL '30 days'`
@@ -2434,7 +3268,15 @@ export class GoogleAdsSyncService {
     logger.info(`Asset extraction from ad snapshots: ${synced} assets created`);
   }
 
-  // Fallback for a specific account (unused but available for per-account retry)
+  /**
+   * Fallback por cuenta individual: delega a populateAssetsFromAdSnapshots().
+   * Disponible para reintentos por cuenta, pero actualmente usa el fallback global.
+   *
+   * @param _accountId    - ID de cuenta Google Ads (no usado directamente)
+   * @param _campaignMapFn - Función que retorna el mapa de campañas (no usado)
+   * @param _today        - Fecha actual ISO (no usado)
+   * @param _backfill     - Modo backfill (pasado al fallback global)
+   */
   private async extractAssetsFromAdSnapshots(
     _accountId: string,
     _campaignMapFn: (id: number) => Map<string, number>,
@@ -2446,4 +3288,5 @@ export class GoogleAdsSyncService {
   }
 }
 
+/** Instancia singleton del servicio de sincronización con Google Ads */
 export const googleAdsSyncService = new GoogleAdsSyncService();

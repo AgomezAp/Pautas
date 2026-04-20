@@ -247,6 +247,50 @@ export class PautadoresController {
     } catch (err) { next(err); }
   }
 
+  async triggerCampaignsSync(_req: Request, res: Response, next: NextFunction) {
+    try {
+      if (googleAdsSyncService.isRateLimited()) {
+        return sendSuccess(res, {
+          message: 'Sincronización omitida — límite de tasa de Google Ads activo. Reintente más tarde.',
+          rateLimited: true,
+        });
+      }
+
+      // Snapshot DB state before sync to detect actual changes
+      const before = await dbQuery(
+        `SELECT MAX(snapshot_date)::text AS max_date, COUNT(*) AS total FROM google_ads_snapshots`
+      );
+      const beforeMax = before.rows[0]?.max_date || 'sin datos';
+      const beforeCount = parseInt(before.rows[0]?.total || '0');
+
+      await googleAdsSyncService.syncAllCampaigns(false);
+
+      const after = await dbQuery(
+        `SELECT MAX(snapshot_date)::text AS max_date, COUNT(*) AS total FROM google_ads_snapshots`
+      );
+      const afterMax = after.rows[0]?.max_date || 'sin datos';
+      const afterCount = parseInt(after.rows[0]?.total || '0');
+      const newRecords = afterCount - beforeCount;
+
+      const wasRateLimited = googleAdsSyncService.isRateLimited();
+
+      let msg: string;
+      if (wasRateLimited) {
+        msg = `Sincronización parcial — límite de tasa alcanzado. Se agregaron ${newRecords} registros. Último dato: ${afterMax}.`;
+      } else if (newRecords > 0) {
+        msg = `Sincronización completada. Se agregaron ${newRecords} registros nuevos. Último dato: ${afterMax}.`;
+      } else if (afterMax !== beforeMax) {
+        msg = `Sincronización completada. Último dato actualizado a: ${afterMax}.`;
+      } else {
+        msg = `Sincronización completada pero sin datos nuevos. Último dato en BD: ${afterMax}. Es posible que la API de Google Ads no tenga datos más recientes aún (demora de 1-2 días) o que haya un error de autenticación — revise los logs del servidor.`;
+      }
+
+      return sendSuccess(res, { message: msg, rateLimited: wasRateLimited, beforeMax, afterMax, newRecords });
+    } catch (err: any) {
+      next(err);
+    }
+  }
+
   // ============ Google Ads Analysis Endpoints ============
 
   async getAnalysisDataRange(_req: Request, res: Response, next: NextFunction) {
@@ -894,6 +938,21 @@ export class PautadoresController {
         accountId: account_id || undefined,
         accountIds: await this.resolvePautadorAccountIds(req),
         countryId: country_id ? Number(country_id) : undefined,
+      });
+      return sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async getAnalysisLocations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { date_from, date_to, account_id, country_id, country_criterion_id } = req.query as any;
+      const data = await googleAdsAnalysisService.getLocationPerformance({
+        dateFrom: date_from,
+        dateTo: date_to,
+        accountId: account_id || undefined,
+        accountIds: await this.resolvePautadorAccountIds(req),
+        countryId: country_id ? Number(country_id) : undefined,
+        countryCriterionId: country_criterion_id || undefined,
       });
       return sendSuccess(res, data);
     } catch (err) { next(err); }

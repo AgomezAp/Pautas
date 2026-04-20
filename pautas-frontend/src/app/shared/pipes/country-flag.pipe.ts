@@ -8,6 +8,8 @@ const FLAGS: Record<string, string> = {
   mexico: '🇲🇽',
   panama: '🇵🇦',
   bolivia: '🇧🇴',
+  españa: '🇪🇸',
+  espana: '🇪🇸',
 };
 
 @Pipe({ name: 'countryFlag', standalone: true })

@@ -152,4 +152,4 @@ Pautas/
 
 ## Países Configurados
 
-Colombia (CO), México (MX), Perú (PE), Chile (CL), Ecuador (EC), Panamá (PA), Costa Rica (CR)
+Colombia (CO), México (MX), Perú (PE), Chile (CL), Ecuador (EC), Panamá (PA), Bolivia (BO), España (ES)

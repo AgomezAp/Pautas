@@ -879,4 +879,35 @@ export class GoogleAdsAnalysisService {
     if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
     return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisCountryEfficiency, { params: httpParams });
   }
+
+  getGeoMapData(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; metric?: string; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.metric) httpParams = httpParams.set('metric', params.metric);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisGeoMap, { params: httpParams });
+  }
+
+  getGeoTierClassification(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisGeoTier, { params: httpParams });
+  }
+
+  getLocationPerformance(params: {
+    date_from: string; date_to: string; account_id?: string; country_id?: number; my_accounts?: boolean;
+  }): Observable<ApiResponse<any[]>> {
+    let httpParams = new HttpParams().set('date_from', params.date_from).set('date_to', params.date_to);
+    if (params.account_id) httpParams = httpParams.set('account_id', params.account_id);
+    if (params.country_id) httpParams = httpParams.set('country_id', params.country_id);
+    if (params.my_accounts) httpParams = httpParams.set('my_accounts', 'true');
+    return this.http.get<ApiResponse<any[]>>(API_URLS.googleAds.analysisLocations, { params: httpParams });
+  }
 }

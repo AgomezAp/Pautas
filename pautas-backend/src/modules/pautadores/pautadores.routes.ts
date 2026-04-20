@@ -29,6 +29,7 @@ router.get('/google-ads/billing/recharges', (req, res, next) => pautadoresContro
 router.get('/google-ads/billing/recharges/export', (req, res, next) => pautadoresController.exportRechargesCsv(req, res, next));
 router.get('/google-ads/recharges-dashboard', (req, res, next) => pautadoresController.getRechargesDashboard(req, res, next));
 router.post('/google-ads/sync', (req, res, next) => pautadoresController.triggerGoogleAdsSync(req, res, next));
+router.post('/google-ads/sync-campaigns', (req, res, next) => pautadoresController.triggerCampaignsSync(req, res, next));
 
 // Google Ads Analysis endpoints
 router.get('/google-ads/analysis/data-range', (req, res, next) => pautadoresController.getAnalysisDataRange(req, res, next));
@@ -121,6 +122,8 @@ router.get('/google-ads/analysis/asset-sitelinks', (req, res, next) => pautadore
 router.get('/google-ads/analysis/geo', (req, res, next) => pautadoresController.getAnalysisGeo(req, res, next));
 router.get('/google-ads/analysis/geo-map', (req, res, next) => pautadoresController.getAnalysisGeoMap(req, res, next));
 router.get('/google-ads/analysis/country-efficiency', (req, res, next) => pautadoresController.getAnalysisCountryEfficiency(req, res, next));
+router.get('/google-ads/analysis/geo-tier', (req, res, next) => pautadoresController.getAnalysisGeoTierClassification(req, res, next));
+router.get('/google-ads/analysis/locations', (req, res, next) => pautadoresController.getAnalysisLocations(req, res, next));
 
 // Conglomerado contrast endpoint
 router.get('/conglomerado-contrast', (req, res, next) => pautadoresController.getConglomeradoContrast(req, res, next));

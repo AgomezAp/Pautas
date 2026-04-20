@@ -39,6 +39,9 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   // Tab 1 - Spending Trend
   granularity = 'daily';
   loadingTrend = false;
+  syncingTrend = false;
+  syncTrendMessage = '';
+  syncTrendError = false;
   spendingTrendData: any[] = [];
   lineChartData: ChartConfiguration<'line'>['data'] | null = null;
   lineChartOptions: ChartConfiguration<'line'>['options'] = {
@@ -411,6 +414,18 @@ export class GoogleAdsAnalysisComponent implements OnInit {
   loadingGeo = false;
   countryEfficiencyData: any[] = [];
   loadingCountryEfficiency = false;
+  geoMapData: any[] = [];
+  loadingGeoMap = false;
+  selectedMapMetric = 'total_cost';
+  geoChart: any = null;
+  geoTierData: any[] = [];
+  loadingGeoTier = false;
+  // Leaflet map
+  leafletMap: any = null;
+  leafletMarkers: any[] = [];
+  // Localities
+  locationData: any[] = [];
+  loadingLocations = false;
 
   // Phase 9: Enhanced Tabs
   // Devices enhancements
@@ -480,8 +495,13 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       next: (res) => {
         const data = res.data;
         if (data?.min_date && data?.max_date) {
+          // Use DB max_date or today (whichever is later) to always show latest data
+          const today = new Date();
+          const dbMaxDate = new Date(data.max_date);
+          const effectiveTo = today > dbMaxDate ? today : dbMaxDate;
+
           this.filterDateFrom = data.min_date;
-          this.filterDateTo = data.max_date;
+          this.filterDateTo = this.formatDate(effectiveTo);
 
           // Auto-select best granularity based on date range
           const fromDate = new Date(data.min_date);
@@ -529,6 +549,36 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       },
       error: () => {
         this.syncing = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  syncSpendingTrend(): void {
+    if (this.syncingTrend) return;
+    this.syncingTrend = true;
+    this.syncTrendMessage = '';
+    this.syncTrendError = false;
+    this.cdr.detectChanges();
+    this.http.post<any>(API_URLS.googleAds.syncCampaigns, {}).subscribe({
+      next: (res) => {
+        this.syncingTrend = false;
+        const msg: string = res?.data?.message || res?.message || '';
+        const rateLimited: boolean = res?.data?.rateLimited || false;
+        if (rateLimited) {
+          this.syncTrendMessage = 'Límite de API activo. ' + (msg || 'Intente más tarde.');
+          this.syncTrendError = true;
+        } else {
+          this.syncTrendMessage = msg || 'Sincronización completada.';
+          this.syncTrendError = false;
+          this.loadSpendingTrend();
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.syncingTrend = false;
+        this.syncTrendError = true;
+        this.syncTrendMessage = err?.error?.error?.message || err?.error?.message || 'Error al sincronizar. Revise los logs del servidor.';
         this.cdr.detectChanges();
       },
     });
@@ -1410,6 +1460,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     if (!this.forecastData?.trend?.length) { this.forecastChartData = null; return; }
     const trend = this.forecastData.trend;
     const forecast = this.forecastData.forecast;
+    const dailyForecast = this.forecastData.daily_forecast || [];
 
     const labels = trend.map((d: any) => {
       const dt = new Date(d.date);
@@ -1418,68 +1469,112 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     const costData = trend.map((d: any) => Number(d.daily_cost));
     const budgetData = trend.map((d: any) => Number(d.daily_budget));
 
-    // Add forecast points if available
-    if (forecast) {
-      const lastDate = new Date(trend[trend.length - 1].date);
+    // Pre-fill forecast arrays aligned with trend length
+    const forecastLine: (number | null)[] = new Array(trend.length).fill(null);
+    const ci95Upper: (number | null)[] = new Array(trend.length).fill(null);
+    const ci95Lower: (number | null)[] = new Array(trend.length).fill(null);
+
+    // Connect forecast to last real point
+    if (forecast && dailyForecast.length > 0) {
+      forecastLine[trend.length - 1] = Number(trend[trend.length - 1].daily_cost);
+      ci95Upper[trend.length - 1] = Number(trend[trend.length - 1].daily_cost);
+      ci95Lower[trend.length - 1] = Number(trend[trend.length - 1].daily_cost);
+
+      for (const fp of dailyForecast.slice(0, 30)) {
+        const dt = new Date(fp.date);
+        labels.push(dt.getDate() + '/' + (dt.getMonth() + 1));
+        costData.push(null);
+        budgetData.push(null);
+        forecastLine.push(fp.daily_cost);
+        ci95Upper.push(fp.ci95_upper);
+        ci95Lower.push(fp.ci95_lower);
+      }
+    } else if (forecast) {
+      // Fallback: simple projection using avg + slope
+      forecastLine[trend.length - 1] = Number(trend[trend.length - 1].daily_cost);
       for (let i = 1; i <= 7; i++) {
-        const projDate = new Date(lastDate);
+        const projDate = new Date(trend[trend.length - 1].date);
         projDate.setDate(projDate.getDate() + i);
         labels.push(projDate.getDate() + '/' + (projDate.getMonth() + 1));
         const projValue = Math.max(0, forecast.avg_daily_cost + forecast.slope * i);
-        costData.push(null); // Real data ends
+        costData.push(null);
         budgetData.push(null);
+        forecastLine.push(projValue);
+        ci95Upper.push(null);
+        ci95Lower.push(null);
       }
     }
 
-    // Forecast line (projected from last real point)
-    const forecastLine: (number | null)[] = new Array(trend.length).fill(null);
-    if (forecast) {
-      forecastLine[trend.length - 1] = Number(trend[trend.length - 1].daily_cost);
-      for (let i = 1; i <= 7; i++) {
-        forecastLine.push(Math.max(0, forecast.avg_daily_cost + forecast.slope * i));
-      }
-    }
+    const datasets: any[] = [
+      {
+        label: 'Costo Real',
+        data: costData,
+        borderColor: '#3B82F6',
+        backgroundColor: 'rgba(59,130,246,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: trend.length <= 14 ? 4 : 2,
+        borderWidth: 2,
+        spanGaps: false,
+      },
+      {
+        label: 'Presupuesto',
+        data: budgetData,
+        borderColor: '#10B981',
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.4,
+        pointRadius: 0,
+        borderWidth: 2,
+        borderDash: [5, 5],
+        spanGaps: false,
+      },
+      {
+        label: 'Proyeccion',
+        data: forecastLine,
+        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(245,158,11,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        borderWidth: 2,
+        borderDash: [8, 4],
+        spanGaps: true,
+      },
+    ];
 
-    const chartData: ChartConfiguration<'line'>['data'] = {
-      labels,
-      datasets: [
+    // Add CI95 band if available
+    const hasCI = ci95Upper.some(v => v !== null);
+    if (hasCI) {
+      datasets.push(
         {
-          label: 'Costo Real',
-          data: costData,
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59,130,246,0.08)',
-          fill: true,
-          tension: 0.4,
-          pointRadius: trend.length <= 14 ? 4 : 2,
-          borderWidth: 2,
-          spanGaps: false,
-        },
-        {
-          label: 'Presupuesto',
-          data: budgetData,
-          borderColor: '#10B981',
-          backgroundColor: 'transparent',
-          fill: false,
+          label: 'CI 95% Superior',
+          data: ci95Upper,
+          borderColor: 'rgba(245,158,11,0.3)',
+          backgroundColor: 'rgba(245,158,11,0.07)',
+          fill: '+1',
           tension: 0.4,
           pointRadius: 0,
-          borderWidth: 2,
-          borderDash: [5, 5],
-          spanGaps: false,
-        },
-        {
-          label: 'Proyeccion',
-          data: forecastLine,
-          borderColor: '#F59E0B',
-          backgroundColor: 'rgba(245,158,11,0.08)',
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
-          borderWidth: 2,
-          borderDash: [8, 4],
+          borderWidth: 1,
+          borderDash: [3, 3],
           spanGaps: true,
         },
-      ],
-    };
+        {
+          label: 'CI 95% Inferior',
+          data: ci95Lower,
+          borderColor: 'rgba(245,158,11,0.3)',
+          backgroundColor: 'rgba(245,158,11,0.07)',
+          fill: '-1',
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 1,
+          borderDash: [3, 3],
+          spanGaps: true,
+        },
+      );
+    }
+
+    const chartData: ChartConfiguration<'line'>['data'] = { labels, datasets };
 
     setTimeout(() => {
       this.forecastChartData = chartData;
@@ -1944,6 +2039,38 @@ export class GoogleAdsAnalysisComponent implements OnInit {
       map.get(key)!.push(row);
     }
     return Array.from(map.entries()).map(([adGroupName, ads]) => ({ adGroupName, ads }));
+  }
+
+  /** Parsea JSON de headlines/descriptions de Google Ads a textos legibles */
+  parseAdTexts(jsonStr: string): string[] {
+    if (!jsonStr) return [];
+    try {
+      const arr = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+      if (Array.isArray(arr)) {
+        return arr.map((item: any) => item.text || item).filter(Boolean);
+      }
+      return [String(jsonStr)];
+    } catch {
+      return jsonStr ? [String(jsonStr)] : [];
+    }
+  }
+
+  /** Etiqueta legible del rendimiento del asset */
+  formatAssetPerformance(label: number): string {
+    const map: Record<number, string> = {
+      0: 'Sin datos', 1: 'Sin datos', 2: 'Aprendiendo',
+      3: 'Bajo', 4: 'Bueno', 5: 'Mejor',
+    };
+    return map[label] || '';
+  }
+
+  /** Clase CSS para el badge de rendimiento del asset */
+  getAssetPerformanceClass(label: number): string {
+    if (label === 5) return 'bg-success';
+    if (label === 4) return 'bg-info';
+    if (label === 3) return 'bg-warning text-dark';
+    if (label === 2) return 'bg-secondary';
+    return 'bg-secondary';
   }
 
   // ---- Helpers ----
@@ -2844,6 +2971,7 @@ export class GoogleAdsAnalysisComponent implements OnInit {
     if (!this.filterDateFrom || !this.filterDateTo) return;
     this.loadingGeo = true;
     this.loadingCountryEfficiency = true;
+    this.loadingGeoMap = true;
     this.cdr.detectChanges();
     const params = {
       date_from: this.filterDateFrom,
@@ -2868,6 +2996,213 @@ export class GoogleAdsAnalysisComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => { this.loadingCountryEfficiency = false; this.cdr.detectChanges(); },
+    });
+
+    this.analysisService.getGeoMapData(params).subscribe({
+      next: (res: any) => {
+        this.geoMapData = res.data || [];
+        this.loadingGeoMap = false;
+        this.cdr.detectChanges();
+        this.buildLeafletMap();
+      },
+      error: () => { this.loadingGeoMap = false; this.cdr.detectChanges(); },
+    });
+
+    // Cargar clasificación por tier (siempre, muestra detalle geográfico)
+    this.loadingGeoTier = true;
+    this.analysisService.getGeoTierClassification(params).subscribe({
+      next: (res: any) => {
+        this.geoTierData = res.data || [];
+        this.loadingGeoTier = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingGeoTier = false; this.cdr.detectChanges(); },
+    });
+
+    // Cargar localidades si hay un país seleccionado
+    if (this.filterCountryId) {
+      this.loadLocations();
+    } else {
+      this.locationData = [];
+    }
+  }
+
+  loadLocations(): void {
+    if (!this.filterDateFrom || !this.filterDateTo) return;
+    this.loadingLocations = true;
+    this.cdr.detectChanges();
+    this.analysisService.getLocationPerformance({
+      date_from: this.filterDateFrom,
+      date_to: this.filterDateTo,
+      country_id: this.filterCountryId || undefined,
+      my_accounts: this.myAccountsFilter,
+    }).subscribe({
+      next: (res: any) => {
+        this.locationData = res.data || [];
+        this.loadingLocations = false;
+        this.cdr.detectChanges();
+      },
+      error: () => { this.loadingLocations = false; this.cdr.detectChanges(); },
+    });
+  }
+
+  onMapMetricChange(): void {
+    this.buildLeafletMap();
+  }
+
+  countTier(tier: string): number {
+    return this.geoTierData.filter((r: any) => r.tier === tier).length;
+  }
+
+  private readonly countryCoords: Record<string, [number, number]> = {
+    'argentina': [-38.4, -63.6], 'bolivia': [-16.3, -63.6], 'brasil': [-14.2, -51.9],
+    'chile': [-35.7, -71.5], 'colombia': [4.6, -74.1], 'costa rica': [9.7, -83.8],
+    'cuba': [21.5, -78.0], 'ecuador': [-1.8, -78.2], 'el salvador': [13.8, -88.9],
+    'guatemala': [15.8, -90.2], 'honduras': [15.2, -86.2], 'méxico': [23.6, -102.6],
+    'mexico': [23.6, -102.6], 'nicaragua': [12.9, -85.2], 'panamá': [8.5, -80.8],
+    'panama': [8.5, -80.8], 'paraguay': [-23.4, -58.4], 'perú': [-9.2, -75.0],
+    'peru': [-9.2, -75.0], 'república dominicana': [18.7, -70.2],
+    'republica dominicana': [18.7, -70.2], 'uruguay': [-32.5, -55.8],
+    'venezuela': [6.4, -66.6], 'españa': [40.5, -3.7], 'espana': [40.5, -3.7],
+    'estados unidos': [37.1, -95.7], 'china': [35.9, 104.2], 'india': [20.6, 78.9],
+    'reino unido': [55.4, -3.4], 'alemania': [51.2, 10.5], 'francia': [46.2, 2.2],
+    'italia': [41.9, 12.6], 'japón': [36.2, 138.3], 'japon': [36.2, 138.3],
+    'canadá': [56.1, -106.3], 'canada': [56.1, -106.3], 'australia': [-25.3, 133.8],
+    'taiwán': [23.7, 121.0], 'taiwan': [23.7, 121.0], 'corea del sur': [35.9, 127.8],
+    'bélgica': [50.5, 4.5], 'belgica': [50.5, 4.5], 'países bajos': [52.1, 5.3],
+    'paises bajos': [52.1, 5.3], 'suiza': [46.8, 8.2], 'rusia': [61.5, 105.3],
+    'turquía': [38.9, 35.2], 'turquia': [38.9, 35.2], 'egipto': [26.8, 30.8],
+    'sudáfrica': [-30.6, 22.9], 'sudafrica': [-30.6, 22.9], 'arabia saudita': [23.9, 45.1],
+    'israel': [31.0, 34.9], 'tailandia': [15.9, 100.9], 'vietnam': [14.1, 108.3],
+    'indonesia': [-0.8, 113.9], 'malasia': [4.2, 101.9], 'filipinas': [12.9, 121.8],
+    'singapur': [1.4, 103.8], 'chipre': [35.1, 33.4], 'grecia': [39.1, 21.8],
+    'polonia': [51.9, 19.1], 'portugal': [39.4, -8.2], 'chequia': [49.8, 15.5],
+    'hungría': [47.2, 19.5], 'hungria': [47.2, 19.5], 'austria': [47.5, 14.6],
+    'suecia': [60.1, 18.6], 'noruega': [60.5, 8.5], 'dinamarca': [56.3, 9.5],
+    'finlandia': [61.9, 25.7], 'irlanda': [53.1, -8.2], 'nueva zelanda': [-40.9, 174.9],
+  };
+
+  buildLeafletMap(): void {
+    if (!this.geoMapData || this.geoMapData.length === 0) return;
+
+    // Dynamically import Leaflet
+    import('leaflet').then((L) => {
+      const mapContainer = document.getElementById('leafletMap');
+      if (!mapContainer) return;
+
+      // Destroy previous map if exists
+      if (this.leafletMap) {
+        this.leafletMap.remove();
+        this.leafletMap = null;
+      }
+
+      // Create map centered on Latin America
+      this.leafletMap = L.map('leafletMap', {
+        scrollWheelZoom: true,
+        zoomControl: true,
+        minZoom: 2,
+        maxZoom: 12,
+      }).setView([4.5, -72], 3);
+
+      // Add tile layer (OpenStreetMap)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 18,
+      }).addTo(this.leafletMap);
+
+      const metric = this.selectedMapMetric;
+      const metricLabels: Record<string, string> = {
+        total_cost: 'Costo', total_conversions: 'Conversiones', cpa: 'CPA', ctr: 'CTR',
+      };
+
+      // Get values for scaling
+      const values = this.geoMapData.map((r: any) => parseFloat(r[metric]) || 0).filter(v => v > 0);
+      const maxVal = Math.max(...values, 1);
+
+      // Clear old markers
+      this.leafletMarkers.forEach(m => m.remove());
+      this.leafletMarkers = [];
+
+      for (const row of this.geoMapData) {
+        const name = (row.country || row.geo_target_name || '').toLowerCase().trim();
+        const coords = this.countryCoords[name];
+        if (!coords) continue;
+
+        const val = parseFloat(row[metric]) || 0;
+        if (val === 0) continue;
+
+        // Circle radius proportional to value (min 6, max 35)
+        const ratio = val / maxVal;
+        const radius = 6 + ratio * 29;
+
+        // Color based on metric
+        let color = '#3B82F6';
+        if (metric === 'cpa') {
+          // Red = high CPA (bad), Green = low CPA (good)
+          const r = Math.round(ratio * 220 + 35);
+          const g = Math.round((1 - ratio) * 200 + 55);
+          color = `rgb(${r}, ${g}, 60)`;
+        } else if (metric === 'ctr') {
+          // Green = high CTR (good)
+          const r = Math.round((1 - ratio) * 200 + 55);
+          const g = Math.round(ratio * 200 + 55);
+          color = `rgb(${r}, ${g}, 80)`;
+        } else {
+          // Blue gradient for cost/conversions
+          const intensity = Math.round(55 + ratio * 200);
+          color = `rgb(30, ${Math.round(80 + ratio * 50)}, ${intensity > 246 ? 246 : intensity})`;
+        }
+
+        // Format value for tooltip
+        let formattedVal = '';
+        if (metric === 'total_cost' || metric === 'cpa') {
+          formattedVal = `$${val.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        } else if (metric === 'ctr') {
+          formattedVal = `${val.toFixed(2)}%`;
+        } else {
+          formattedVal = val.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        }
+
+        const displayName = row.country || row.geo_target_name || name;
+        const popupHtml = `
+          <div style="font-family:Inter,sans-serif;font-size:12px;min-width:160px">
+            <strong style="font-size:13px">${displayName}</strong><br/>
+            <hr style="margin:4px 0;border-color:#ddd">
+            <div><b>${metricLabels[metric]}:</b> ${formattedVal}</div>
+            <div><b>Costo:</b> $${parseFloat(row.total_cost || 0).toLocaleString('en', { minimumFractionDigits: 2 })}</div>
+            <div><b>Conversiones:</b> ${parseFloat(row.total_conversions || 0).toFixed(1)}</div>
+            <div><b>CPA:</b> $${parseFloat(row.cpa || 0).toFixed(2)}</div>
+            <div><b>CTR:</b> ${parseFloat(row.ctr || 0).toFixed(2)}%</div>
+            ${row.cost_pct ? `<div><b>% Costo:</b> ${row.cost_pct}%</div>` : ''}
+          </div>`;
+
+        const marker = L.circleMarker([coords[0], coords[1]], {
+          radius,
+          fillColor: color,
+          color: '#fff',
+          weight: 2,
+          opacity: 0.9,
+          fillOpacity: 0.75,
+        })
+          .bindPopup(popupHtml)
+          .bindTooltip(`${displayName}: ${formattedVal}`, { direction: 'top', offset: [0, -radius] })
+          .addTo(this.leafletMap);
+
+        this.leafletMarkers.push(marker);
+      }
+
+      // Fit bounds if we have markers
+      if (this.leafletMarkers.length > 0) {
+        const group = L.featureGroup(this.leafletMarkers);
+        this.leafletMap.fitBounds(group.getBounds().pad(0.2));
+      }
+
+      // Force map to redraw
+      setTimeout(() => {
+        this.leafletMap?.invalidateSize();
+      }, 200);
+    }).catch(err => {
+      console.warn('Leaflet map failed:', err);
     });
   }
 }

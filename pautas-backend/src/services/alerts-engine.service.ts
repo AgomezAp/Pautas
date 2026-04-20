@@ -1,34 +1,111 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ *  Alerts Engine Service — Motor de Alertas y Detección de Anomalías
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ *  PROPÓSITO:
+ *    Monitorea entries de conglomerado, rendimiento de Google Ads y
+ *    métricas de presupuesto para generar alertas automáticas.
+ *    Las alertas se guardan en BD y se emiten por WebSocket en tiempo real.
+ *
+ *  TIPOS DE ALERTAS:
+ *    ── Conglomerado (evaluateEntry):
+ *       ZERO_EFFECTIVE    (CRITICAL): clientes > 0 pero efectivos = 0
+ *       CONVERSION_DROP   (CRITICAL): tasa de conversión cayó ≥ threshold% (default 30%)
+ *       TRAFFIC_DROP      (WARNING):  clientes cayeron ≥ threshold% (default 25%)
+ *       HIGH_MINORS_RATIO (WARNING):  menores/clientes ≥ threshold% (default 40%)
+ *       CONVERSION_SPIKE  (INFO):     tasa subió ≥ threshold% (default 20%)
+ *       RECORD_DAY        (INFO):     clientes_efectivos supera máximo histórico
+ *
+ *    ── Cron Jobs:
+ *       NO_REPORT         (WARNING):  usuario activo no reportó hoy (detectNoReports)
+ *       TREND_DECLINING   (WARNING):  pendiente de conversión < -1.5 en 14 días (detectTrends)
+ *       ADS_DISCREPANCY   (WARNING):  discrepancia ≥ 50% entre ads y campo (detectAdsDiscrepancy)
+ *       BUDGET_OVERSPEND  (WARNING):  gasto > 110% del presupuesto diario
+ *       BUDGET_UNDERSPEND (INFO):     gasto < 50% del presupuesto
+ *       BUDGET_EXHAUSTION (WARNING):  pacing mensual > 130%
+ *       CPC_SPIKE         (WARNING):  CPC hoy > 130% del promedio 7d
+ *       CTR_ANOMALY       (WARNING):  CTR fuera de 2σ del promedio
+ *       IMPRESSION_SHARE_DROP (WARNING): IS cayó > 20% semana a semana
+ *       KEYWORD_QS_DROP   (WARNING):  QS promedio cayó > 1 punto
+ *       OPPORTUNITY_ALERT (INFO):     budget_lost_IS > 30% con conversiones
+ *
+ *  TABLAS:
+ *    Lee: daily_entries, users, roles, countries, campaigns,
+ *         google_ads_snapshots, google_ads_keyword_snapshots,
+ *         alert_thresholds, conglomerate_stats
+ *    Escribe: alerts, conglomerate_stats
+ *
+ *  DEDUPLICACIÓN:
+ *    Antes de crear alertas de cron, verifica que no exista una activa
+ *    del mismo tipo en los últimos 3-7 días.
+ * ══════════════════════════════════════════════════════════════════════
+ */
+
 import { query, getClient } from '../config/database';
 import { logger } from '../utils/logger.util';
 import { websocketService } from './websocket.service';
 
+/**
+ * Datos de un registro diario de conglomerado.
+ * Se recibe desde el controlador de daily_entries al crear/actualizar.
+ */
 interface DailyEntryData {
+  /** PK del daily_entry recién insertado */
   id: number;
+  /** FK al usuario conglomerado que reporta */
   user_id: number;
+  /** FK al país del usuario */
   country_id: number;
+  /** FK a la campaña asociada (puede ser null si no aplica) */
   campaign_id: number | null;
+  /** Total de clientes atendidos en el día */
   clientes: number;
+  /** Clientes que completaron el proceso (conversión real) */
   clientes_efectivos: number;
+  /** Clientes menores de edad atendidos */
   menores: number;
+  /** Fecha del reporte en formato ISO (YYYY-MM-DD) */
   entry_date: string;
+  /** Año ISO para agrupación semanal */
   iso_year: number;
+  /** Semana ISO para agrupación semanal */
   iso_week: number;
 }
 
+/**
+ * Umbral configurable por tipo de alerta.
+ * Se carga desde la tabla `alert_thresholds` con cascada de prioridad.
+ */
 interface Threshold {
+  /** Tipo de alerta al que aplica (e.g. 'CONVERSION_DROP', 'TRAFFIC_DROP') */
   alert_type: string;
+  /** Valor numérico del umbral (porcentaje o valor absoluto según el tipo) */
   threshold_value: number;
 }
 
+/**
+ * Payload para crear una alerta en BD y emitirla por WebSocket.
+ * Cada alerta generada por el motor se construye con esta estructura.
+ */
 interface AlertPayload {
+  /** Identificador del tipo de alerta (e.g. 'ZERO_EFFECTIVE', 'CPC_SPIKE') */
   alert_type: string;
+  /** Nivel de severidad: CRITICAL > WARNING > INFO */
   severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  /** FK al usuario afectado (null para alertas a nivel campaña/cuenta) */
   user_id: number;
+  /** FK al país relacionado */
   country_id: number;
+  /** FK a la campaña relacionada (null si aplica a nivel cuenta o usuario) */
   campaign_id: number | null;
+  /** FK al daily_entry que disparó la alerta (null en cron jobs) */
   daily_entry_id: number | null;
+  /** Título corto y legible para mostrar en la UI */
   title: string;
+  /** Mensaje descriptivo con valores concretos para contexto */
   message: string;
+  /** Datos adicionales en JSON para drill-down y auditoría */
   metadata: Record<string, any>;
 }
 
@@ -36,6 +113,22 @@ export class AlertsEngineService {
 
   // ─── Punto de entrada: evalúa una daily_entry recién creada ──────────
 
+  /**
+   * Punto de entrada cuando se crea un daily_entry.
+   *
+   * Evalúa el registro contra 6 reglas de alerta con umbrales configurables:
+   *   1. ZERO_EFFECTIVE  (CRITICAL) — clientes > 0 pero efectivos = 0
+   *   2. CONVERSION_DROP (CRITICAL) — tasa de conversión cayó >= threshold%
+   *   3. TRAFFIC_DROP    (WARNING)  — clientes cayeron >= threshold%
+   *   4. HIGH_MINORS_RATIO (WARNING) — menores/clientes >= threshold%
+   *   5. CONVERSION_SPIKE (INFO)    — tasa subió >= threshold%
+   *   6. RECORD_DAY      (INFO)     — clientes_efectivos supera máximo histórico
+   *
+   * Los umbrales se cargan con cascada: country+campaign > country > global.
+   * Las alertas generadas se persisten en BD y se emiten por WebSocket.
+   *
+   * @param entry - Datos del daily_entry recién creado
+   */
   async evaluateEntry(entry: DailyEntryData): Promise<void> {
     try {
       logger.info(`[ALERTS-ENGINE] Evaluating entry ${entry.id} for user ${entry.user_id}`);
@@ -173,6 +266,15 @@ export class AlertsEngineService {
 
   // ─── Cron: detectar conglomerados que no reportaron hoy ──────────
 
+  /**
+   * Cron job — Encuentra usuarios conglomerado activos sin reporte hoy.
+   *
+   * Salta fines de semana (sábado y domingo) ya que no se espera reporte.
+   * Busca usuarios con rol 'conglomerado' e is_active=TRUE que no tengan
+   * un daily_entry para la fecha actual. Genera alertas NO_REPORT (WARNING).
+   *
+   * @returns Cantidad de alertas NO_REPORT generadas
+   */
   async detectNoReports(): Promise<number> {
     logger.info('[ALERTS-ENGINE] Detecting missing reports...');
     const today = new Date().toISOString().split('T')[0];
@@ -218,6 +320,16 @@ export class AlertsEngineService {
 
   // ─── Cron: recalcular conglomerate_stats ──────────
 
+  /**
+   * Cron job — Recalcula conglomerate_stats de los últimos 42 días (6 semanas).
+   *
+   * Agrupa daily_entries por (user_id, iso_year, iso_week) y calcula:
+   * avg_clientes, avg_clientes_efectivos, avg_menores, avg_conversion_rate,
+   * total_entries y max_clientes_efectivos.
+   *
+   * Usa UPSERT (ON CONFLICT DO UPDATE) para actualizar registros existentes
+   * sin duplicar datos.
+   */
   async recomputeStats(): Promise<void> {
     logger.info('[ALERTS-ENGINE] Recomputing conglomerate_stats...');
 
@@ -259,6 +371,18 @@ export class AlertsEngineService {
 
   // ─── Detección de tendencia con regresión lineal (últimos 14 días) ──
 
+  /**
+   * Cron job — Detecta tendencia declinante vía regresión lineal en 14 días.
+   *
+   * Para cada conglomerado activo con al menos 5 entries en los últimos 14 días,
+   * calcula la pendiente (slope) de la tasa de conversión usando regresión lineal.
+   * Genera alerta TREND_DECLINING (WARNING) si slope < -1.5.
+   *
+   * Deduplicación: no crea alerta si ya existe una TREND_DECLINING activa
+   * para el mismo usuario en los últimos 7 días.
+   *
+   * @returns Cantidad de alertas TREND_DECLINING generadas
+   */
   async detectTrends(): Promise<number> {
     logger.info('[ALERTS-ENGINE] Detecting conversion trends...');
 
@@ -328,6 +452,19 @@ export class AlertsEngineService {
 
   // ─── Cruce Google Ads vs Datos de Campo ──────────
 
+  /**
+   * Cron job — Compara conversiones de Google Ads vs clientes_efectivos en campo.
+   *
+   * Para cada campaña activa, suma las conversiones reportadas por Google Ads
+   * (google_ads_snapshots) y los clientes_efectivos reales (daily_entries)
+   * en los últimos 7 días. Genera alerta ADS_DISCREPANCY (WARNING)
+   * si la discrepancia entre ambos valores es >= 50%.
+   *
+   * También calcula el costo real por cliente efectivo para contexto.
+   * Deduplicación: no crea alerta si ya existe una activa en los últimos 7 días.
+   *
+   * @returns Cantidad de alertas ADS_DISCREPANCY generadas
+   */
   async detectAdsDiscrepancy(): Promise<number> {
     logger.info('[ALERTS-ENGINE] Detecting Ads vs Field discrepancies...');
 
@@ -406,6 +543,22 @@ export class AlertsEngineService {
 
   // ─── Cron: detectar alertas de presupuesto Google Ads ──────────
 
+  /**
+   * Cron job — Detecta 3 tipos de alertas de presupuesto:
+   *
+   *   1. BUDGET_OVERSPEND  (WARNING) — gasto > 110% del presupuesto diario
+   *   2. BUDGET_UNDERSPEND (INFO)    — gasto < 50% del presupuesto (con gasto > 0)
+   *   3. BUDGET_EXHAUSTION (WARNING) — pacing mensual acumulado > 130%
+   *
+   * Las dos primeras operan a nivel snapshot diario por campaña.
+   * BUDGET_EXHAUSTION opera a nivel cuenta, proyectando el gasto mensual
+   * según el ritmo acumulado vs el esperado.
+   *
+   * Deduplicación: overspend/underspend se limitan a 1 por campaña por día;
+   * exhaustion se limita a 1 por cuenta cada 3 días.
+   *
+   * @returns Cantidad total de alertas de presupuesto generadas
+   */
   async detectBudgetAlerts(): Promise<number> {
     logger.info('[ALERTS-ENGINE] Detecting budget alerts...');
 
@@ -564,6 +717,20 @@ export class AlertsEngineService {
 
   // ─── Cron: detectar anomalías en Google Ads ──────────
 
+  /**
+   * Cron job — Detecta 5 tipos de anomalías en métricas de Google Ads:
+   *
+   *   1. CPC_SPIKE             (WARNING) — CPC hoy > 130% del promedio 7 días
+   *   2. CTR_ANOMALY           (WARNING) — CTR fuera de 2 desviaciones estándar
+   *   3. IMPRESSION_SHARE_DROP (WARNING) — IS cayó > 20% semana a semana
+   *   4. KEYWORD_QS_DROP       (WARNING) — QS promedio cayó > 1 punto vs semana anterior
+   *   5. OPPORTUNITY_ALERT     (INFO)    — budget_lost_IS > 30% con conversiones activas
+   *
+   * Cada sub-alerta tiene su propia query CTE y lógica de deduplicación.
+   * Las alertas se acumulan y se persisten en batch al final.
+   *
+   * @returns Cantidad total de alertas de anomalía generadas
+   */
   async detectGoogleAdsAnomalies(): Promise<number> {
     logger.info('[ALERTS-ENGINE] Detecting Google Ads anomalies...');
     let alertCount = 0;
@@ -826,6 +993,18 @@ export class AlertsEngineService {
 
   // ─── Obtener resumen del día para email ──────────
 
+  /**
+   * Dashboard diario — Obtiene un resumen consolidado del día actual.
+   *
+   * Ejecuta 3 queries en paralelo (Promise.all):
+   *   - alertas: todas las alertas de hoy ordenadas por severidad (CRITICAL primero)
+   *   - consolidated: total de entries, clientes y efectivos del día
+   *   - noReportUsers: usuarios conglomerado activos sin reporte hoy
+   *
+   * Se usa para alimentar el email de resumen diario y el dashboard.
+   *
+   * @returns Objeto con alertas, consolidado y usuarios sin reporte
+   */
   async getDailySummary(): Promise<{
     alerts: any[];
     consolidated: { total_entries: number; total_clientes: number; total_efectivos: number };
@@ -871,6 +1050,14 @@ export class AlertsEngineService {
 
   // ─── Obtener emails de pautadores para notificación ──────────
 
+  /**
+   * Emails de pautadores/admins activos para notificaciones.
+   *
+   * Retorna una lista de emails únicos de usuarios con rol 'pautador' o 'admin'
+   * que estén activos y tengan email configurado.
+   *
+   * @returns Array de direcciones de email únicas
+   */
   async getPautadorEmails(): Promise<string[]> {
     const result = await query(`
       SELECT DISTINCT u.email
@@ -886,6 +1073,19 @@ export class AlertsEngineService {
 
   // ─── Helpers privados ──────────────────────────────────────────
 
+  /**
+   * Carga umbrales con cascada de prioridad:
+   *   1. country_id + campaign_id (más específico)
+   *   2. country_id solamente
+   *   3. global (country_id IS NULL AND campaign_id IS NULL)
+   *
+   * Solo el primer umbral encontrado para cada alert_type se conserva
+   * (el más específico gana gracias al ORDER BY).
+   *
+   * @param countryId  - ID del país para filtrar umbrales
+   * @param campaignId - ID de la campaña para filtrar umbrales (puede ser null)
+   * @returns Array de umbrales deduplicados por tipo de alerta
+   */
   private async getThresholds(countryId: number, campaignId: number | null): Promise<Threshold[]> {
     // Buscar umbrales: primero específicos (país+campaña), luego por país, luego globales
     const result = await query(`
@@ -916,11 +1116,31 @@ export class AlertsEngineService {
     }));
   }
 
+  /**
+   * Busca el valor de umbral para un tipo de alerta específico.
+   * Si no se encuentra en la lista de umbrales cargados, retorna el valor por defecto.
+   *
+   * @param thresholds - Lista de umbrales cargados
+   * @param alertType  - Tipo de alerta a buscar
+   * @param defaultVal - Valor por defecto si no se encuentra el umbral
+   * @returns Valor numérico del umbral
+   */
   private getThresholdValue(thresholds: Threshold[], alertType: string, defaultVal: number): number {
     const t = thresholds.find(th => th.alert_type === alertType);
     return t ? t.threshold_value : defaultVal;
   }
 
+  /**
+   * Media histórica de las últimas N semanas para un usuario.
+   *
+   * Calcula promedios de clientes, clientes_efectivos, menores y
+   * tasa de conversión global usando daily_entries anteriores a hoy.
+   * Requiere al menos 3 entries para retornar datos (si no, retorna null).
+   *
+   * @param userId - ID del usuario conglomerado
+   * @param weeks  - Cantidad de semanas hacia atrás a considerar
+   * @returns Objeto con promedios o null si datos insuficientes (< 3 entries)
+   */
   private async getHistoricAverage(userId: number, weeks: number) {
     const result = await query(`
       SELECT
@@ -951,6 +1171,13 @@ export class AlertsEngineService {
     };
   }
 
+  /**
+   * Obtiene el máximo histórico de clientes_efectivos para un usuario.
+   * Solo considera entries anteriores a la fecha actual.
+   *
+   * @param userId - ID del usuario conglomerado
+   * @returns Máximo histórico de clientes_efectivos (0 si no hay datos)
+   */
   private async getHistoricMaxEfectivos(userId: number): Promise<number> {
     const result = await query(
       `SELECT COALESCE(MAX(clientes_efectivos), 0) AS max_val
@@ -961,6 +1188,16 @@ export class AlertsEngineService {
     return parseInt(result.rows[0].max_val) || 0;
   }
 
+  /**
+   * Guarda alertas en transacción + broadcast por WebSocket.
+   *
+   * Abre una transacción de BD, inserta cada alerta en la tabla `alerts`,
+   * hace COMMIT y luego emite cada alerta por WebSocket al usuario afectado.
+   * Si falla cualquier INSERT, hace ROLLBACK completo.
+   *
+   * @param alerts - Array de payloads de alerta a persistir y emitir
+   * @throws Re-lanza el error después de hacer ROLLBACK
+   */
   private async saveAlerts(alerts: AlertPayload[]): Promise<void> {
     const client = await getClient();
     try {
@@ -996,6 +1233,19 @@ export class AlertsEngineService {
     }
   }
 
+  /**
+   * Regresión lineal simple para detectar tendencia.
+   *
+   * Calcula la pendiente (slope) de una serie de valores usando
+   * mínimos cuadrados ordinarios:
+   *   slope = (n * SUM(x*y) - SUM(x) * SUM(y)) / (n * SUM(x^2) - (SUM(x))^2)
+   *
+   * Donde x = índice (0, 1, 2, ...) e y = valor en esa posición.
+   * Un slope negativo indica tendencia declinante; positivo, creciente.
+   *
+   * @param values - Serie temporal de valores numéricos (ordenados cronológicamente)
+   * @returns Pendiente de la recta de regresión (0 si < 2 valores o denominador = 0)
+   */
   // Regresión lineal simple: calcula la pendiente
   private calculateSlope(values: number[]): number {
     const n = values.length;

@@ -16,7 +16,6 @@ const COUNTRY_PATTERNS: Record<string, string> = {
   'CHILE': 'CL',
   'ECUADOR': 'EC',
   'PANAMA': 'PA',
-  'COSTA RICA': 'CR',
   'BOLIVIA': 'BO',
   'ESPAÑA': 'ES',
 };

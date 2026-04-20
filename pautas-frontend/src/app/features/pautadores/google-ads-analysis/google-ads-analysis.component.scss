@@ -10,45 +10,131 @@ $color-primary: #141414;
 $color-secondary: #ffd600;
 $font-primary: 'Fira Sans', sans-serif;
 
-// Variantes de texto
 $color-text-dark: #141414;
 $color-text-muted: #6c757d;
 $color-text-light: #ffffff;
 
-// Fondos
 $color-bg-white: #ffffff;
 $color-bg-light: #f8f9fa;
 
-// Bordes
 $color-border: #dee2e6;
 $color-border-light: #e9ecef;
 
-// Estados
 $color-danger: #dc3545;
 $color-success: #10b981;
 $color-warning: #f59e0b;
+$color-info: #3b82f6;
 
-// Espaciado
 $spacing-xs: 0.25rem;
 $spacing-sm: 0.5rem;
 $spacing-md: 1rem;
 $spacing-lg: 1.5rem;
 $spacing-xl: 2rem;
-$spacing-xxl: 2.5rem;
 
-// Border radius
 $radius-sm: 0.375rem;
 $radius-md: 0.5rem;
 $radius-lg: 0.75rem;
 $radius-xl: 1rem;
 
-// Shadows
 $shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
 $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
 $shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
 
-// Transitions
 $transition-base: all 0.2s ease-in-out;
+
+// ============================================
+// MIXINS REUTILIZABLES
+// ============================================
+@mixin scrollbar-thin {
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: $color-bg-light;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $color-border;
+    border-radius: 3px;
+    &:hover {
+      background: $color-text-muted;
+    }
+  }
+}
+
+@mixin table-base {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $font-primary;
+  font-size: 0.82rem;
+  table-layout: fixed;
+
+  thead tr {
+    background-color: $color-primary;
+
+    th {
+      font-family: $font-primary;
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: $color-text-light;
+      padding: 0.6rem $spacing-sm;
+      border-bottom: 2px solid $color-secondary;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      white-space: normal;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  tbody tr {
+    transition: background-color 0.15s ease;
+
+    &:nth-child(even) {
+      background-color: $color-bg-light;
+    }
+
+    &:hover {
+      background-color: rgba($color-secondary, 0.08);
+    }
+
+    td {
+      padding: 0.55rem $spacing-sm;
+      color: $color-text-dark;
+      border-bottom: 1px solid $color-border-light;
+      vertical-align: middle;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      line-height: 1.4;
+      max-width: 280px;
+    }
+  }
+}
+
+@mixin td-numeric {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  max-width: none;
+  overflow: visible;
+}
+
+@mixin td-truncate($max: 220px) {
+  max-width: $max;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@mixin card-panel {
+  background-color: $color-bg-white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+}
 
 // ============================================
 // HOST & BASE
@@ -60,7 +146,6 @@ $transition-base: all 0.2s ease-in-out;
   background-color: $color-bg-light;
   min-height: 100vh;
   padding: $spacing-lg $spacing-xl;
-  // Previene desbordamiento horizontal global
   overflow-x: hidden;
   max-width: 100%;
 }
@@ -113,11 +198,9 @@ $transition-base: all 0.2s ease-in-out;
   align-items: flex-end;
   gap: $spacing-md;
   flex-wrap: wrap;
-  background-color: $color-bg-white;
+  @include card-panel;
   padding: $spacing-lg;
-  border-radius: $radius-lg;
   border-top: 4px solid $color-secondary;
-  box-shadow: $shadow-sm;
   margin-bottom: $spacing-xl;
 
   .filter-field {
@@ -153,10 +236,32 @@ $transition-base: all 0.2s ease-in-out;
         box-shadow: 0 0 0 0.2rem rgba($color-secondary, 0.25);
         outline: none;
       }
+    }
+  }
 
-      &::placeholder {
-        color: $color-text-muted;
+  .form-check {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+
+    .form-check-input {
+      cursor: pointer;
+
+      &:checked {
+        background-color: $color-secondary;
+        border-color: $color-secondary;
       }
+
+      &:focus {
+        box-shadow: 0 0 0 0.2rem rgba($color-secondary, 0.25);
+      }
+    }
+
+    .form-check-label {
+      font-family: $font-primary;
+      font-size: 0.82rem;
+      color: $color-text-dark;
+      cursor: pointer;
     }
   }
 
@@ -224,32 +329,28 @@ $transition-base: all 0.2s ease-in-out;
     margin: 0;
     list-style: none;
 
-    .nav-item {
-      .nav-link {
-        font-family: $font-primary;
-        font-size: 0.78rem;
-        font-weight: 500;
-        color: $color-text-muted;
-        background: none;
-        border: none;
-        border-bottom: 3px solid transparent;
-        padding: $spacing-sm $spacing-md;
-        cursor: pointer;
-        transition: $transition-base;
-        white-space: nowrap;
-        position: relative;
+    .nav-item .nav-link {
+      font-family: $font-primary;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: $color-text-muted;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: $spacing-sm $spacing-md;
+      cursor: pointer;
+      transition: $transition-base;
+      white-space: nowrap;
 
-        &:hover {
-          color: $color-primary;
-          background-color: rgba($color-secondary, 0.08);
-        }
+      &:hover {
+        color: $color-primary;
+        background-color: rgba($color-secondary, 0.08);
+      }
 
-        &.active {
-          color: $color-primary;
-          font-weight: 700;
-          border-bottom-color: $color-secondary;
-          background-color: transparent;
-        }
+      &.active {
+        color: $color-primary;
+        font-weight: 700;
+        border-bottom-color: $color-secondary;
       }
     }
   }
@@ -278,7 +379,7 @@ $transition-base: all 0.2s ease-in-out;
 }
 
 // ============================================
-// TOGGLE ROW (Button Groups)
+// TOGGLE ROW
 // ============================================
 .toggle-row {
   display: flex;
@@ -340,6 +441,26 @@ $transition-base: all 0.2s ease-in-out;
 }
 
 // ============================================
+// ALERTS
+// ============================================
+.alert {
+  font-family: $font-primary;
+  font-size: 0.85rem;
+  border-radius: $radius-sm;
+  border: none;
+
+  &.alert-success {
+    background-color: rgba($color-success, 0.1);
+    color: $color-success;
+  }
+
+  &.alert-danger {
+    background-color: rgba($color-danger, 0.1);
+    color: $color-danger;
+  }
+}
+
+// ============================================
 // LOADING STATE
 // ============================================
 .loading-state {
@@ -360,11 +481,11 @@ $transition-base: all 0.2s ease-in-out;
     border-radius: 50%;
     display: inline-block;
     animation: spinner-border 0.75s linear infinite;
-  }
 
-  .spinner-border-sm {
-    width: 1rem;
-    height: 1rem;
+    &-sm {
+      width: 1rem;
+      height: 1rem;
+    }
   }
 }
 
@@ -386,19 +507,18 @@ $transition-base: all 0.2s ease-in-out;
   font-family: $font-primary;
   font-size: 0.9rem;
   font-style: italic;
-  background-color: $color-bg-white;
-  border-radius: $radius-md;
+  @include card-panel;
   border: 1px dashed $color-border;
   margin: $spacing-md 0;
+  text-align: center;
+  line-height: 1.5;
 }
 
 // ============================================
 // CHART PANELS
 // ============================================
 .chart-panel {
-  background-color: $color-bg-white;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
+  @include card-panel;
   padding: $spacing-lg;
   margin-bottom: $spacing-lg;
   border-top: 4px solid $color-secondary;
@@ -437,111 +557,15 @@ $transition-base: all 0.2s ease-in-out;
   .chart-container-doughnut {
     max-width: 450px;
     margin: 0 auto;
-    min-height: 280px;
+    min-height: 260px;
   }
 }
 
 // ============================================
-// MIXIN: TABLA BASE (DRY - reutilizable)
-// ============================================
-@mixin table-base {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: $font-primary;
-  font-size: 0.82rem;
-  // Fuerza tabla a respetar anchos
-  table-layout: fixed;
-
-  thead {
-    tr {
-      background-color: $color-primary;
-
-      th {
-        font-family: $font-primary;
-        font-weight: 600;
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        color: $color-text-light;
-        padding: 0.6rem $spacing-sm;
-        border-bottom: 2px solid $color-secondary;
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        // Las cabeceras SÍ permiten wrap
-        white-space: normal;
-        word-break: normal;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-    }
-  }
-
-  tbody {
-    tr {
-      transition: background-color 0.15s ease;
-
-      &:nth-child(even) {
-        background-color: $color-bg-light;
-      }
-
-      &:hover {
-        background-color: rgba($color-secondary, 0.08);
-      }
-
-      td {
-        padding: 0.55rem $spacing-sm;
-        color: $color-text-dark;
-        border-bottom: 1px solid $color-border-light;
-        vertical-align: middle;
-        // POR DEFECTO: permite wrap
-        white-space: normal;
-        word-break: break-word;
-        overflow-wrap: break-word;
-        line-height: 1.4;
-      }
-    }
-  }
-}
-
-// ============================================
-// MIXIN: Celda numérica (no-wrap, alineada)
-// ============================================
-@mixin td-numeric {
-  white-space: nowrap !important;
-  word-break: normal !important;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-// ============================================
-// MIXIN: Celda texto largo (wrappable, limitada)
-// ============================================
-@mixin td-text-long($max: 280px) {
-  max-width: $max;
-  white-space: normal !important;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  line-height: 1.4;
-}
-
-// ============================================
-// MIXIN: Celda texto truncado (ellipsis)
-// ============================================
-@mixin td-truncate($max: 200px) {
-  max-width: $max;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-// ============================================
-// TABLE PANEL (con header)
+// TABLE PANEL (con header negro)
 // ============================================
 .table-panel {
-  background-color: $color-bg-white;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
+  @include card-panel;
   overflow: hidden;
   margin-bottom: $spacing-lg;
 
@@ -569,54 +593,25 @@ $transition-base: all 0.2s ease-in-out;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
-
-    &::-webkit-scrollbar {
-      height: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: $color-bg-light;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: $color-border;
-      border-radius: 3px;
-
-      &:hover {
-        background: $color-text-muted;
-      }
-    }
+    @include scrollbar-thin;
   }
 
-  table {
+  table,
+  .data-table {
     @include table-base;
   }
 }
 
 // ============================================
-// TABLE RESPONSIVE (Stand-alone, sin header)
+// TABLE RESPONSIVE (sin header)
 // ============================================
 .table-responsive {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  background-color: $color-bg-white;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
+  @include card-panel;
   margin-bottom: $spacing-lg;
   max-width: 100%;
-
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: $color-bg-light;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $color-border;
-    border-radius: 3px;
-  }
+  @include scrollbar-thin;
 }
 
 .data-table {
@@ -624,12 +619,8 @@ $transition-base: all 0.2s ease-in-out;
 }
 
 // ============================================
-// *** COLUMNAS INTELIGENTES POR TIPO ***
-// Regla: columnas numéricas = nowrap
-//        columnas texto largo = wrap + max-width
+// CELDAS NUMÉRICAS (nowrap obligatorio)
 // ============================================
-
-// Clase para forzar nowrap en celdas numéricas
 .text-right {
   @include td-numeric;
 }
@@ -637,54 +628,6 @@ $transition-base: all 0.2s ease-in-out;
 .text-center {
   text-align: center;
   white-space: nowrap;
-}
-
-// ============================================
-// ANCHOS DE COLUMNA ESPECÍFICOS POR TABLA
-// Se aplican via table-layout: fixed + th widths
-// ============================================
-
-// --- Tablas genéricas: la primera columna (nombre/texto)
-// es la más ancha, el resto proporcional
-.table-panel,
-.table-responsive {
-  table,
-  .data-table {
-    // Primera columna: texto principal (nombre, keyword, etc.)
-    th:first-child,
-    td:first-child {
-      width: 18%;
-      min-width: 140px;
-    }
-
-    // Columnas de texto largo que no son la primera
-    // (campañas, nombres, descripciones)
-    td {
-      // Por defecto: permite wrapping (ya definido en mixin)
-    }
-  }
-}
-
-// === ANCHO COLUMNA "CAMPANAS" / "NOMBRES DE CAMPANAS" ===
-// Estas columnas tienen listas enormes separadas por coma.
-// Les damos max-width y forzamos wrap + scroll vertical si excede.
-
-// Selector genérico para cualquier celda con texto excesivamente largo
-// Lo aplicamos via CSS sobre columnas específicas por posición.
-
-// Para la tabla de Canibalización (keyword, campañas, nombres, costo, clicks, conv)
-// La columna "Nombres de Campanas" es la 3ra
-// Para la tabla de Negativos, la columna "Campanas" es la 5ta
-
-// Estrategia: restringir todas las celdas de texto a un max-height
-// y añadir scroll interno para texto extremadamente largo
-td {
-  &.td-wrap-long {
-    @include td-text-long(320px);
-    max-height: 120px;
-    overflow-y: auto;
-    display: block;
-  }
 }
 
 // ============================================
@@ -730,9 +673,7 @@ td {
 }
 
 .kpi-card {
-  background-color: $color-bg-white;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
+  @include card-panel;
   padding: $spacing-lg;
   display: flex;
   flex-direction: column;
@@ -768,18 +709,27 @@ td {
     font-size: 0.78rem;
     font-weight: 600;
   }
+
+  .kpi-sub {
+    font-family: $font-primary;
+    font-size: 0.7rem;
+    color: $color-text-muted;
+    line-height: 1.3;
+  }
+
+  .kpi-prev {
+    font-size: 0.7rem;
+    color: $color-text-muted;
+  }
 }
 
 // ============================================
-// TEXT WEIGHT UTILITIES
+// TEXT UTILITIES
 // ============================================
 .fw-600 {
   font-weight: 600;
 }
 
-// ============================================
-// TEXT COLOR UTILITIES
-// ============================================
 .text-danger {
   color: $color-danger !important;
 }
@@ -798,6 +748,14 @@ td {
 
 .text-dark {
   color: $color-text-dark !important;
+}
+
+.text-primary {
+  color: $color-info !important;
+}
+
+.small {
+  font-size: 0.78rem;
 }
 
 // ============================================
@@ -829,6 +787,11 @@ td {
     color: $color-text-dark;
   }
 
+  &.bg-info {
+    background-color: $color-info;
+    color: $color-text-light;
+  }
+
   &.badge-outline {
     background-color: transparent;
     color: $color-text-muted;
@@ -853,6 +816,25 @@ td {
     border: 1px solid rgba($color-secondary, 0.4);
   }
 
+  &.badge-success {
+    background-color: rgba($color-success, 0.12);
+    color: $color-success;
+    border: 1px solid rgba($color-success, 0.3);
+  }
+
+  &.badge-danger {
+    background-color: rgba($color-danger, 0.12);
+    color: $color-danger;
+    border: 1px solid rgba($color-danger, 0.3);
+  }
+
+  &.badge-warning {
+    background-color: rgba($color-warning, 0.15);
+    color: color.adjust($color-warning, $lightness: -15%);
+    border: 1px solid rgba($color-warning, 0.4);
+  }
+
+  // Quality Score
   &.qs-good {
     background-color: rgba($color-success, 0.12);
     color: $color-success;
@@ -868,6 +850,7 @@ td {
     color: $color-danger;
   }
 
+  // Health
   &.health-good {
     background-color: rgba($color-success, 0.12);
     color: $color-success;
@@ -886,6 +869,7 @@ td {
     border: 1px solid rgba($color-danger, 0.3);
   }
 
+  // Tiers
   &.tier-top {
     background-color: rgba($color-success, 0.12);
     color: $color-success;
@@ -904,6 +888,7 @@ td {
     border: 1px solid rgba($color-danger, 0.3);
   }
 
+  // Fatigue
   &.fatigue-high {
     background-color: rgba($color-danger, 0.12);
     color: $color-danger;
@@ -922,6 +907,7 @@ td {
     border: 1px solid rgba($color-success, 0.3);
   }
 
+  // Actions
   &.action-pause {
     background-color: rgba($color-danger, 0.12);
     color: $color-danger;
@@ -942,6 +928,7 @@ td {
     color: $color-text-muted;
   }
 
+  // Recommendations
   &.rec-scale {
     background-color: rgba($color-success, 0.12);
     color: $color-success;
@@ -1010,7 +997,7 @@ td {
 }
 
 // ============================================
-// COUNTRY NAME (with dot)
+// COUNTRY NAME (con punto de color)
 // ============================================
 .country-name {
   display: flex;
@@ -1028,7 +1015,38 @@ td {
 }
 
 // ============================================
-// PERCENTAGE BAR
+// AD PREVIEW (Tab Anuncios)
+// ============================================
+.ad-preview {
+  max-width: 300px;
+
+  .ad-headline {
+    font-family: $font-primary;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: $color-info;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .ad-description {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    margin-top: 2px;
+    word-break: break-word;
+  }
+
+  .ad-url {
+    font-size: 0.72rem;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ============================================
+// PCT BAR
 // ============================================
 .pct-bar-wrap {
   display: flex;
@@ -1067,16 +1085,33 @@ td {
 }
 
 // ============================================
+// FUNNEL BAR (Dashboard Ejecutivo)
+// ============================================
+.funnel-bar {
+  height: 8px;
+  background: $color-border-light;
+  border-radius: 4px;
+  position: relative;
+  min-width: 120px;
+
+  > div {
+    position: absolute;
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+}
+
+// ============================================
 // HEATMAP
 // ============================================
 .heatmap-panel {
-  background-color: $color-bg-white;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
+  @include card-panel;
   padding: $spacing-lg;
   margin-bottom: $spacing-lg;
   overflow-x: auto;
   border-top: 4px solid $color-secondary;
+  @include scrollbar-thin;
 
   .heatmap-header {
     display: flex;
@@ -1204,12 +1239,81 @@ td {
 }
 
 // ============================================
-// BUTTONS (Generic)
+// MAP SECTION (Geografía)
+// ============================================
+.map-section {
+  @include card-panel;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  border-top: 4px solid $color-secondary;
+
+  .map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-md;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  .metric-select {
+    font-family: $font-primary;
+    font-size: 0.82rem;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    padding: 0.35rem 0.75rem;
+    color: $color-text-dark;
+    min-width: 140px;
+
+    &:focus {
+      border-color: $color-secondary;
+      box-shadow: 0 0 0 0.2rem rgba($color-secondary, 0.25);
+      outline: none;
+    }
+  }
+
+  .geo-map-container {
+    width: 100%;
+    min-height: 350px;
+    position: relative;
+
+    canvas {
+      width: 100% !important;
+    }
+  }
+
+  .leaflet-map-container {
+    width: 100%;
+    border-radius: $radius-md;
+    overflow: hidden;
+    border: 1px solid $color-border;
+
+    #leafletMap {
+      width: 100%;
+      height: 500px;
+      background: #f0f0f0;
+      z-index: 1;
+    }
+  }
+
+  .map-hint {
+    font-size: 0.78rem;
+    color: $color-text-muted;
+    margin: 0 0 $spacing-sm 0;
+    font-style: italic;
+  }
+}
+
+// ============================================
+// BUTTONS (genéricos)
 // ============================================
 .btn {
   font-family: $font-primary;
   cursor: pointer;
   transition: $transition-base;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
 
   &.btn-primary {
     background-color: $color-secondary;
@@ -1219,6 +1323,11 @@ td {
 
     &:hover {
       background-color: color.adjust($color-secondary, $lightness: -8%);
+    }
+
+    &:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
     }
   }
 
@@ -1238,6 +1347,46 @@ td {
       color: $color-text-light;
       border-color: $color-primary;
     }
+  }
+
+  &.btn-outline-primary {
+    background-color: transparent;
+    color: $color-secondary;
+    border: 1px solid $color-secondary;
+    font-weight: 500;
+
+    &:hover {
+      background-color: $color-secondary;
+      color: $color-primary;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &.btn-outline-success {
+    background-color: transparent;
+    color: $color-success;
+    border: 1px solid $color-success;
+    font-weight: 500;
+    font-size: 0.82rem;
+
+    &:hover {
+      background-color: $color-success;
+      color: $color-text-light;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &.btn-sm {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.75rem;
   }
 }
 
@@ -1262,37 +1411,6 @@ td {
 }
 
 // ============================================
-// SPACING UTILITIES
-// ============================================
-.mt-2 {
-  margin-top: $spacing-sm;
-}
-
-.mt-3 {
-  margin-top: $spacing-md;
-}
-
-.mt-4 {
-  margin-top: $spacing-lg;
-}
-
-.mb-2 {
-  margin-bottom: $spacing-sm;
-}
-
-.mb-3 {
-  margin-bottom: $spacing-md;
-}
-
-.mb-4 {
-  margin-bottom: $spacing-lg;
-}
-
-.ms-2 {
-  margin-left: $spacing-sm;
-}
-
-// ============================================
 // SUBTITLES
 // ============================================
 h5 {
@@ -1312,68 +1430,81 @@ h6 {
 }
 
 // ============================================
-// *** FIX PRINCIPAL: COLUMNAS DE TEXTO LARGO ***
-// Aplica a TODAS las tablas del componente.
-// Las celdas que NO son .text-right harán wrap.
-// Las celdas .text-right se mantienen nowrap.
+// SPACING & DISPLAY UTILITIES
 // ============================================
+.mt-1 {
+  margin-top: $spacing-xs;
+}
+.mt-2 {
+  margin-top: $spacing-sm;
+}
+.mt-3 {
+  margin-top: $spacing-md;
+}
+.mt-4 {
+  margin-top: $spacing-lg;
+}
+.mb-0 {
+  margin-bottom: 0;
+}
+.mb-2 {
+  margin-bottom: $spacing-sm;
+}
+.mb-3 {
+  margin-bottom: $spacing-md;
+}
+.mb-4 {
+  margin-bottom: $spacing-lg;
+}
+.ms-2 {
+  margin-left: $spacing-sm;
+}
+.ms-auto {
+  margin-left: auto;
+}
+.me-1 {
+  margin-right: $spacing-xs;
+}
+.py-2 {
+  padding-top: $spacing-sm;
+  padding-bottom: $spacing-sm;
+}
+.px-3 {
+  padding-left: $spacing-md;
+  padding-right: $spacing-md;
+}
 
-// Regla global: toda celda td por defecto wrappea
-// (ya definido en el mixin table-base).
-// Solo .text-right fuerza nowrap.
+.d-flex {
+  display: flex;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+.align-items-center {
+  align-items: center;
+}
+.justify-content-between {
+  justify-content: space-between;
+}
+.gap-2 {
+  gap: $spacing-sm;
+}
+.gap-3 {
+  gap: $spacing-md;
+}
 
-// Para columnas con listas de campañas o texto muy largo,
-// forzamos max-width y scroll vertical contenido.
-
-.table-panel,
-.table-responsive {
-  table,
-  .data-table {
-    // Resetear table-layout para mejor adaptación
-    // Usar 'auto' permite que las columnas numéricas
-    // se compriman, y las de texto se expandan
-    // Pero con max-width controlamos el desborde.
-
-    // Columnas de texto (no .text-right, no .text-center):
-    // permiten wrap y tienen max-width
-    tbody td:not(.text-right):not(.text-center) {
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      max-width: 300px;
-      line-height: 1.4;
-    }
-
-    // Cuando una celda de texto es extremadamente larga
-    // (como listas de 20+ campañas), limitar altura y scroll
-    tbody td:not(.text-right):not(.text-center) {
-      &:has(~ td:nth-child(n + 4)) {
-        // Para filas con muchas columnas, ser más agresivo
-      }
-    }
-
-    // Columnas numéricas: compactas
-    thead th.text-right {
-      width: auto;
-      min-width: 80px;
-      white-space: nowrap;
-    }
-
-    tbody td.text-right {
-      @include td-numeric;
-      min-width: 75px;
-    }
-  }
+.form-switch {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
 }
 
 // ============================================
 // RESPONSIVE
 // ============================================
 @media (max-width: 1200px) {
-  .filters-bar {
-    .filter-field {
-      min-width: 140px;
-    }
+  .filters-bar .filter-field {
+    min-width: 140px;
   }
 
   .table-panel,
@@ -1381,7 +1512,7 @@ h6 {
     table,
     .data-table {
       tbody td:not(.text-right):not(.text-center) {
-        max-width: 250px;
+        max-width: 240px;
       }
     }
   }
@@ -1392,10 +1523,8 @@ h6 {
     padding: $spacing-md;
   }
 
-  .page-header {
-    h1 {
-      font-size: 1.5rem;
-    }
+  .page-header h1 {
+    font-size: 1.5rem;
   }
 
   .kpi-row {
@@ -1411,15 +1540,9 @@ h6 {
     }
   }
 
-  .tabs-wrapper {
-    .nav-tabs {
-      .nav-item {
-        .nav-link {
-          font-size: 0.72rem;
-          padding: $spacing-xs $spacing-sm;
-        }
-      }
-    }
+  .tabs-wrapper .nav-tabs .nav-item .nav-link {
+    font-size: 0.72rem;
+    padding: $spacing-xs $spacing-sm;
   }
 
   .table-panel,
@@ -1491,7 +1614,7 @@ h6 {
     table,
     .data-table {
       tbody td:not(.text-right):not(.text-center) {
-        max-width: 180px;
+        max-width: 170px;
         font-size: 0.75rem;
       }
 
@@ -1532,6 +1655,18 @@ h6 {
       }
     }
   }
+
+  .ad-preview {
+    max-width: 200px;
+  }
+
+  .map-section .geo-map-container {
+    min-height: 250px;
+  }
+
+  .map-section .leaflet-map-container #leafletMap {
+    height: 350px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1546,7 +1681,7 @@ h6 {
       font-size: 0.72rem;
 
       tbody td:not(.text-right):not(.text-center) {
-        max-width: 150px;
+        max-width: 140px;
       }
 
       thead th {
@@ -1561,34 +1696,55 @@ h6 {
   }
 }
 
-// KPI comparison cards
-.kpi-card {
-  background: $color-bg-white;
-  border: 1px solid $color-border-light;
-  border-radius: 8px;
-  padding: 12px 16px;
-  min-width: 130px;
-  flex: 1 1 130px;
-  text-align: center;
+// Anuncios - Ad Preview
+.ad-preview {
+  max-width: 400px;
+}
 
-  .kpi-label {
-    font-size: 0.72rem;
-    color: $color-text-muted;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
+.ad-headlines-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
 
-  .kpi-value {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: $color-text-dark;
-    margin-bottom: 2px;
-  }
+.ad-headline-chip {
+  display: inline-block;
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
 
-  .kpi-delta {
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
+.ad-more-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+}
+
+.ad-descriptions-list {
+  margin-bottom: 4px;
+}
+
+.ad-description-text {
+  color: #d1d5db;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  margin-bottom: 2px;
+  padding-left: 2px;
+  border-left: 2px solid rgba(255, 214, 0, 0.4);
+  padding-left: 6px;
+}
+
+.ad-url {
+  font-size: 0.73rem;
+  color: #34d399 !important;
+  word-break: break-all;
 }

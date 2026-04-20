@@ -1,346 +1,357 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ *  Predictive Budget Service — Análisis Predictivo de Presupuesto
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ *  PROPÓSITO:
+ *    Dado un account de Google Ads, analiza TODO su historial para
+ *    predecir cuántas conversiones generará a distintos niveles de
+ *    presupuesto, y recomienda el presupuesto óptimo (menor CPA).
+ *
+ *  FLUJO PRINCIPAL (getPredictiveAnalysis):
+ *    1. Query SQL: trae métricas diarias históricas (costo, conversiones,
+ *       IS, quality score, presupuesto) + config de conversion_value
+ *    2. validateDataQuality() → reporte de calidad de datos
+ *    3. buildFeatureMatrix() → transforma en [9 features] por día
+ *    4. fitOLS() → entrena regresión: Features → Conversiones
+ *    5. Genera 6 escenarios de presupuesto (70%–150% del actual)
+ *    6. Busca presupuesto óptimo (50%–200% en pasos de 5%)
+ *    7. Descomposición estacional (semanal + mensual)
+ *    8. Recomendación final en español
+ *
+ *  DEPENDENCIAS:
+ *    ─ ml-analytics.service.ts → fitOLS, predictWithCI, buildFeatureMatrix,
+ *      validateDataQuality, decomposeSeasonality
+ *    ─ database (config/database) → query PostgreSQL
+ *    ─ Tabla: google_ads_snapshots, campaigns, google_ads_keyword_snapshots,
+ *      account_conversion_config
+ *
+ *  QUIÉN LO USA:
+ *    ─ google-ads-analysis.service.ts → getPredictiveAnalysis()
+ *    ─ Endpoint: /api/pautadores/analysis/predictive
+ * ══════════════════════════════════════════════════════════════════════
+ */
 import { query } from '../config/database';
+import {
+  fitOLS,
+  predictWithCI,
+  fitHoltWinters,
+  decomposeSeasonality,
+  validateDataQuality,
+  buildFeatureMatrix,
+  simpleMovingAverageForecast,
+  type RegressionResult,
+  type PredictionWithCI,
+  type DataQualityReport,
+  type DailyRow,
+} from './ml-analytics.service';
 
-interface BudgetPoint {
-  dailyBudget: number;
-  conversions: number;
-  cost: number;
-  clicks: number;
-}
-
-interface RegressionResult {
-  slope: number;
-  intercept: number;
-  r2: number;
-}
-
-interface PredictionResult {
-  dailyBudget: number;
-  predictedConversions: number;
-  predictedCost: number;
-  expectedCPA: number;
-  roi: number;
-}
+// ────────────────────────────────────────────────────────────────
+//  Types
+// ────────────────────────────────────────────────────────────────
 
 /**
- * Predictive Budget Service
- * Uses linear regression to:
- * 1. Predict conversions based on budget
- * 2. Find optimal budget for maximum ROI
- * 3. Project monthly outcomes
+ * Escenario de presupuesto — resultado de simular un nivel de gasto diario.
+ * Se genera para cada multiplicador (0.7x, 0.85x, 1.0x, 1.15x, 1.3x, 1.5x).
  */
+export interface BudgetScenario {
+  /** Presupuesto diario propuesto (USD) */
+  dailyBudget: number;
+  /** Conversiones diarias predichas por el modelo */
+  predictedConversions: number;
+  /** CPA esperado = dailyBudget / predictedConversions */
+  expectedCPA: number;
+  /** Intervalo de confianza al 80% para conversiones */
+  ci80: { lower: number; upper: number };
+  /** Intervalo de confianza al 95% para conversiones */
+  ci95: { lower: number; upper: number };
+  /** Proyección mensual (× 30 días) */
+  monthlyProjection: {
+    monthlyBudget: number;
+    monthlyConversions: number;
+    monthlyCost: number;
+    averageCPA: number;
+    /** Solo presente si hay conversion_value configurado en account_conversion_config */
+    roi?: number;
+  };
+}
+
+// ────────────────────────────────────────────────────────────────
+//  Service
+// ────────────────────────────────────────────────────────────────
+
 export class PredictiveBudgetService {
-  /**
-   * Calculate linear regression: budget -> conversions
-   * Returns: conversions = intercept + slope * budget
-   */
-  private calculateRegression(dataPoints: BudgetPoint[]): RegressionResult {
-    if (dataPoints.length < 2) {
-      return { slope: 0, intercept: 0, r2: 0 };
-    }
-
-    const n = dataPoints.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
-
-    for (const point of dataPoints) {
-      const x = point.dailyBudget;
-      const y = point.conversions;
-      sumX += x;
-      sumY += y;
-      sumXY += x * y;
-      sumX2 += x * x;
-      sumY2 += y * y;
-    }
-
-    const denominator = n * sumX2 - sumX * sumX;
-    if (denominator === 0) {
-      return { slope: 0, intercept: 0, r2: 0 };
-    }
-
-    const slope = (n * sumXY - sumX * sumY) / denominator;
-    const intercept = (sumY - slope * sumX) / n;
-
-    // Calculate R² (coefficient of determination)
-    const yMean = sumY / n;
-    let ssTotal = 0, ssResidual = 0;
-
-    for (const point of dataPoints) {
-      const predicted = intercept + slope * point.dailyBudget;
-      ssTotal += Math.pow(point.conversions - yMean, 2);
-      ssResidual += Math.pow(point.conversions - predicted, 2);
-    }
-
-    const r2 = ssTotal > 0 ? 1 - ssResidual / ssTotal : 0;
-
-    return { slope, intercept, r2 };
-  }
 
   /**
-   * Predict conversions for a given daily budget
-   */
-  predictConversions(
-    dailyBudget: number,
-    regression: RegressionResult,
-    avgCPA: number
-  ): PredictionResult {
-    const predictedConversions = Math.max(
-      0,
-      regression.intercept + regression.slope * dailyBudget
-    );
-    const predictedCost = dailyBudget;
-    const expectedCPA = predictedConversions > 0
-      ? predictedCost / predictedConversions
-      : avgCPA;
-
-    // Assume $50 value per conversion (configurable)
-    const conversionValue = 50;
-    const revenue = predictedConversions * conversionValue;
-    const roi = predictedCost > 0 ? ((revenue - predictedCost) / predictedCost) * 100 : 0;
-
-    return {
-      dailyBudget,
-      predictedConversions: Math.round(predictedConversions * 100) / 100,
-      predictedCost,
-      expectedCPA: Math.round(expectedCPA * 100) / 100,
-      roi: Math.round(roi * 100) / 100,
-    };
-  }
-
-  /**
-   * Find optimal budget that maximizes ROI
-   */
-  findOptimalBudget(
-    regression: RegressionResult,
-    avgCPA: number,
-    currentBudget: number,
-    maxBudget: number
-  ): PredictionResult {
-    const conversionValue = 50; // Configurable
-    const step = currentBudget * 0.1; // Test 10% increments
-    let bestBudget = currentBudget;
-    let bestROI = -Infinity;
-
-    // Test different budget levels
-    for (let budget = currentBudget * 0.5; budget <= maxBudget * 1.5; budget += step) {
-      const prediction = this.predictConversions(budget, regression, avgCPA);
-      if (prediction.roi > bestROI) {
-        bestROI = prediction.roi;
-        bestBudget = budget;
-      }
-    }
-
-    return this.predictConversions(bestBudget, regression, avgCPA);
-  }
-
-  /**
-   * Project monthly outcomes based on daily metrics
+   * Extrapola métricas diarias a mensuales (× daysInMonth).
+   *
+   * Si hay conversion_value configurado (tabla account_conversion_config):
+   *   revenue = conversiones_mensuales × conversion_value
+   *   profit  = revenue - costo_mensual
+   *   ROI     = (profit / costo_mensual) × 100 (%)
+   *
+   * @param conversionValue - null si no hay configuración de valor por conversión
    */
   projectMonthly(
     dailyBudget: number,
     dailyConversions: number,
     dailyCost: number,
-    daysInMonth: number = 30
+    conversionValue: number | null,
+    daysInMonth: number = 30,
   ) {
     const monthlyBudget = dailyBudget * daysInMonth;
     const monthlyConversions = dailyConversions * daysInMonth;
     const monthlyCost = dailyCost * daysInMonth;
     const cpa = monthlyConversions > 0 ? monthlyCost / monthlyConversions : 0;
 
-    const conversionValue = 50;
-    const revenue = monthlyConversions * conversionValue;
-    const profit = revenue - monthlyCost;
-    const roi = monthlyCost > 0 ? (profit / monthlyCost) * 100 : 0;
-
-    return {
-      monthlyBudget: Math.round(monthlyBudget * 100) / 100,
+    const result: any = {
+      monthlyBudget: round2(monthlyBudget),
       monthlyConversions: Math.round(monthlyConversions),
-      monthlyCost: Math.round(monthlyCost * 100) / 100,
-      monthlyRevenue: Math.round(revenue * 100) / 100,
-      monthlyProfit: Math.round(profit * 100) / 100,
-      averageCPA: Math.round(cpa * 100) / 100,
-      roi: Math.round(roi * 100) / 100,
+      monthlyCost: round2(monthlyCost),
+      averageCPA: round2(cpa),
     };
+
+    if (conversionValue !== null && conversionValue > 0) {
+      const revenue = monthlyConversions * conversionValue;
+      const profit = revenue - monthlyCost;
+      result.monthlyRevenue = round2(revenue);
+      result.monthlyProfit = round2(profit);
+      result.roi = monthlyCost > 0 ? round2((profit / monthlyCost) * 100) : 0;
+      result.conversionValueSource = 'configured';
+    }
+
+    return result;
   }
 
   /**
-   * Get predictive budget analysis for an account
-   * Fetches historical data and generates predictions
+   * Análisis predictivo completo para una cuenta de Google Ads.
+   *
+   * QUERY SQL (3 CTEs):
+   *   1. daily_metrics: agrupa google_ads_snapshots por fecha para la cuenta,
+   *      solo campañas ENABLED con cost > 0. Trae TODO el historial (≤ dateTo).
+   *      Campos: costo, conversiones, clicks, impressions, presupuesto,
+   *      impression_share, budget_lost_is, rank_lost_is, day_of_week, month
+   *   2. keyword_quality: promedio de quality_score por fecha desde
+   *      google_ads_keyword_snapshots
+   *   3. conversion_config: valor por conversión desde account_conversion_config
+   *
+   * PIPELINE DE ML:
+   *   1. Parse de filas → DailyRow[]
+   *   2. validateDataQuality() → score 0-100 + warnings
+   *   3. buildFeatureMatrix() → matriz X[n×9] + vector Y[n]
+   *   4. fitOLS() → regresión: ln(budget) + IS + QS + estacionalidad → conversiones
+   *   5. Rendimiento actual: media de últimos 30 días
+   *   6. decomposeSeasonality() → patrones semanal y mensual
+   *   7. 6 escenarios: [0.7x, 0.85x, 1.0x, 1.15x, 1.3x, 1.5x] del presupuesto actual
+   *   8. Búsqueda de óptimo: 50% a 200% en pasos de 5%, minimiza CPA
+   *   9. Recomendación en español + warning si R² < 0.6
    */
   async getPredictiveAnalysis(params: {
     accountId: string;
     dateFrom: string;
     dateTo: string;
-    daysOfHistoryForRegression?: number;
   }) {
-    const historyDays = params.daysOfHistoryForRegression || 30;
-    const conversionValue = 50;
-
-    // Calculate date ranges
-    const toDate = new Date(params.dateTo);
-    const fromDate = new Date(params.dateFrom);
-    const historyFromDate = new Date(toDate);
-    historyFromDate.setDate(historyFromDate.getDate() - historyDays);
-
+    // Pull ALL historical data for this account
     const sql = `
-      WITH daily_budget_performance AS (
+      WITH daily_metrics AS (
         SELECT
-          gs.snapshot_date,
-          c.customer_account_id,
-          COALESCE(c.daily_budget, 0) AS daily_budget,
-          SUM(gs.cost) AS daily_cost,
-          SUM(gs.conversions) AS daily_conversions,
-          SUM(gs.clicks) AS daily_clicks,
-          CASE WHEN SUM(gs.conversions) > 0
-            THEN ROUND(SUM(gs.cost) / SUM(gs.conversions), 2)
-            ELSE 0
-          END AS daily_cpa
+          gs.snapshot_date::text AS snapshot_date,
+          SUM(gs.cost)::numeric AS daily_cost,
+          SUM(gs.conversions)::numeric AS daily_conversions,
+          SUM(gs.clicks)::int AS daily_clicks,
+          SUM(gs.impressions)::int AS daily_impressions,
+          AVG(COALESCE(gs.daily_budget, c.daily_budget))::numeric AS avg_daily_budget,
+          AVG(gs.search_impression_share)::numeric AS avg_impression_share,
+          AVG(gs.search_budget_lost_is)::numeric AS avg_budget_lost_is,
+          AVG(gs.search_rank_lost_is)::numeric AS avg_rank_lost_is,
+          EXTRACT(DOW FROM gs.snapshot_date)::int AS day_of_week,
+          EXTRACT(MONTH FROM gs.snapshot_date)::int AS month_of_year
         FROM google_ads_snapshots gs
         JOIN campaigns c ON c.id = gs.campaign_id
         WHERE c.customer_account_id = $1
-          AND gs.snapshot_date BETWEEN $2 AND $3
-        GROUP BY gs.snapshot_date, c.customer_account_id, c.daily_budget
+          AND c.ads_status = 'ENABLED'
+          AND gs.snapshot_date <= $2
+        GROUP BY gs.snapshot_date
+        ORDER BY gs.snapshot_date
       ),
-      aggregated_metrics AS (
+      keyword_quality AS (
         SELECT
-          daily_budget,
-          SUM(daily_cost) AS total_cost,
-          SUM(daily_conversions) AS total_conversions,
-          SUM(daily_clicks) AS total_clicks,
-          COUNT(*) AS days_count,
-          ROUND(AVG(daily_cpa), 2) AS avg_cpa,
-          ROUND(SUM(daily_cost) / NULLIF(SUM(daily_conversions), 0), 2) AS overall_cpa
-        FROM daily_budget_performance
-        GROUP BY daily_budget
-        HAVING SUM(daily_cost) > 0
+          ks.snapshot_date::text AS snapshot_date,
+          AVG(ks.quality_score)::numeric AS avg_quality_score
+        FROM google_ads_keyword_snapshots ks
+        JOIN campaigns c ON c.id = ks.campaign_id
+        WHERE c.customer_account_id = $1
+          AND ks.quality_score IS NOT NULL
+          AND ks.snapshot_date <= $2
+        GROUP BY ks.snapshot_date
       ),
-      current_metrics AS (
-        SELECT
-          COALESCE(AVG(total_cost), 0) AS avg_daily_cost,
-          COALESCE(SUM(total_conversions) / NULLIF(SUM(days_count), 0), 0) AS avg_daily_conversions,
-          COALESCE(AVG(overall_cpa), 0) AS overall_cpa,
-          MAX(daily_budget) AS current_budget
-        FROM aggregated_metrics
+      conversion_config AS (
+        SELECT conversion_value
+        FROM account_conversion_config
+        WHERE customer_account_id = $1
       )
       SELECT
-        am.*,
-        cm.avg_daily_cost,
-        cm.avg_daily_conversions,
-        cm.overall_cpa,
-        cm.current_budget
-      FROM aggregated_metrics am
-      CROSS JOIN current_metrics cm
-      ORDER BY am.daily_budget ASC
+        dm.*,
+        kq.avg_quality_score,
+        cc.conversion_value
+      FROM daily_metrics dm
+      LEFT JOIN keyword_quality kq ON kq.snapshot_date = dm.snapshot_date
+      LEFT JOIN conversion_config cc ON true
+      WHERE dm.daily_cost > 0
+      ORDER BY dm.snapshot_date
     `;
 
     try {
-      const result = await query(sql, [params.accountId, historyFromDate.toISOString().split('T')[0], params.dateTo]);
+      const result = await query(sql, [params.accountId, params.dateTo]);
 
       if (result.rows.length === 0) {
         return {
-          error: 'Insufficient data for prediction',
-          recommendation: 'Need at least 7 days of data with varying budgets',
+          error: 'Datos insuficientes para prediccion',
+          recommendation: 'Se necesitan datos historicos con gasto > 0',
         };
       }
 
-      // Convert to regression data points
-      const dataPoints: BudgetPoint[] = result.rows.map((row: any) => ({
-        dailyBudget: parseFloat(row.daily_budget) || 0,
-        conversions: parseFloat(row.total_conversions) || 0,
-        cost: parseFloat(row.total_cost) || 0,
-        clicks: parseFloat(row.total_clicks) || 0,
+      // Parse rows
+      const conversionValue: number | null = result.rows[0].conversion_value
+        ? parseFloat(result.rows[0].conversion_value)
+        : null;
+
+      const dailyRows: DailyRow[] = result.rows.map((r: any) => ({
+        snapshot_date: r.snapshot_date,
+        daily_cost: parseFloat(r.daily_cost) || 0,
+        daily_conversions: parseFloat(r.daily_conversions) || 0,
+        daily_clicks: parseInt(r.daily_clicks) || 0,
+        daily_impressions: parseInt(r.daily_impressions) || 0,
+        avg_daily_budget: parseFloat(r.avg_daily_budget) || 0,
+        avg_impression_share: r.avg_impression_share !== null ? parseFloat(r.avg_impression_share) : null,
+        avg_budget_lost_is: r.avg_budget_lost_is !== null ? parseFloat(r.avg_budget_lost_is) : null,
+        avg_rank_lost_is: r.avg_rank_lost_is !== null ? parseFloat(r.avg_rank_lost_is) : null,
+        avg_quality_score: r.avg_quality_score !== null ? parseFloat(r.avg_quality_score) : null,
+        day_of_week: parseInt(r.day_of_week) || 0,
+        month_of_year: parseInt(r.month_of_year) || 1,
       }));
 
-      // Calculate regression
-      const regression = this.calculateRegression(dataPoints);
+      // 1. Data quality validation
+      const dataQuality = validateDataQuality(dailyRows);
 
-      if (regression.r2 < 0.3) {
+      // 2. Build feature matrix and fit regression
+      const { X, Y, featureNames } = buildFeatureMatrix(dailyRows, 'conversions');
+      const regression = fitOLS(X, Y, featureNames);
+
+      if (!regression) {
         return {
-          error: 'Low model confidence (R² < 0.3)',
-          recommendation: 'Insufficient correlation between budget and conversions. Need more varied budget levels.',
-          rSquared: regression.r2,
+          error: 'No fue posible ajustar el modelo de regresion (matriz singular)',
+          recommendation: 'Los datos pueden ser demasiado uniformes. Se necesita mas variacion en presupuesto/metricas.',
+          dataQuality,
         };
       }
 
-      const currentBudget = result.rows[result.rows.length - 1].current_budget || 100;
-      const avgCPA = result.rows[0].overall_cpa || 0;
-      const currentMetrics = result.rows[0];
+      // 3. Current performance
+      const recentDays = dailyRows.slice(-30);
+      const currentBudget = mean(recentDays.map(r => r.avg_daily_budget));
+      const avgDailyCost = mean(recentDays.map(r => r.daily_cost));
+      const avgDailyConversions = mean(recentDays.map(r => r.daily_conversions));
+      const avgCPA = avgDailyConversions > 0 ? avgDailyCost / avgDailyConversions : 0;
 
-      // Get optimal prediction
-      const optimal = this.findOptimalBudget(
-        regression,
-        avgCPA,
-        currentBudget,
-        currentBudget * 3 // Max 3x current budget for recommendations
+      // 4. Seasonal decomposition
+      const decomposition = decomposeSeasonality(
+        dailyRows.map(r => r.daily_conversions),
+        dailyRows.map(r => r.snapshot_date),
       );
 
-      // Generate budget scenarios
-      const scenarios = [
-        this.predictConversions(currentBudget * 0.7, regression, avgCPA),
-        this.predictConversions(currentBudget * 0.9, regression, avgCPA),
-        this.predictConversions(currentBudget, regression, avgCPA),
-        this.predictConversions(currentBudget * 1.1, regression, avgCPA),
-        this.predictConversions(currentBudget * 1.3, regression, avgCPA),
-        this.predictConversions(currentBudget * 1.5, regression, avgCPA),
-      ];
+      // 5. Generate budget scenarios with confidence intervals
+      const budgetMultipliers = [0.7, 0.85, 1.0, 1.15, 1.3, 1.5];
+      const scenarios: BudgetScenario[] = budgetMultipliers.map(mult => {
+        const scenarioBudget = currentBudget * mult;
+        const prediction = this.predictForBudget(
+          scenarioBudget, regression, recentDays, conversionValue,
+        );
+        return prediction;
+      });
 
-      // Monthly projections
-      const currentMonthly = this.projectMonthly(
-        currentBudget,
-        currentMetrics.avg_daily_conversions,
-        currentMetrics.avg_daily_cost
-      );
-
-      const optimalMonthly = this.projectMonthly(
-        optimal.dailyBudget,
-        optimal.predictedConversions,
-        optimal.predictedCost
-      );
-
-      // Recommendation
-      let recommendation = '';
-      const budgetDelta = optimal.dailyBudget - currentBudget;
-      const roiDelta = optimal.roi - scenarios[2].roi;
-
-      if (budgetDelta > 0) {
-        recommendation = `Increase budget by $${budgetDelta.toFixed(2)}/day to maximize ROI (+${roiDelta.toFixed(1)}%)`;
-      } else if (budgetDelta < 0) {
-        recommendation = `Reduce budget by $${Math.abs(budgetDelta).toFixed(2)}/day to improve efficiency (+${roiDelta.toFixed(1)}% ROI)`;
-      } else {
-        recommendation = 'Current budget is near optimal. Monitor and adjust based on market conditions.';
+      // 6. Find optimal budget (min CPA with positive conversions)
+      let bestScenario = scenarios[2]; // default: current
+      let bestCPA = Infinity;
+      const step = currentBudget * 0.05;
+      for (let budget = currentBudget * 0.5; budget <= currentBudget * 2.0; budget += step) {
+        const pred = this.predictForBudget(budget, regression, recentDays, conversionValue);
+        if (pred.predictedConversions > 0 && pred.expectedCPA < bestCPA) {
+          bestCPA = pred.expectedCPA;
+          bestScenario = pred;
+        }
       }
+
+      // 7. Build recommendation text
+      const budgetDelta = bestScenario.dailyBudget - currentBudget;
+      let recommendation: string;
+      if (Math.abs(budgetDelta) < currentBudget * 0.05) {
+        recommendation = 'Presupuesto actual esta cerca del optimo. Monitorear y ajustar segun condiciones del mercado.';
+      } else if (budgetDelta > 0) {
+        const pctChange = ((budgetDelta / currentBudget) * 100).toFixed(0);
+        recommendation = `Incrementar presupuesto un ${pctChange}% ($${budgetDelta.toFixed(2)}/dia) para mejorar CPA de $${avgCPA.toFixed(2)} a $${bestScenario.expectedCPA.toFixed(2)}`;
+      } else {
+        const pctChange = ((Math.abs(budgetDelta) / currentBudget) * 100).toFixed(0);
+        recommendation = `Reducir presupuesto un ${pctChange}% ($${Math.abs(budgetDelta).toFixed(2)}/dia) para mejorar eficiencia. CPA estimado: $${bestScenario.expectedCPA.toFixed(2)}`;
+      }
+
+      // 8. Warn if model quality is low
+      const modelWarning = regression.r2 < 0.6
+        ? `Calidad del modelo baja (R²=${regression.r2.toFixed(3)}). Las predicciones deben tomarse con precaucion. Se necesitan datos con mayor variacion.`
+        : undefined;
 
       return {
         modelQuality: {
-          r2: Math.round(regression.r2 * 1000) / 1000,
-          slope: Math.round(regression.slope * 1000) / 1000,
-          intercept: Math.round(regression.intercept * 1000) / 1000,
-          equation: `Conversions = ${regression.intercept.toFixed(2)} + ${regression.slope.toFixed(4)} × Budget`,
-          description: 'Linear regression model: Daily Budget → Daily Conversions',
+          r2: round3(regression.r2),
+          adjustedR2: round3(regression.adjustedR2),
+          rmse: round3(regression.rmse),
+          equation: regression.equation,
+          description: 'Regresion log-lineal multi-variable: ln(Budget) + ImpressionShare + QualityScore + Estacionalidad → Conversiones',
+          featureImportance: regression.featureImportance.map(f => ({
+            feature: f.feature,
+            coefficient: round4(f.coefficient),
+            pValue: round4(f.pValue),
+            significant: f.significant,
+          })),
+          nObservations: regression.nObservations,
+          dataRange: {
+            from: dailyRows[0].snapshot_date,
+            to: dailyRows[dailyRows.length - 1].snapshot_date,
+          },
+          warning: modelWarning,
         },
         currentPerformance: {
-          dailyBudget: currentBudget,
-          dailyCost: currentMetrics.avg_daily_cost,
-          dailyConversions: currentMetrics.avg_daily_conversions,
-          cpa: currentMetrics.overall_cpa,
-          roi: scenarios[2].roi,
+          dailyBudget: round2(currentBudget),
+          dailyCost: round2(avgDailyCost),
+          dailyConversions: round2(avgDailyConversions),
+          cpa: round2(avgCPA),
+          ...(conversionValue !== null ? {
+            roi: avgDailyCost > 0 ? round2(((avgDailyConversions * conversionValue - avgDailyCost) / avgDailyCost) * 100) : 0,
+            conversionValueSource: 'configured',
+          } : {}),
         },
         optimalRecommendation: {
-          ...optimal,
-          monthlyProjection: optimalMonthly,
+          ...bestScenario,
+          monthlyProjection: this.projectMonthly(
+            bestScenario.dailyBudget, bestScenario.predictedConversions,
+            bestScenario.dailyBudget, conversionValue,
+          ),
           recommendation,
-          budgetAdjustment: budgetDelta,
-          expectedROIImprovement: roiDelta,
+          budgetAdjustment: round2(budgetDelta),
         },
-        budgetScenarios: scenarios.map(s => ({
-          ...s,
-          monthlyProjection: this.projectMonthly(s.dailyBudget, s.predictedConversions, s.predictedCost),
-        })),
+        budgetScenarios: scenarios,
+        seasonalPatterns: {
+          weeklyEffect: decomposition.seasonalWeekly.map(v => round3(v)),
+          monthlyEffect: decomposition.seasonalMonthly.map(v => round3(v)),
+          weeklyStrength: round3(decomposition.weeklyStrength),
+          monthlyStrength: round3(decomposition.monthlyStrength),
+        },
+        dataQuality,
         historicalData: {
-          dataPoints: dataPoints.length,
+          dataPoints: dailyRows.length,
           dateRange: {
-            from: historyFromDate.toISOString().split('T')[0],
-            to: params.dateTo,
+            from: dailyRows[0].snapshot_date,
+            to: dailyRows[dailyRows.length - 1].snapshot_date,
           },
-          averageDailyMetrics: currentMetrics,
         },
       };
     } catch (err) {
@@ -348,6 +359,88 @@ export class PredictiveBudgetService {
       throw err;
     }
   }
+
+  /**
+   * Predice conversiones para un presupuesto hipotético usando el modelo de regresión.
+   *
+   * Construye un vector de features xNew con 9 valores:
+   *   [1, ln(budget+1), medianIS, 1-medianBLIS, medianQS/10, sin_dow=0, cos_dow=1, sin_month=0, cos_month=1]
+   *
+   * NOTA: sin/cos de día y mes se fijan en 0/1 (punto neutral = promedio).
+   * Esto da una predicción "promedio" sin sesgo estacional.
+   *
+   * Las medianas de IS, BLIS y QS se calculan de los últimos 30 días
+   * (recentDays). Si cambias los features en buildFeatureMatrix(),
+   * DEBES actualizar este vector también.
+   *
+   * @param dailyBudget - Presupuesto diario a simular
+   * @param regression - Modelo OLS ya ajustado
+   * @param recentDays - Últimos 30 días de datos para calcular medianas
+   * @param conversionValue - Valor por conversión (null si no configurado)
+   */
+  private predictForBudget(
+    dailyBudget: number,
+    regression: RegressionResult,
+    recentDays: DailyRow[],
+    conversionValue: number | null,
+  ): BudgetScenario {
+    // Build a feature vector for prediction using recent medians for non-budget features
+    const medianIS = sortedMedianFrom(recentDays.map(r => r.avg_impression_share).filter(v => v !== null) as number[]);
+    const medianBLIS = sortedMedianFrom(recentDays.map(r => r.avg_budget_lost_is).filter(v => v !== null) as number[]);
+    const medianQS = sortedMedianFrom(recentDays.map(r => r.avg_quality_score).filter(v => v !== null) as number[]);
+
+    // Use average day-of-week and month (neutral seasonal point)
+    const xNew = [
+      1, // intercept
+      Math.log(dailyBudget + 1),
+      medianIS,
+      1 - medianBLIS,
+      medianQS / 10,
+      0, // sin_dow = 0 (average across week)
+      1, // cos_dow = 1 (average across week)
+      0, // sin_month = 0 (average across year)
+      1, // cos_month = 1 (average across year)
+    ];
+
+    const prediction = predictWithCI(regression, xNew);
+    const expectedCPA = prediction.predicted > 0 ? dailyBudget / prediction.predicted : 0;
+
+    const monthly = this.projectMonthly(
+      dailyBudget, prediction.predicted, dailyBudget, conversionValue,
+    );
+
+    return {
+      dailyBudget: round2(dailyBudget),
+      predictedConversions: round2(prediction.predicted),
+      expectedCPA: round2(expectedCPA),
+      ci80: { lower: round2(prediction.ci80Lower), upper: round2(prediction.ci80Upper) },
+      ci95: { lower: round2(prediction.ci95Lower), upper: round2(prediction.ci95Upper) },
+      monthlyProjection: monthly,
+    };
+  }
 }
 
+// ── Helpers ──
+
+/** Redondea a 2 decimales */
+function round2(v: number): number { return Math.round(v * 100) / 100; }
+/** Redondea a 3 decimales */
+function round3(v: number): number { return Math.round(v * 1000) / 1000; }
+/** Redondea a 4 decimales */
+function round4(v: number): number { return Math.round(v * 10000) / 10000; }
+
+/** Media aritmética. Retorna 0 si array vacío */
+function mean(arr: number[]): number {
+  return arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+}
+
+/** Mediana de un array (crea copia ordenada). Promedia los 2 centrales si par */
+function sortedMedianFrom(arr: number[]): number {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+/** Singleton — se importa como `predictiveBudgetService` en otros servicios */
 export const predictiveBudgetService = new PredictiveBudgetService();
