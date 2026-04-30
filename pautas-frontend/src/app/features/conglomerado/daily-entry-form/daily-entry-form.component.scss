@@ -218,6 +218,15 @@ $radius-xl: 1rem;
 // ============================================
 // UPLOAD AREA
 // ============================================
+.section-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: $spacing-sm;
+}
+
 .upload-area {
   display: flex;
   flex-direction: column;
@@ -248,6 +257,12 @@ $radius-xl: 1rem;
     border-color: $color-secondary;
     background-color: color.adjust($color-secondary, $alpha: -0.95);
     padding: $spacing-md;
+  }
+
+  &--vouchers {
+    border-color: #198754;
+    &:hover { border-color: #198754; background-color: rgba(25, 135, 84, 0.05); }
+    &.has-file { border-color: #198754; background-color: rgba(25, 135, 84, 0.05); }
   }
 }
 

@@ -18,8 +18,12 @@ import { NotificationService } from '../../../core/services/notification.service
 export class DailyEntryFormComponent implements OnInit {
   form: FormGroup;
   today = new Date();
+  // Soporte images
   selectedFiles: File[] = [];
   imagePreviews: string[] = [];
+  // Comprobantes de pago (vouchers)
+  selectedVouchers: File[] = [];
+  voucherPreviews: string[] = [];
   submitting = false;
   alreadySubmitted = false;
 
@@ -33,6 +37,7 @@ export class DailyEntryFormComponent implements OnInit {
       clientes: [null, [Validators.required, Validators.min(0)]],
       clientes_efectivos: [null, [Validators.required, Validators.min(0)]],
       menores: [null, [Validators.required, Validators.min(0)]],
+      cierre: [null, [Validators.min(0)]],
     });
   }
 
@@ -50,12 +55,24 @@ export class DailyEntryFormComponent implements OnInit {
         if (this.selectedFiles.length >= 10) break;
         this.selectedFiles.push(file);
         const reader = new FileReader();
-        reader.onload = (e) => {
-          this.imagePreviews.push(e.target?.result as string);
-        };
+        reader.onload = (e) => { this.imagePreviews.push(e.target?.result as string); };
         reader.readAsDataURL(file);
       }
-      // Reset input so the same file can be selected again
+      input.value = '';
+    }
+  }
+
+  onVouchersSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const newFiles = Array.from(input.files);
+      for (const file of newFiles) {
+        if (this.selectedVouchers.length >= 10) break;
+        this.selectedVouchers.push(file);
+        const reader = new FileReader();
+        reader.onload = (e) => { this.voucherPreviews.push(e.target?.result as string); };
+        reader.readAsDataURL(file);
+      }
       input.value = '';
     }
   }
@@ -63,6 +80,11 @@ export class DailyEntryFormComponent implements OnInit {
   removeFile(index: number): void {
     this.selectedFiles.splice(index, 1);
     this.imagePreviews.splice(index, 1);
+  }
+
+  removeVoucher(index: number): void {
+    this.selectedVouchers.splice(index, 1);
+    this.voucherPreviews.splice(index, 1);
   }
 
   onSubmit(): void {
@@ -73,8 +95,14 @@ export class DailyEntryFormComponent implements OnInit {
     formData.append('clientes', this.form.value.clientes.toString());
     formData.append('clientes_efectivos', this.form.value.clientes_efectivos.toString());
     formData.append('menores', this.form.value.menores.toString());
+    if (this.form.value.cierre !== null && this.form.value.cierre !== '') {
+      formData.append('cierre', this.form.value.cierre.toString());
+    }
     for (const file of this.selectedFiles) {
       formData.append('soporte', file);
+    }
+    for (const voucher of this.selectedVouchers) {
+      formData.append('vouchers', voucher);
     }
 
     this.conglomeradoService.submitEntry(formData).subscribe({

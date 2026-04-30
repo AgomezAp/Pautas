@@ -17,37 +17,54 @@ export class ConglomeradoController {
 
   async createEntry(req: Request, res: Response, next: NextFunction) {
     try {
-      const { clientes, clientes_efectivos, menores } = req.body;
-      const files = (req.files as Express.Multer.File[]) || [];
+      const { clientes, clientes_efectivos, menores, cierre } = req.body;
+      const allFiles = req.files as { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
 
-      // Process each uploaded image
-      const images: { imagePath: string; originalName: string; thumbPath: string | null }[] = [];
-      for (const file of files) {
-        let imagePath = file.path.replace(/\\/g, '/');
-        let thumbPath: string | null = null;
-        const originalName = file.originalname;
+      // Support both array (single field) and object (multiple fields) from multer
+      const soporteFiles: Express.Multer.File[] = Array.isArray(allFiles)
+        ? allFiles.filter((f: Express.Multer.File) => f.fieldname === 'soporte')
+        : (allFiles as any)['soporte'] || [];
+      const voucherFiles: Express.Multer.File[] = Array.isArray(allFiles)
+        ? allFiles.filter((f: Express.Multer.File) => f.fieldname === 'vouchers')
+        : (allFiles as any)['vouchers'] || [];
 
-        try {
-          const processed = await imageProcessingService.processUploadedImage(imagePath);
-          imagePath = processed.mainPath.replace(/\\/g, '/');
-          thumbPath = processed.thumbPath ? processed.thumbPath.replace(/\\/g, '/') : null;
-        } catch (imgErr: any) {
-          logger.warn(`Image processing failed, using original: ${imgErr.message}`);
+      const processFiles = async (files: Express.Multer.File[]) => {
+        const result: { imagePath: string; originalName: string; thumbPath: string | null }[] = [];
+        for (const file of files) {
+          let imagePath = file.path.replace(/\\/g, '/');
+          let thumbPath: string | null = null;
+          const originalName = file.originalname;
+          try {
+            const processed = await imageProcessingService.processUploadedImage(imagePath);
+            imagePath = processed.mainPath.replace(/\\/g, '/');
+            thumbPath = processed.thumbPath ? processed.thumbPath.replace(/\\/g, '/') : null;
+          } catch (imgErr: any) {
+            logger.warn(`Image processing failed, using original: ${imgErr.message}`);
+          }
+          result.push({
+            imagePath: toRelativeImagePath(imagePath),
+            originalName,
+            thumbPath: thumbPath ? toRelativeImagePath(thumbPath) : null,
+          });
         }
+        return result;
+      };
 
-        images.push({
-          imagePath: toRelativeImagePath(imagePath),
-          originalName,
-          thumbPath: thumbPath ? toRelativeImagePath(thumbPath) : null,
-        });
-      }
+      const images = await processFiles(soporteFiles);
+      const vouchers = await processFiles(voucherFiles);
 
       const entry = await conglomeradoService.createEntry(
         req.user!.sub,
         req.user!.countryId!,
         req.user!.campaignId,
-        { clientes: parseInt(clientes), clientes_efectivos: parseInt(clientes_efectivos), menores: parseInt(menores) },
+        {
+          clientes: parseInt(clientes),
+          clientes_efectivos: parseInt(clientes_efectivos),
+          menores: parseInt(menores),
+          cierre: cierre !== undefined && cierre !== '' ? parseFloat(cierre) : null,
+        },
         images,
+        vouchers,
         req.ip
       );
 

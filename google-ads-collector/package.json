@@ -1,0 +1,30 @@
+{
+  "name": "google-ads-collector",
+  "version": "1.0.0",
+  "description": "Servicio de recolección de datos raw desde la API de Google Ads",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "migrate": "ts-node -r dotenv/config src/database/migrate.ts",
+    "sync": "ts-node -r dotenv/config src/app.ts --run-once"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "google-ads-api": "^23.0.0",
+    "node-cron": "^3.0.3",
+    "pg": "^8.13.0",
+    "winston": "^3.14.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.11.10",
+    "nodemon": "^3.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

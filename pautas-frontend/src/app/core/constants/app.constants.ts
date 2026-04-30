@@ -3,6 +3,7 @@ export enum UserRole {
   CONGLOMERADO = 'conglomerado',
   PAUTADOR = 'pautador',
   GESTION = 'gestion_administrativa',
+  CONTABILIDAD = 'contabilidad',
 }
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -10,6 +11,7 @@ export const ROLE_LABELS: Record<string, string> = {
   conglomerado: 'Conglomerado',
   pautador: 'Pautador',
   gestion_administrativa: 'Gestión Administrativa',
+  contabilidad: 'Contabilidad',
 };
 
 export const ROLE_ROUTES: Record<string, string> = {
@@ -17,4 +19,5 @@ export const ROLE_ROUTES: Record<string, string> = {
   conglomerado: '/conglomerado',
   pautador: '/pautadores',
   gestion_administrativa: '/gestion',
+  contabilidad: '/contabilidad',
 };

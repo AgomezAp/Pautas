@@ -29,6 +29,10 @@ export const PAUTADORES_ROUTES: Routes = [
         path: 'ranking',
         loadComponent: () => import('../alerts/conglomerate-ranking/conglomerate-ranking.component').then(m => m.ConglomerateRankingComponent),
       },
+      {
+        path: 'campaign-reports',
+        loadComponent: () => import('./campaign-reports/campaign-reports.component').then(m => m.PautadorCampaignReportsComponent),
+      },
     ],
   },
 ];

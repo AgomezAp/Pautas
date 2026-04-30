@@ -1,0 +1,86 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons page-title__icon">campaign</span>
+      Reportes de Cambio de Pautadores
+    </h1>
+  </div>
+
+  <!-- Filters -->
+  <div class="card filter-card">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label class="form-label">Buscar campaña</label>
+        <input class="form-control" type="text" [(ngModel)]="filterCampaign"
+               placeholder="Nombre de campaña..." />
+      </div>
+      <div class="filter-group">
+        <label class="form-label">Desde</label>
+        <input class="form-control" type="date" [(ngModel)]="filterDateFrom" />
+      </div>
+      <div class="filter-group">
+        <label class="form-label">Hasta</label>
+        <input class="form-control" type="date" [(ngModel)]="filterDateTo" />
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="applyFilters()">
+          <span class="material-icons">search</span> Filtrar
+        </button>
+        <button class="btn btn-outline-secondary" (click)="clearFilters()">
+          <span class="material-icons">clear</span> Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    @if (loading) {
+      <div class="loading-state">
+        <span class="material-icons spin">autorenew</span> Cargando reportes...
+      </div>
+    } @else if (reports.length === 0) {
+      <p class="empty-state">No hay reportes para los filtros seleccionados.</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Pautador</th>
+              <th>Campaña</th>
+              <th>País</th>
+              <th>Descripción</th>
+              <th>Enviado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of reports; track r.id) {
+              <tr>
+                <td><strong>{{ r.pautador_name }}</strong></td>
+                <td>{{ r.campaign_name }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ r.country_name }}</span>
+                </td>
+                <td class="description-cell">{{ r.description }}</td>
+                <td class="date-cell">{{ r.sent_at | date:'dd/MM/yyyy HH:mm' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages > 1) {
+        <div class="pagination-bar">
+          <button class="btn btn-sm btn-outline-secondary" (click)="prevPage()" [disabled]="page === 1">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          <span class="pagination-label">Página {{ page }} de {{ totalPages }}</span>
+          <button class="btn btn-sm btn-outline-secondary" (click)="nextPage()" [disabled]="page >= totalPages">
+            <span class="material-icons">chevron_right</span>
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>

@@ -1,0 +1,98 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons page-title__icon">campaign</span>
+      Reportar Cambios en Campaña
+    </h1>
+    <p class="page-subtitle">Notifica a gestión sobre cambios relevantes en tus campañas. El reporte se envía automáticamente después de 5 minutos sin editar.</p>
+  </div>
+
+  <!-- Form card -->
+  <div class="card report-card">
+    <h2 class="card__title">Nuevo Reporte</h2>
+
+    <!-- Campaign selector -->
+    <div class="form-group">
+      <label class="form-label" for="campaignSelect">Campaña afectada *</label>
+      <select id="campaignSelect" class="form-control"
+              [(ngModel)]="selectedCampaignId"
+              (change)="onDescriptionChange()"
+              [disabled]="sending">
+        <option [ngValue]="null" disabled>— Selecciona una campaña —</option>
+        @for (c of campaigns; track c.id) {
+          <option [ngValue]="c.id">{{ c.name }} ({{ c.country }})</option>
+        }
+      </select>
+    </div>
+
+    <!-- Description textarea -->
+    <div class="form-group">
+      <label class="form-label" for="description">Descripción del cambio *</label>
+      <textarea id="description" class="form-control description-textarea"
+                [(ngModel)]="description"
+                (ngModelChange)="onDescriptionChange()"
+                [disabled]="sending"
+                placeholder="Describe qué cambió en la campaña: presupuesto, orientación, creatividades, etc."
+                rows="5"></textarea>
+    </div>
+
+    <!-- Countdown indicator -->
+    @if (countdownSeconds > 0 && !sending) {
+      <div class="countdown-banner">
+        <span class="material-icons countdown-banner__icon">schedule</span>
+        <span>Se enviará automáticamente en <strong>{{ countdownLabel }}</strong></span>
+        <div class="countdown-actions">
+          <button class="btn btn-primary btn-sm" (click)="sendNow()">Enviar ahora</button>
+          <button class="btn btn-outline-secondary btn-sm" (click)="cancelPending()">Cancelar</button>
+        </div>
+      </div>
+    }
+
+    @if (sending) {
+      <div class="status-msg status-msg--sending">
+        <span class="material-icons">hourglass_top</span> Enviando reporte...
+      </div>
+    }
+
+    @if (sent) {
+      <div class="status-msg status-msg--success">
+        <span class="material-icons">check_circle</span> ¡Reporte enviado exitosamente!
+      </div>
+    }
+
+    @if (errorMsg) {
+      <div class="status-msg status-msg--error">
+        <span class="material-icons">error</span> {{ errorMsg }}
+      </div>
+    }
+  </div>
+
+  <!-- History -->
+  <div class="card">
+    <h2 class="card__title">Mis reportes anteriores</h2>
+    @if (reports.length === 0) {
+      <p class="empty-state">No has enviado reportes aún.</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Campaña</th>
+              <th>Descripción</th>
+              <th>Enviado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of reports; track r.id) {
+              <tr>
+                <td><strong>{{ r.campaign_name }}</strong></td>
+                <td class="description-cell">{{ r.description }}</td>
+                <td class="date-cell">{{ r.sent_at | date:'dd/MM/yyyy HH:mm' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

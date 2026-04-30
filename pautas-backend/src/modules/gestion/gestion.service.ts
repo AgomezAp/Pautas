@@ -443,6 +443,129 @@ export class GestionService {
 
     return { id: userId, username: user.username, passwordReset: true };
   }
+
+  // ─── User Countries (multi-country for gestion_administrativa) ──────────────
+
+  async getUserCountries(userId: number): Promise<any[]> {
+    const result = await query(
+      `SELECT uc.country_id, c.name, c.code
+       FROM user_countries uc
+       JOIN countries c ON c.id = uc.country_id
+       WHERE uc.user_id = $1
+       ORDER BY c.name`,
+      [userId]
+    );
+    return result.rows;
+  }
+
+  async setUserCountries(userId: number, countryIds: number[], byUserId: number, ip?: string): Promise<void> {
+    const client = await (await import('../../config/database')).getClient();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM user_countries WHERE user_id = $1', [userId]);
+      for (const cid of countryIds) {
+        await client.query(
+          'INSERT INTO user_countries (user_id, country_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [userId, cid]
+        );
+      }
+      await client.query('COMMIT');
+      await logAudit(byUserId, 'USER_COUNTRIES_UPDATED', 'user', userId, { country_ids: countryIds }, ip);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // ─── Master Evaluations (Hoja de vida) ──────────────────────────────────────
+
+  async getMasterEvaluations(masterUserId: number): Promise<any[]> {
+    const result = await query(
+      `SELECT me.*, u.full_name AS created_by_name
+       FROM master_evaluations me
+       JOIN users u ON u.id = me.created_by
+       WHERE me.master_user_id = $1
+       ORDER BY me.created_at DESC`,
+      [masterUserId]
+    );
+    return result.rows;
+  }
+
+  async createMasterEvaluation(params: {
+    masterUserId: number;
+    createdBy: number;
+    type: 'evaluation' | 'incident' | 'campaign_change' | 'phone_history';
+    title?: string;
+    description?: string;
+    numericRating?: number;
+    phoneNumber?: string;
+    campaignChangeDate?: string;
+  }): Promise<any> {
+    // Verify target user is conglomerado
+    const userRow = await query(
+      `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1 AND r.name = 'conglomerado'`,
+      [params.masterUserId]
+    );
+    if (userRow.rows.length === 0) {
+      throw { status: 404, code: 'MASTER_NOT_FOUND', message: 'Maestro no encontrado o no es del conglomerado' };
+    }
+
+    const result = await query(
+      `INSERT INTO master_evaluations
+         (master_user_id, created_by, type, title, description, numeric_rating, phone_number, campaign_change_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        params.masterUserId, params.createdBy, params.type,
+        params.title || null, params.description || null,
+        params.numericRating || null, params.phoneNumber || null,
+        params.campaignChangeDate || null,
+      ]
+    );
+    return result.rows[0];
+  }
+
+  async deleteMasterEvaluation(id: number, byUserId: number): Promise<void> {
+    const result = await query(
+      'DELETE FROM master_evaluations WHERE id = $1 RETURNING id',
+      [id]
+    );
+    if (result.rows.length === 0) {
+      throw { status: 404, code: 'NOT_FOUND', message: 'Registro no encontrado' };
+    }
+    await logAudit(byUserId, 'MASTER_EVALUATION_DELETED', 'master_evaluation', id, {});
+  }
+
+  /** Get all conglomerado users with their phone history count (for master profiles list) */
+  async getMasterList(params: { countryId?: number }): Promise<any[]> {
+    const conditions: string[] = ["r.name = 'conglomerado'"];
+    const qParams: any[] = [];
+    let idx = 1;
+
+    if (params.countryId) {
+      conditions.push(`u.country_id = $${idx++}`);
+      qParams.push(params.countryId);
+    }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const result = await query(
+      `SELECT u.id, u.full_name, u.username, u.is_active,
+              c.name AS country_name,
+              COUNT(me.id) AS total_records,
+              COALESCE(AVG(me.numeric_rating) FILTER (WHERE me.numeric_rating IS NOT NULL), NULL) AS avg_rating
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN countries c ON c.id = u.country_id
+       LEFT JOIN master_evaluations me ON me.master_user_id = u.id
+       ${where}
+       GROUP BY u.id, c.name
+       ORDER BY u.full_name`,
+      qParams
+    );
+    return result.rows;
+  }
 }
 
 export const gestionService = new GestionService();

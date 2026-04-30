@@ -9,6 +9,14 @@
     @if (roleLabel) {
       <span class="topbar__role-badge" role="status">{{ roleLabel }}</span>
     }
+    <button class="topbar__notif-btn" (click)="markAllNotificationsRead()" aria-label="Notificaciones" title="Notificaciones">
+      <app-icon name="notifications" size="md"></app-icon>
+      @if (unreadCount > 0) {
+        <span class="topbar__notif-badge" aria-label="{{ unreadCount }} notificaciones sin leer">
+          {{ unreadCount > 99 ? '99+' : unreadCount }}
+        </span>
+      }
+    </button>
     <div ngbDropdown placement="bottom-end" class="d-inline-block">
       <button class="topbar__avatar-btn" ngbDropdownToggle
               [attr.aria-label]="'Menú de usuario: ' + userName">

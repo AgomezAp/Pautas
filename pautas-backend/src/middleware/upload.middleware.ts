@@ -40,6 +40,16 @@ export const uploadSoporte = multer({
   limits: { fileSize: env.upload.maxFileSizeMB * 1024 * 1024 },
 }).array('soporte', 10);
 
+// Accepts both soporte images and payment vouchers in a single request
+export const uploadEntryFiles = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: env.upload.maxFileSizeMB * 1024 * 1024 },
+}).fields([
+  { name: 'soporte', maxCount: 10 },
+  { name: 'vouchers', maxCount: 10 },
+]);
+
 export const uploadAdsFile = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => {

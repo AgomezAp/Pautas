@@ -244,6 +244,55 @@ $topbar-height: 64px;
 }
 
 // ============================================
+// NOTIFICATION BELL BUTTON
+// ============================================
+.topbar__notif-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid color.adjust($color-text-light, $alpha: -0.8);
+  border-radius: 0.5rem;
+  color: $color-text-light;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: $color-secondary;
+    border-color: $color-secondary;
+    color: $color-primary;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px color.adjust($color-secondary, $alpha: -0.6);
+  }
+}
+
+.topbar__notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background-color: #e53935;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+// ============================================
 // RESPONSIVE
 // ============================================
 @media (max-width: 576px) {

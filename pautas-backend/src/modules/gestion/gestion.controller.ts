@@ -179,6 +179,82 @@ export class GestionController {
       next(err);
     }
   }
+
+  // ─── User Countries ───────────────────────────────────────────────────────
+
+  async getUserCountries(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = parseInt(req.params.userId);
+      const countries = await gestionService.getUserCountries(userId);
+      return sendSuccess(res, countries);
+    } catch (err) { next(err); }
+  }
+
+  async setUserCountries(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { country_ids } = req.body;
+      if (!Array.isArray(country_ids)) {
+        return sendError(res, 'VALIDATION_ERROR', 'country_ids debe ser un arreglo', 400);
+      }
+      await gestionService.setUserCountries(userId, country_ids.map(Number), req.user!.sub, req.ip);
+      return sendSuccess(res, { updated: true });
+    } catch (err) { next(err); }
+  }
+
+  // ─── Master Evaluations (Hoja de vida) ───────────────────────────────────
+
+  async getMasterList(req: Request, res: Response, next: NextFunction) {
+    try {
+      const countryId = req.query['country_id'] ? parseInt(req.query['country_id'] as string) : undefined;
+      const list = await gestionService.getMasterList({ countryId });
+      return sendSuccess(res, list);
+    } catch (err) { next(err); }
+  }
+
+  async getMasterEvaluations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const masterUserId = parseInt(req.params.masterUserId);
+      const evals = await gestionService.getMasterEvaluations(masterUserId);
+      return sendSuccess(res, evals);
+    } catch (err) { next(err); }
+  }
+
+  async createMasterEvaluation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const masterUserId = parseInt(req.params.masterUserId);
+      const { type, title, description, numeric_rating, phone_number, campaign_change_date } = req.body;
+      const validTypes = ['evaluation', 'incident', 'campaign_change', 'phone_history'];
+      if (!validTypes.includes(type)) {
+        return sendError(res, 'VALIDATION_ERROR', `Tipo inválido. Válidos: ${validTypes.join(', ')}`, 400);
+      }
+      const evaluation = await gestionService.createMasterEvaluation({
+        masterUserId,
+        createdBy: req.user!.sub,
+        type,
+        title,
+        description,
+        numericRating: numeric_rating ? parseInt(numeric_rating) : undefined,
+        phoneNumber: phone_number,
+        campaignChangeDate: campaign_change_date,
+      });
+      return sendCreated(res, evaluation);
+    } catch (err: any) {
+      if (err.status) return sendError(res, err.code, err.message, err.status);
+      next(err);
+    }
+  }
+
+  async deleteMasterEvaluation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = parseInt(req.params.evalId);
+      await gestionService.deleteMasterEvaluation(id, req.user!.sub);
+      return sendSuccess(res, { deleted: true });
+    } catch (err: any) {
+      if (err.status) return sendError(res, err.code, err.message, err.status);
+      next(err);
+    }
+  }
 }
 
 export const gestionController = new GestionController();

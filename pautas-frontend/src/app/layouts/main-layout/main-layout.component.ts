@@ -7,6 +7,7 @@ import { SidebarComponent, NavItem } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
 import { routeAnimation } from '../../config/route-animation';
 import { WebSocketService } from '../../core/services/websocket.service';
+import { InAppNotificationsService } from '../../core/services/in-app-notifications.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -25,6 +26,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
     public authService: AuthService,
     private router: Router,
     private wsService: WebSocketService,
+    private notifService: InAppNotificationsService,
   ) {
     const role = this.authService.userRole();
     this.roleLabel = role ? ROLE_LABELS[role] || role : '';
@@ -34,10 +36,12 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.wsService.connect();
+    this.notifService.startPolling();
   }
 
   ngOnDestroy(): void {
     this.wsService.disconnect();
+    this.notifService.stopPolling();
   }
 
   logout(): void {
@@ -80,6 +84,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
           { label: 'Contraste', route: '/pautadores/conglomerado-contrast', icon: 'compare' },
           { label: 'Alertas', route: '/pautadores/alertas', icon: 'notifications_active' },
           { label: 'Ranking', route: '/pautadores/ranking', icon: 'emoji_events' },
+          { label: 'Reportar Cambios', route: '/pautadores/campaign-reports', icon: 'campaign' },
         ];
       case 'gestion_administrativa':
         return [
@@ -89,6 +94,13 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
           { label: 'Cuentas Conglomerado', route: '/gestion/conglomerado-accounts', icon: 'link' },
           { label: 'Imágenes Soporte', route: '/gestion/soporte-images', icon: 'photo_library' },
           { label: 'Alertas', route: '/gestion/alertas', icon: 'notifications_active' },
+          { label: 'Reportes de Cambio', route: '/gestion/campaign-reports', icon: 'campaign' },
+          { label: 'Hoja de Vida Maestros', route: '/gestion/master-profiles', icon: 'badge' },
+        ];
+      case 'contabilidad':
+        return [
+          { label: 'Dashboard', route: '/contabilidad', icon: 'dashboard' },
+          { label: 'Cierres', route: '/contabilidad/cierres', icon: 'payments' },
         ];
       default:
         return [];

@@ -1,0 +1,170 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons page-title__icon">payments</span>
+      Cierres Diarios
+    </h1>
+  </div>
+
+  <!-- Filters -->
+  <div class="card filter-card">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label class="form-label">País (ID)</label>
+        <input class="form-control" type="number" [(ngModel)]="filterCountry" placeholder="ID de país..." />
+      </div>
+      <div class="filter-group">
+        <label class="form-label">Desde</label>
+        <input class="form-control" type="date" [(ngModel)]="filterDateFrom" />
+      </div>
+      <div class="filter-group">
+        <label class="form-label">Hasta</label>
+        <input class="form-control" type="date" [(ngModel)]="filterDateTo" />
+      </div>
+      <div class="filter-group">
+        <label class="form-label">Estado comprobantes</label>
+        <select class="form-control" [(ngModel)]="filterApproval">
+          <option value="">Todos</option>
+          <option value="pending">Pendientes</option>
+          <option value="approved">Aprobados</option>
+          <option value="rejected">Rechazados</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="applyFilters()">
+          <span class="material-icons">search</span> Filtrar
+        </button>
+        <button class="btn btn-outline-secondary" (click)="clearFilters()">
+          <span class="material-icons">clear</span> Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    @if (loading) {
+      <div class="loading-state">
+        <span class="material-icons spin">autorenew</span> Cargando cierres...
+      </div>
+    } @else if (entries.length === 0) {
+      <p class="empty-state">No hay cierres para los filtros seleccionados.</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Maestro</th>
+              <th>País</th>
+              <th class="text-end">Cierre</th>
+              <th class="text-center">Comprobantes</th>
+              <th class="text-center">Pendientes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of entries; track e.id) {
+              <tr [class.row-has-pending]="e.pending_vouchers > 0">
+                <td class="date-cell">{{ e.entry_date | date:'dd/MM/yyyy' }}</td>
+                <td><strong>{{ e.user_name }}</strong></td>
+                <td>{{ e.country_name }}</td>
+                <td class="text-end cierre-cell">{{ e.cierre | number:'1.2-2' }}</td>
+                <td class="text-center">
+                  <span class="badge bg-secondary">{{ e.voucher_count }}</span>
+                </td>
+                <td class="text-center">
+                  @if (e.pending_vouchers > 0) {
+                    <span class="badge badge-pending">{{ e.pending_vouchers }}</span>
+                  } @else {
+                    <span class="material-icons text-success" style="font-size:1rem">check_circle</span>
+                  }
+                </td>
+                <td>
+                  @if (e.voucher_count > 0) {
+                    <button class="btn btn-sm btn-outline-primary" (click)="openVouchers(e)">
+                      <span class="material-icons">image_search</span> Ver
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPages > 1) {
+        <div class="pagination-bar">
+          <button class="btn btn-sm btn-outline-secondary" (click)="prevPage()" [disabled]="page === 1">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          <span class="pagination-label">Página {{ page }} de {{ totalPages }}</span>
+          <button class="btn btn-sm btn-outline-secondary" (click)="nextPage()" [disabled]="page >= totalPages">
+            <span class="material-icons">chevron_right</span>
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Voucher Modal -->
+@if (selectedEntry) {
+  <div class="modal-backdrop" (click)="closeModal()"></div>
+  <div class="voucher-modal" role="dialog" aria-modal="true">
+    <div class="voucher-modal__header">
+      <h3 class="voucher-modal__title">
+        Comprobantes — {{ selectedEntry.user_name }} ({{ selectedEntry.entry_date | date:'dd/MM/yyyy' }})
+      </h3>
+      <button class="btn-close" (click)="closeModal()" aria-label="Cerrar"></button>
+    </div>
+    <div class="voucher-modal__body">
+      @if (loadingVouchers) {
+        <div class="loading-state"><span class="material-icons spin">autorenew</span></div>
+      } @else if (vouchers.length === 0) {
+        <p class="empty-state">Sin comprobantes en esta entrada.</p>
+      } @else {
+        <div class="voucher-grid">
+          @for (v of vouchers; track v.id) {
+            <div class="voucher-card">
+              <a [href]="voucherImageUrl(v.image_path)" target="_blank" rel="noopener">
+                <img class="voucher-img" [src]="voucherImageUrl(v.image_path)" [alt]="v.original_name" />
+              </a>
+              <div class="voucher-card__footer">
+                <span class="badge" [class]="approvalClass(v)">{{ approvalLabel(v) }}</span>
+                @if (v.approval_comment) {
+                  <span class="voucher-card__comment">{{ v.approval_comment }}</span>
+                }
+                @if (reviewVoucherId === v.id) {
+                  <div class="review-form">
+                    <div class="review-toggle">
+                      <button class="review-btn" [class.review-btn--active]="reviewApproved" (click)="reviewApproved = true">
+                        <span class="material-icons">thumb_up</span> Aprobar
+                      </button>
+                      <button class="review-btn review-btn--reject" [class.review-btn--active]="!reviewApproved" (click)="reviewApproved = false">
+                        <span class="material-icons">thumb_down</span> Rechazar
+                      </button>
+                    </div>
+                    <textarea class="form-control review-comment" [(ngModel)]="reviewComment"
+                              placeholder="Comentario (opcional)" rows="2"></textarea>
+                    @if (reviewError) {
+                      <div class="alert alert-danger py-1 mt-1" style="font-size:0.8rem">{{ reviewError }}</div>
+                    }
+                    <div class="review-actions">
+                      <button class="btn btn-sm btn-primary" (click)="submitReview()" [disabled]="reviewSubmitting">Guardar</button>
+                      <button class="btn btn-sm btn-outline-secondary" (click)="cancelReview()">Cancelar</button>
+                    </div>
+                  </div>
+                } @else {
+                  <button class="btn btn-sm btn-outline-secondary mt-2" (click)="startReview(v.id, v.is_approved)">
+                    <span class="material-icons">rate_review</span> Revisar
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

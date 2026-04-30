@@ -1,0 +1,72 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons page-title__icon">dashboard</span>
+      Dashboard Contabilidad
+    </h1>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <span class="material-icons spin">autorenew</span> Cargando indicadores...
+    </div>
+  } @else if (kpis) {
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-card--blue">
+        <div class="kpi-card__icon">
+          <span class="material-icons">receipt_long</span>
+        </div>
+        <div class="kpi-card__content">
+          <span class="kpi-card__label">Total Cierres</span>
+          <span class="kpi-card__value">{{ kpis.total_cierres | number }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--green">
+        <div class="kpi-card__icon">
+          <span class="material-icons">payments</span>
+        </div>
+        <div class="kpi-card__content">
+          <span class="kpi-card__label">Monto Total</span>
+          <span class="kpi-card__value">{{ kpis.total_amount | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--yellow">
+        <div class="kpi-card__icon">
+          <span class="material-icons">pending</span>
+        </div>
+        <div class="kpi-card__content">
+          <span class="kpi-card__label">Comprobantes Pendientes</span>
+          <span class="kpi-card__value">{{ kpis.pending_vouchers | number }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--success">
+        <div class="kpi-card__icon">
+          <span class="material-icons">check_circle</span>
+        </div>
+        <div class="kpi-card__content">
+          <span class="kpi-card__label">Comprobantes Aprobados</span>
+          <span class="kpi-card__value">{{ kpis.approved_vouchers | number }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-card--danger">
+        <div class="kpi-card__icon">
+          <span class="material-icons">cancel</span>
+        </div>
+        <div class="kpi-card__content">
+          <span class="kpi-card__label">Comprobantes Rechazados</span>
+          <span class="kpi-card__value">{{ kpis.rejected_vouchers | number }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <a routerLink="/contabilidad/cierres" class="btn btn-primary">
+        <span class="material-icons">list</span> Ver todos los cierres
+      </a>
+    </div>
+  }
+</div>

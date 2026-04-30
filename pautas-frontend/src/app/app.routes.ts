@@ -32,5 +32,11 @@ export const routes: Routes = [
     data: { roles: ['gestion_administrativa'] },
     loadChildren: () => import('./features/gestion/gestion.routes').then(m => m.GESTION_ROUTES),
   },
+  {
+    path: 'contabilidad',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['contabilidad'] },
+    loadChildren: () => import('./features/contabilidad/contabilidad.routes').then(m => m.CONTABILIDAD_ROUTES),
+  },
   { path: '**', redirectTo: '/auth/login' },
 ];

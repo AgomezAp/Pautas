@@ -1,0 +1,186 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons page-title__icon">badge</span>
+      Hoja de Vida de Maestros
+    </h1>
+  </div>
+
+  <div class="master-layout">
+    <!-- Master list (left panel) -->
+    <div class="master-list-panel card">
+      <h2 class="panel-title">Maestros</h2>
+      @if (loadingMasters) {
+        <div class="loading-state">
+          <span class="material-icons spin">autorenew</span>
+        </div>
+      } @else if (masters.length === 0) {
+        <p class="empty-state">No hay maestros registrados.</p>
+      } @else {
+        <ul class="master-list">
+          @for (m of masters; track m.id) {
+            <li class="master-item" [class.master-item--selected]="selectedMaster?.id === m.id"
+                (click)="selectMaster(m)">
+              <div class="master-item__avatar">{{ m.full_name.charAt(0).toUpperCase() }}</div>
+              <div class="master-item__info">
+                <span class="master-item__name">{{ m.full_name }}</span>
+                <span class="master-item__meta">{{ m.country_name }} · {{ m.total_records }} reg.</span>
+              </div>
+              @if (m.avg_rating !== null) {
+                <span class="master-item__rating">{{ m.avg_rating | number:'1.1-1' }} ★</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <!-- Detail panel (right) -->
+    <div class="detail-panel">
+      @if (!selectedMaster) {
+        <div class="detail-placeholder card">
+          <span class="material-icons detail-placeholder__icon">person_search</span>
+          <p>Selecciona un maestro para ver su hoja de vida.</p>
+        </div>
+      } @else {
+        <div class="card detail-header-card">
+          <div class="master-detail-header">
+            <div class="master-detail-avatar">{{ selectedMaster.full_name.charAt(0).toUpperCase() }}</div>
+            <div>
+              <h2 class="master-detail-name">{{ selectedMaster.full_name }}</h2>
+              <span class="master-detail-meta">{{ selectedMaster.email }} · {{ selectedMaster.country_name }}</span>
+              @if (selectedMaster.avg_rating !== null) {
+                <div class="master-detail-rating">
+                  Calificación promedio: <strong>{{ selectedMaster.avg_rating | number:'1.1-1' }}/10</strong>
+                </div>
+              }
+            </div>
+            <button class="btn btn-primary ms-auto" (click)="openForm()">
+              <span class="material-icons">add</span> Agregar registro
+            </button>
+          </div>
+        </div>
+
+        <!-- Add evaluation form -->
+        @if (showForm) {
+          <div class="card form-card">
+            <h3 class="form-card__title">Nuevo registro en hoja de vida</h3>
+
+            <div class="form-group">
+              <label class="form-label">Tipo de registro</label>
+              <div class="type-selector">
+                @for (kv of TYPE_LABELS | keyvalue; track kv.key) {
+                  <button class="type-btn" [class.type-btn--active]="formType === kv.key"
+                          (click)="formType = $any(kv.key)">
+                    <span class="material-icons">{{ TYPE_ICONS[$any(kv.key)] }}</span>
+                    {{ kv.value }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="formTitle">Título *</label>
+              <input id="formTitle" class="form-control" type="text" [(ngModel)]="formTitle"
+                     placeholder="Ej: Excelente desempeño en campaña Q1" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="formDesc">Descripción *</label>
+              <textarea id="formDesc" class="form-control" rows="4" [(ngModel)]="formDescription"
+                        placeholder="Detalle del registro..."></textarea>
+            </div>
+
+            @if (formType === 'evaluation') {
+              <div class="form-group">
+                <label class="form-label">Calificación (1–10)</label>
+                <div class="rating-slider">
+                  <input type="range" min="1" max="10" [(ngModel)]="formRating" class="form-range" />
+                  <span class="rating-value">{{ formRating ?? '—' }}</span>
+                </div>
+              </div>
+            }
+
+            @if (formType === 'phone_history') {
+              <div class="form-group">
+                <label class="form-label">Número de teléfono</label>
+                <input class="form-control" type="tel" [(ngModel)]="formPhone"
+                       placeholder="+57 300 000 0000" />
+              </div>
+            }
+
+            @if (formType === 'campaign_change') {
+              <div class="form-group">
+                <label class="form-label">Fecha del cambio</label>
+                <input class="form-control" type="date" [(ngModel)]="formChangeDate" />
+              </div>
+            }
+
+            @if (formError) {
+              <div class="alert alert-danger py-2">{{ formError }}</div>
+            }
+
+            <div class="form-actions">
+              <button class="btn btn-primary" (click)="submitEvaluation()" [disabled]="formSubmitting">
+                @if (formSubmitting) {
+                  <span class="material-icons spin">autorenew</span>
+                } @else {
+                  <span class="material-icons">save</span>
+                }
+                Guardar
+              </button>
+              <button class="btn btn-outline-secondary" (click)="cancelForm()">Cancelar</button>
+            </div>
+          </div>
+        }
+
+        <!-- Evaluations timeline -->
+        <div class="card">
+          <h3 class="panel-title">Historial ({{ evaluations.length }} registros)</h3>
+          @if (loadingEvals) {
+            <div class="loading-state"><span class="material-icons spin">autorenew</span></div>
+          } @else if (evaluations.length === 0) {
+            <p class="empty-state">Sin registros aún.</p>
+          } @else {
+            <ul class="eval-timeline">
+              @for (ev of evaluations; track ev.id) {
+                <li class="eval-item" [attr.data-type]="ev.type">
+                  <div class="eval-item__icon">
+                    <span class="material-icons">{{ TYPE_ICONS[ev.type] }}</span>
+                  </div>
+                  <div class="eval-item__body">
+                    <div class="eval-item__header">
+                      <strong class="eval-item__title">{{ ev.title }}</strong>
+                      <span class="eval-item__type-badge">{{ TYPE_LABELS[ev.type] }}</span>
+                      @if (ev.numeric_rating !== null) {
+                        <span class="eval-item__rating">{{ ev.numeric_rating }}/10</span>
+                      }
+                    </div>
+                    <p class="eval-item__desc">{{ ev.description }}</p>
+                    @if (ev.phone_number) {
+                      <div class="eval-item__meta">
+                        <span class="material-icons">phone</span> {{ ev.phone_number }}
+                      </div>
+                    }
+                    @if (ev.campaign_change_date) {
+                      <div class="eval-item__meta">
+                        <span class="material-icons">event</span>
+                        {{ ev.campaign_change_date | date:'dd/MM/yyyy' }}
+                      </div>
+                    }
+                    <div class="eval-item__footer">
+                      por {{ ev.created_by_name }} · {{ ev.created_at | date:'dd/MM/yyyy HH:mm' }}
+                      <button class="btn-icon-delete" (click)="deleteEvaluation(ev.id)" title="Eliminar">
+                        <span class="material-icons">delete_outline</span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

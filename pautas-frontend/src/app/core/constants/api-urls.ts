@@ -55,6 +55,27 @@ export const API_URLS = {
     soporteImages: `${BASE}/gestion/soporte-images`,
     resetEntry: (id: number) => `${BASE}/gestion/entries/${id}`,
     resetPassword: (id: number) => `${BASE}/gestion/conglomerado-users/${id}/reset-password`,
+    masters: `${BASE}/gestion/masters`,
+    masterEvaluations: (masterUserId: number) => `${BASE}/gestion/masters/${masterUserId}/evaluations`,
+    deleteEvaluation: (evalId: number) => `${BASE}/gestion/masters/evaluations/${evalId}`,
+    gestionUserCountries: (userId: number) => `${BASE}/gestion/gestion-users/${userId}/countries`,
+  },
+  notifications: {
+    list: `${BASE}/notifications`,
+    unread: `${BASE}/notifications/unread`,
+    markRead: (id: number) => `${BASE}/notifications/${id}/read`,
+    markAllRead: `${BASE}/notifications/read-all`,
+  },
+  campaignReports: {
+    list: `${BASE}/campaign-reports`,
+    create: `${BASE}/campaign-reports`,
+    campaigns: `${BASE}/campaign-reports/campaigns`,
+  },
+  contabilidad: {
+    kpis: `${BASE}/contabilidad/kpis`,
+    cierres: `${BASE}/contabilidad/cierres`,
+    vouchers: (entryId: number) => `${BASE}/contabilidad/entries/${entryId}/vouchers`,
+    reviewVoucher: (voucherId: number) => `${BASE}/contabilidad/vouchers/${voucherId}/review`,
   },
   system: {
     countries: `${BASE}/system/countries`,

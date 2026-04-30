@@ -5,6 +5,9 @@ const allowedOrigins = [
   env.frontendUrl,
   'http://localhost:4200',
   'http://localhost:4201',
+  'https://api.metricsap.com',
+  'https://metricsap.com',
+
 ];
 
 export const corsOptions: CorsOptions = {

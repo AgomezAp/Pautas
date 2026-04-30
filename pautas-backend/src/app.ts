@@ -18,6 +18,9 @@ import { gestionRoutes } from './modules/gestion/gestion.routes';
 import { systemRoutes } from './modules/system/system.routes';
 import { googleAdsRoutes } from './modules/google-ads/google-ads.routes';
 import { alertsRoutes } from './modules/alerts/alerts.routes';
+import { notificationsRoutes } from './modules/notifications/notifications.routes';
+import { campaignReportsRoutes } from './modules/campaign-reports/campaign-reports.routes';
+import { contabilidadRoutes } from './modules/contabilidad/contabilidad.routes';
 import { registerCronJobs } from './jobs/cron';
 import { initRedis } from './config/redis';
 import { cacheService } from './services/cache.service';
@@ -71,6 +74,9 @@ app.use('/api/v1/gestion', gestionRoutes);
 app.use('/api/v1/system', systemRoutes);
 app.use('/api/v1/google-ads', googleAdsRoutes);
 app.use('/api/v1/alerts', alertsRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/campaign-reports', campaignReportsRoutes);
+app.use('/api/v1/contabilidad', contabilidadRoutes);
 
 // Health check
 app.get('/api/v1/health', (_req, res) => {

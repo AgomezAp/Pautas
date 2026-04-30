@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { Toast, ToastService } from '../../../core/services/toast.service';
@@ -15,13 +15,18 @@ export class ToastContainerComponent implements OnInit, OnDestroy {
   private subs: Subscription[] = [];
   private timers = new Map<number, ReturnType<typeof setTimeout>>();
 
-  constructor(private toastService: ToastService) {}
+  constructor(private toastService: ToastService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.subs.push(
       this.toastService.toasts$.subscribe(toast => {
-        this.toasts.push(toast);
-        this.scheduleRemoval(toast);
+        // Defer push to avoid ExpressionChangedAfterItHasBeenCheckedError
+        // when toast is triggered from within an active change detection cycle
+        setTimeout(() => {
+          this.toasts.push(toast);
+          this.scheduleRemoval(toast);
+          this.cdr.detectChanges();
+        }, 0);
       }),
       this.toastService.dismiss$.subscribe(id => {
         const t = this.toasts.find(x => x.id === id);

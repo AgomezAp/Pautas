@@ -25,8 +25,9 @@ export class ConglomeradoService {
     userId: number,
     countryId: number,
     campaignId: number | null,
-    data: { clientes: number; clientes_efectivos: number; menores: number },
+    data: { clientes: number; clientes_efectivos: number; menores: number; cierre?: number | null },
     images: { imagePath: string; originalName: string; thumbPath: string | null }[],
+    vouchers: { imagePath: string; originalName: string; thumbPath: string | null }[],
     ip?: string
   ) {
     const today = new Date();
@@ -40,23 +41,33 @@ export class ConglomeradoService {
       const result = await client.query(
         `INSERT INTO daily_entries
           (user_id, country_id, campaign_id, entry_date, iso_year, iso_week,
-           clientes, clientes_efectivos, menores)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           clientes, clientes_efectivos, menores, cierre)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           userId, countryId, campaignId, entryDate, isoYear, isoWeek,
           data.clientes, data.clientes_efectivos, data.menores,
+          data.cierre ?? null,
         ]
       );
 
       const entry = result.rows[0];
 
-      // Insert images into entry_images table
+      // Insert soporte images into entry_images table
       for (const img of images) {
         await client.query(
           `INSERT INTO entry_images (entry_id, image_path, original_name, thumb_path)
            VALUES ($1, $2, $3, $4)`,
           [entry.id, img.imagePath, img.originalName, img.thumbPath]
+        );
+      }
+
+      // Insert payment vouchers
+      for (const v of vouchers) {
+        await client.query(
+          `INSERT INTO payment_vouchers (entry_id, image_path, original_name, thumb_path)
+           VALUES ($1, $2, $3, $4)`,
+          [entry.id, v.imagePath, v.originalName, v.thumbPath]
         );
       }
 
@@ -66,7 +77,9 @@ export class ConglomeradoService {
         clientes: data.clientes,
         clientes_efectivos: data.clientes_efectivos,
         menores: data.menores,
+        cierre: data.cierre,
         images_count: images.length,
+        vouchers_count: vouchers.length,
       }, ip);
 
       await Promise.all([

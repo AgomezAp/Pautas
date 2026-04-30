@@ -80,6 +80,11 @@ class WebSocketService {
     this.io.to(`role:${role}`).emit(event, data);
   }
 
+  sendToUser(userId: number, event: string, data: any): void {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit(event, data);
+  }
+
   getConnectedCount(): number {
     if (!this.io) return 0;
     return this.io.engine?.clientsCount || 0;

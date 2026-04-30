@@ -48,8 +48,22 @@
               <div class="invalid-feedback d-block">Campo requerido</div>
             }
           </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cierre <span class="text-muted">(opcional)</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><app-icon name="payments" size="sm"></app-icon></span>
+              <input type="number" class="form-control" formControlName="cierre" min="0" step="0.01"
+                     placeholder="0.00">
+            </div>
+            @if (form.get('cierre')?.hasError('min') && form.get('cierre')?.touched) {
+              <div class="invalid-feedback d-block">El valor debe ser >= 0</div>
+            }
+          </div>
         </div>
 
+        <!-- Soporte images -->
+        <p class="section-label mt-3">Imágenes de soporte</p>
         <div class="upload-area" (click)="fileInput.click()"
              [class.has-file]="selectedFiles.length > 0">
           <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" #fileInput hidden>
@@ -71,8 +85,36 @@
             </div>
           } @else {
             <app-icon name="cloud_upload" size="xl" class="upload-icon"></app-icon>
-            <span class="upload-text">Subir imagenes de soporte</span>
-            <span class="upload-hint">JPEG, PNG, WebP, GIF - max 5MB cada una - hasta 10 imagenes</span>
+            <span class="upload-text">Subir imágenes de soporte</span>
+            <span class="upload-hint">JPEG, PNG, WebP, GIF - max 5MB cada una - hasta 10 imágenes</span>
+          }
+        </div>
+
+        <!-- Comprobantes de pago -->
+        <p class="section-label mt-4">Comprobantes de pago <span class="text-muted">(opcional)</span></p>
+        <div class="upload-area upload-area--vouchers" (click)="voucherInput.click()"
+             [class.has-file]="selectedVouchers.length > 0">
+          <input type="file" accept="image/*" multiple (change)="onVouchersSelected($event)" #voucherInput hidden>
+          @if (voucherPreviews.length > 0) {
+            <div class="preview-grid" (click)="$event.stopPropagation()">
+              @for (preview of voucherPreviews; track $index) {
+                <div class="preview-item">
+                  <img [src]="preview" alt="Comprobante" class="upload-preview-thumb">
+                  <button type="button" class="btn-remove-preview" (click)="removeVoucher($index)">
+                    <app-icon name="close" size="sm"></app-icon>
+                  </button>
+                </div>
+              }
+              @if (selectedVouchers.length < 10) {
+                <div class="preview-add" (click)="voucherInput.click()">
+                  <app-icon name="add" size="md"></app-icon>
+                </div>
+              }
+            </div>
+          } @else {
+            <app-icon name="receipt_long" size="xl" class="upload-icon"></app-icon>
+            <span class="upload-text">Subir comprobantes de pago</span>
+            <span class="upload-hint">JPEG, PNG, WebP, GIF - max 5MB cada una - hasta 10 imágenes</span>
           }
         </div>
 

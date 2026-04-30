@@ -49,4 +49,14 @@ router.delete('/entries/:entryId', roleMiddleware('gestion_administrativa', 'adm
 // Reset password for a conglomerado user
 router.patch('/conglomerado-users/:userId/reset-password', roleMiddleware('gestion_administrativa', 'admin'), (req, res, next) => gestionController.resetPassword(req, res, next));
 
+// Multi-country assignment for gestion_administrativa users
+router.get('/gestion-users/:userId/countries',  roleMiddleware('gestion_administrativa', 'admin'), (req, res, next) => gestionController.getUserCountries(req, res, next));
+router.put('/gestion-users/:userId/countries',  roleMiddleware('admin'), (req, res, next) => gestionController.setUserCountries(req, res, next));
+
+// Master profiles (hoja de vida) — only gestion_administrativa
+router.get('/masters',                                       roleMiddleware('gestion_administrativa'), (req, res, next) => gestionController.getMasterList(req, res, next));
+router.get('/masters/:masterUserId/evaluations',             roleMiddleware('gestion_administrativa'), (req, res, next) => gestionController.getMasterEvaluations(req, res, next));
+router.post('/masters/:masterUserId/evaluations',            roleMiddleware('gestion_administrativa'), (req, res, next) => gestionController.createMasterEvaluation(req, res, next));
+router.delete('/masters/evaluations/:evalId',                roleMiddleware('gestion_administrativa'), (req, res, next) => gestionController.deleteMasterEvaluation(req, res, next));
+
 export { router as gestionRoutes };
